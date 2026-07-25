@@ -32,8 +32,9 @@
 
 #include "config.h"
 #include "dataManagement/DataManager.h"
+#include "fileFormats/CUB.h"
 #include "fileFormats/MBTILES.h"
-#include "geomaps/OpenAir.h"
+#include "fileFormats/OpenAir.h"
 
 using namespace std::chrono_literals;
 using namespace Qt::Literals::StringLiterals;
@@ -191,13 +192,26 @@ QString DataManagement::DataManager::import(const QString& fileName, const QStri
 
 QString DataManagement::DataManager::importOpenAir(const QString& fileName, const QString& newName)
 {
-
-    auto path = m_dataDirectory + u"/Unsupported"_s;
-    auto newFileName = path + u"/"_s + newName;
-
     QStringList errors;
     QStringList warnings;
-    auto json = GeoMaps::openAir::parse(fileName, errors, warnings);
+    auto json = FileFormats::OpenAir::parse(fileName, errors, warnings);
+    return saveAirspaceJson(json, errors, newName);
+}
+
+
+QString DataManagement::DataManager::importCub(const QString& fileName, const QString& newName)
+{
+    QStringList errors;
+    QStringList warnings;
+    auto json = FileFormats::CUB::parse(fileName, errors, warnings);
+    return saveAirspaceJson(json, errors, newName);
+}
+
+
+QString DataManagement::DataManager::saveAirspaceJson(const QJsonDocument& json, const QStringList& errors, const QString& newName)
+{
+    auto path = m_dataDirectory + u"/Unsupported"_s;
+    auto newFileName = path + u"/"_s + newName;
 
     if (!errors.isEmpty())
     {

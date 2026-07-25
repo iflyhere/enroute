@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Added
+- Airspace data can now be imported in the binary CUB format used by Naviter
+  and LXNav products, such as SeeYou and the LX9000. (#601)
+
 - Waypoints in the flight route can now be reordered by drag-and-drop. (#52)
 
 - Flight routes can now be exported in Garmin FPL and MSFS PLN formats, for
