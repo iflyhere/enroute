@@ -876,6 +876,9 @@ void Flightlog::FlightLog::onAutoFlightDetectionChanged()
     if (GlobalObject::globalSettings()->autoFlightDetection()) {
         ObjCAdapter::requestNotificationPermission();
     }
+    GlobalObject::positionProvider()->setBackgroundUpdates(
+        u"flightlog"_s,
+        GlobalObject::globalSettings()->autoFlightDetection());
 #endif
 
     // Ensure the satellite GPS source is running whenever auto-detection is

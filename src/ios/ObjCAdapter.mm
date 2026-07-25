@@ -126,3 +126,25 @@ void ObjCAdapter::postNotification(const QString& title, const QString& body) {
     [content release];
 }
 
+
+//MARK: Background Location
+
+static CLLocationManager* s_bgLocationManager = nil;
+
+void ObjCAdapter::enableBackgroundLocation() {
+    if (s_bgLocationManager == nil) {
+        s_bgLocationManager = [[CLLocationManager alloc] init];
+    }
+    [s_bgLocationManager requestAlwaysAuthorization];
+    s_bgLocationManager.allowsBackgroundLocationUpdates = YES;
+    s_bgLocationManager.pausesLocationUpdatesAutomatically = NO;
+    [s_bgLocationManager startUpdatingLocation];
+}
+
+void ObjCAdapter::disableBackgroundLocation() {
+    if (s_bgLocationManager != nil) {
+        s_bgLocationManager.allowsBackgroundLocationUpdates = NO;
+        [s_bgLocationManager stopUpdatingLocation];
+    }
+}
+
