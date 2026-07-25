@@ -25,6 +25,7 @@
 #include <QNetworkRequest>
 #include <QUrl>
 
+#include "fileFormats/CUB.h"
 #include "fileFormats/CUP.h"
 #include "fileFormats/FPL.h"
 #include "fileFormats/GeoTIFF.h"
@@ -239,8 +240,15 @@ void Platform::FileExchange_Abstract::processFileOpenRequest(const QString& path
         }
     }
 
-    // OpenAir
+    // CUB
     QString info;
+    if (FileFormats::CUB::isValid(myPath, &info))
+    {
+        emit openFileRequest(path, info, Cub);
+        return;
+    }
+
+    // OpenAir
     if (FileFormats::OpenAir::isValid(myPath, &info))
     {
         emit openFileRequest(path, info, OpenAir);

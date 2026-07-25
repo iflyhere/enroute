@@ -107,7 +107,7 @@ Item {
                 importTripKitDialog.open()
                 return
             }
-            if (fileFunction === FileExchange.OpenAir) {
+            if (fileFunction === FileExchange.OpenAir || fileFunction === FileExchange.Cub) {
                 openAirInfoLabel.text = info;
                 importOpenAirDialog.open()
                 return
@@ -256,7 +256,9 @@ Item {
         onAccepted: {
             PlatformAdaptor.vibrateBrief()
 
-            var errorString = DataManager.importOpenAir(importManager.filePath, mapNameOpenAir.text)
+            var errorString = importManager.fileFunction === FileExchange.Cub
+                            ? DataManager.importCub(importManager.filePath, mapNameOpenAir.text)
+                            : DataManager.importOpenAir(importManager.filePath, mapNameOpenAir.text)
             if (errorString !== "") {
                 errLbl.text = errorString
                 errorDialog.open()

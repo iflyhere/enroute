@@ -152,6 +152,23 @@
         </dict>
         <dict>
             <key>UTTypeIdentifier</key>
+            <string>enroute.cub</string>
+            <key>UTTypeDescription</key>
+            <string>cub</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.data</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>cub</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
             <string>enroute.geojson</string>
             <key>UTTypeConformsTo</key>
             <array>
@@ -320,6 +337,23 @@
             <key>NSExportableTypes</key>
             <array>
                 <string>enroute.cup</string>
+            </array>
+        </dict>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>CUB</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>CUB</string>
+                <string>cub</string>
+            </array>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>enroute.cub</string>
             </array>
         </dict>
         <dict>

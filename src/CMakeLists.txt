@@ -38,6 +38,7 @@ set(SOURCES
     dataManagement/Downloadable_SingleFile.h
     dataManagement/SSLErrorHandler.h
     fileFormats/CSV.h
+    fileFormats/CUB.h
     fileFormats/CUP.h
     fileFormats/DataFileAbstract.h
     fileFormats/FPL.h
@@ -148,6 +149,7 @@ set(SOURCES
     dataManagement/SSLErrorHandler.cpp
     DemoRunner.cpp
     fileFormats/CSV.cpp
+    fileFormats/CUB.cpp
     fileFormats/CUP.cpp
     fileFormats/DataFileAbstract.cpp
     fileFormats/FPL.cpp

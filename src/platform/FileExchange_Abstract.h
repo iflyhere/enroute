@@ -56,7 +56,8 @@ public:
         OpenAir, /*< Airspace data in openAir format */
         Image, /*< Image without georeferencing information */
         TripKit, /*< Trip Kit */
-        ZipFile /*< Zip File */
+        ZipFile, /*< Zip File */
+        Cub /*< Airspace data in CUB format */
       };
     Q_ENUM(FileFunction)
 

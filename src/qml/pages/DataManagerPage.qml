@@ -261,6 +261,7 @@ Page {
                         // Setting a non-trivial name filter on Android means we cannot select any
                         // files at all.
                         nameFilters: Qt.platform.os === "android" ? undefined : [qsTr("OpenAir Airspace Data (*.txt)"),
+                                                                                 qsTr("CUB Airspace Data (*.cub)"),
                                                                                  qsTr("Raster and Vector Maps (*.mbtiles)"),
                                                                                  qsTr("Trip Kits (*.zip)"),
                                                                                  qsTr("Visual Approach Charts (*.tif *.tiff)")]
