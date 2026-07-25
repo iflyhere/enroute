@@ -24,8 +24,8 @@
 #include <QJsonObject>
 #include <QTextStream>
 
-#include "OpenAir.h"
 #include "fileFormats/DataFileAbstract.h"
+#include "fileFormats/OpenAir.h"
 
 #include <cmath>
 
@@ -507,7 +507,7 @@ public:
 };
 
 
-bool GeoMaps::openAir::isValid(const QString& fileName, QString* info)
+bool FileFormats::OpenAir::isValid(const QString& fileName, QString* info)
 {
     QStringList errorList;
     QStringList warnings;
@@ -532,7 +532,7 @@ bool GeoMaps::openAir::isValid(const QString& fileName, QString* info)
 }
 
 
-QJsonDocument GeoMaps::openAir::parse(const QString& fileName, QStringList& errorList, QStringList& warningList)
+QJsonDocument FileFormats::OpenAir::parse(const QString& fileName, QStringList& errorList, QStringList& warningList)
 {
     QString line;
     AirSpace airSpace;

@@ -17,7 +17,10 @@
       "Bash(git -C /home/kebekus/Software/projects/enroute stash list)",
       "Bash(git -C /home/kebekus/Software/projects/enroute status --short)",
       "Bash(git -C /home/kebekus/Software/projects/enroute diff .claude/settings.json)",
-      "Bash(git -C /home/kebekus/Software/projects/enroute diff -- src/ CHANGELOG.md)"
+      "Bash(git -C /home/kebekus/Software/projects/enroute diff -- src/ CHANGELOG.md)",
+      "Bash(git mv *)",
+      "Bash(git -C /home/kebekus/Software/projects/enroute diff --stat HEAD -- src)",
+      "Bash(./build/openair-test ~/Software/standards/Airspace/Sample/Königsdorf.txt ~/Software/standards/Airspace/Sample/2023_09_Airspace_Germany2023.txt)"
     ]
   },
   "hooks": {

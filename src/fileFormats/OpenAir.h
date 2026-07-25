@@ -17,12 +17,20 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#pragma once
+
 #include <QJsonDocument>
 
-namespace GeoMaps
+namespace FileFormats
 {
 
-class openAir
+/*! \brief OpenAIR file support class
+ *
+ *  The methods of this class read airspace files in OpenAIR format, as specified here:
+ *  http://www.winpilot.com/UsersGuide/UserAirspace.asp
+ */
+
+class OpenAir
 {
 public:
     /*! \brief Check if file contains valid OpenAIR data
@@ -34,14 +42,6 @@ public:
      *  @returns True if the file is likely to contain valid OpenAIR data.
      */
     static bool isValid(const QString &fileName, QString* info=nullptr);
-
-    /*! \brief Check if file contains valid OpenAIR data
-     *
-     *  @param fileName Name of a file
-     *
-     *  @returns Translated HTML string with warnings.
-     */
-    static QString warnings(const QString &fileName);
 
     /*! \brief Reads a file in openAIR format and returns a GeoJSON document
      *
@@ -57,4 +57,4 @@ public:
 };
 
 
-} // namespace GeoMaps
+} // namespace FileFormats

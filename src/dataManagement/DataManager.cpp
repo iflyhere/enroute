@@ -33,7 +33,7 @@
 #include "config.h"
 #include "dataManagement/DataManager.h"
 #include "fileFormats/MBTILES.h"
-#include "geomaps/OpenAir.h"
+#include "fileFormats/OpenAir.h"
 
 using namespace std::chrono_literals;
 using namespace Qt::Literals::StringLiterals;
@@ -197,7 +197,7 @@ QString DataManagement::DataManager::importOpenAir(const QString& fileName, cons
 
     QStringList errors;
     QStringList warnings;
-    auto json = GeoMaps::openAir::parse(fileName, errors, warnings);
+    auto json = FileFormats::OpenAir::parse(fileName, errors, warnings);
 
     if (!errors.isEmpty())
     {

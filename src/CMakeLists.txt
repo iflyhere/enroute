@@ -44,6 +44,7 @@ set(SOURCES
     fileFormats/GeoTIFF.h
     fileFormats/MapURL.h
     fileFormats/MBTILES.h
+    fileFormats/OpenAir.h
     fileFormats/PLN.h
     fileFormats/TIFF.h
     fileFormats/TripKit.h
@@ -54,7 +55,6 @@ set(SOURCES
     geomaps/GeoJSON.h
     geomaps/GeoMapProvider.h
     geomaps/GPX.h
-    geomaps/OpenAir.h
     geomaps/TileHandler.h
     geomaps/TileServer.h
     geomaps/Waypoint.h
@@ -154,6 +154,7 @@ set(SOURCES
     fileFormats/GeoTIFF.cpp
     fileFormats/MapURL.cpp
     fileFormats/MBTILES.cpp
+    fileFormats/OpenAir.cpp
     fileFormats/PLN.cpp
     fileFormats/TIFF.cpp
     fileFormats/TripKit.cpp
@@ -163,7 +164,6 @@ set(SOURCES
     geomaps/GeoJSON.cpp
     geomaps/GeoMapProvider.cpp
     geomaps/GPX.cpp
-    geomaps/OpenAir.cpp
     geomaps/TileHandler.cpp
     geomaps/TileServer.cpp
     geomaps/Waypoint.cpp

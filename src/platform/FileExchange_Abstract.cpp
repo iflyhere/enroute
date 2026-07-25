@@ -30,10 +30,10 @@
 #include "fileFormats/GeoTIFF.h"
 #include "fileFormats/MBTILES.h"
 #include "fileFormats/MapURL.h"
+#include "fileFormats/OpenAir.h"
 #include "fileFormats/PLN.h"
 #include "fileFormats/TripKit.h"
 #include "geomaps/GeoJSON.h"
-#include "geomaps/OpenAir.h"
 #include "geomaps/VAC.h"
 #include "platform/FileExchange_Abstract.h"
 #include "traffic/TrafficDataProvider.h"
@@ -241,7 +241,7 @@ void Platform::FileExchange_Abstract::processFileOpenRequest(const QString& path
 
     // OpenAir
     QString info;
-    if (GeoMaps::openAir::isValid(myPath, &info))
+    if (FileFormats::OpenAir::isValid(myPath, &info))
     {
         emit openFileRequest(path, info, OpenAir);
         return;
