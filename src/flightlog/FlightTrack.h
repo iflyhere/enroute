@@ -22,6 +22,7 @@
 
 #include <QDateTime>
 #include <QGeoCoordinate>
+#include <QList>
 
 namespace Flightlog {
 
@@ -51,5 +52,8 @@ struct TrackPoint
         return coordinate.isValid() && timestamp.isValid();
     }
 };
+
+/*! \brief A recorded flight track, as a sequence of track points */
+using FlightTrack = QList<TrackPoint>;
 
 } // namespace Flightlog

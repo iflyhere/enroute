@@ -59,6 +59,7 @@ void Flightlog::AirplaneFlightDetector::processPositionUpdate(const Positioning:
         // Check if near an airfield
         auto closestAD = FlightLog::nearestAirfield(info.coordinate(), airfieldProximityM);
         if (!closestAD.isValid()) {
+            return;
         }
 
         // If already well above the airfield, this is not a takeoff
@@ -68,9 +69,11 @@ void Flightlog::AirplaneFlightDetector::processPositionUpdate(const Positioning:
             return;
         }
 
-        // Near airfield and speed above threshold → enter takeoff phase
+        // Near airfield and speed above threshold → enter takeoff phase.
+        // The departure coordinate is the real GPS fix, not the airfield's
+        // charted position.
         m_pendingDepartureICAO = closestAD.shortName();
-        m_pendingDepartureCoordinate = closestAD.coordinate();
+        m_pendingDepartureCoordinate = info.coordinate();
         m_pendingDepartureElevation = Units::Distance::fromM(closestAD.coordinate().altitude());
         m_pendingStartTime = info.timestamp();
         m_detectionState = TakeoffPhase;
@@ -101,10 +104,35 @@ void Flightlog::AirplaneFlightDetector::processPositionUpdate(const Positioning:
     }
 
     case InFlight: {
-        // Safety valve: if we have been InFlight for more than maxFlightDurationH
-        // with no GPS speed (e.g. landed at an unmapped field), auto-end the flight
-        // so the recorder doesn't grow unbounded.  A real flight in progress will
-        // have a valid ground speed above the minimum, so it won't be affected.
+        // Outlanding detection: sustained low ground speed close to the
+        // terrain directly underneath (not tied to any airfield) is treated
+        // as a landing on its own. This is what makes an outlanding away
+        // from any charted airfield get detected automatically and
+        // promptly, rather than relying on the pilot to press "End Flight"
+        // or waiting for the many-hours-long safety valve below. The
+        // altitude gate matters: ground speed alone can read near zero
+        // while still fully airborne — e.g. a glider circling in a strong
+        // headwind — so low speed is only trusted close to the ground.
+        auto altAGL = info.trueAltitudeAGL();
+        const bool nearGround = altAGL.isFinite() && altAGL < Units::Distance::fromFT(landingAltitudeAGLFT);
+        const bool lowSpeed = groundSpeed.isFinite() && groundSpeed < aircraftMinimumSpeed();
+        if (nearGround && lowSpeed) {
+            if (!m_lowSpeedEntryTime.isValid()) {
+                m_lowSpeedEntryTime = info.timestamp();
+            } else if (m_lowSpeedEntryTime.secsTo(info.timestamp()) >= landingConfirmTimeoutS) {
+                endFlight();
+                return;
+            }
+        } else {
+            m_lowSpeedEntryTime = {};
+        }
+
+        // Last-resort safety valve: if we have been InFlight for more than
+        // maxFlightDurationH with no GPS speed, auto-end the flight so the
+        // recorder doesn't grow unbounded. Only reachable when the check
+        // above can't engage (e.g. no terrain elevation data for this
+        // region). A real flight in progress will have a valid ground speed
+        // above the minimum, so it won't be affected.
         if (m_pendingStartTime.isValid()
             && m_pendingStartTime.secsTo(info.timestamp()) > static_cast<qint64>(maxFlightDurationH * 3600)
             && (!groundSpeed.isFinite() || groundSpeed < aircraftMinimumSpeed())) {
@@ -112,13 +140,12 @@ void Flightlog::AirplaneFlightDetector::processPositionUpdate(const Positioning:
             return;
         }
 
-        // Need valid AMSL altitude to detect landing
+        // Need valid AMSL altitude to detect landing near an airfield
         if (!altitudeAMSL.isFinite()) {
             return;
         }
 
         // Skip the expensive airfield lookup while well above ground
-        auto altAGL = info.trueAltitudeAGL();
         if (altAGL.isFinite() && altAGL > Units::Distance::fromFT(landingAltitudeAGLFT * 3.0)) {
             return;
         }
@@ -138,6 +165,7 @@ void Flightlog::AirplaneFlightDetector::processPositionUpdate(const Positioning:
 
         // Near airport and low altitude → enter landing phase
         m_landingPhaseEntryTime = info.timestamp();
+        m_lowSpeedEntryTime = {};
         m_detectionState = LandingPhase;
         emit detectionStateChanged();
         break;
@@ -149,13 +177,14 @@ void Flightlog::AirplaneFlightDetector::processPositionUpdate(const Positioning:
             || (m_landingPhaseEntryTime.isValid() && m_landingPhaseEntryTime.secsTo(info.timestamp()) > landingConfirmTimeoutS)) {
             // Use the time we first went low as the landing time
             auto landingTime = m_landingPhaseEntryTime.isValid() ? m_landingPhaseEntryTime : info.timestamp();
+            // Arrival coordinate is the real GPS fix, not the airfield's
+            // charted position; the ICAO code is only a label, when found.
             QString arrivalICAO;
-            QGeoCoordinate arrivalCoordinate;
             auto closestAD = FlightLog::nearestAirfield(info.coordinate(), airfieldProximityM);
             if (closestAD.isValid()) {
                 arrivalICAO = closestAD.shortName();
-                arrivalCoordinate = closestAD.coordinate();
             }
+            auto arrivalCoordinate = info.coordinate();
             m_landingCount++;
             auto landingCount = m_landingCount;
 
@@ -174,7 +203,7 @@ void Flightlog::AirplaneFlightDetector::processPositionUpdate(const Positioning:
             if (closestAD2.isValid()) {
                 auto elev = Units::Distance::fromM(closestAD2.coordinate().altitude());
                 if (elev.isFinite()
-                    && (altitudeAMSL - elev) > Units::Distance::fromFT(landingAltitudeAGLFT)) {
+                    && (altitudeAMSL - elev) > Units::Distance::fromFT(altitudeGainFT)) {
                     // Count the low pass as a landing. GPS data cannot reliably
                     // distinguish a touch-and-go from a balked landing / go-around,
                     // so any approach that descended below the landing threshold near
@@ -201,21 +230,29 @@ void Flightlog::AirplaneFlightDetector::endFlight()
 
     auto now = QDateTime::currentDateTimeUtc();
 
-    // Try to find the nearest airport based on current position
+    // Capture the real GPS position, regardless of whether an airfield is
+    // nearby — this is what makes an outlanding away from any charted
+    // airfield still get a usable coordinate. The ICAO code is only a
+    // label, filled in when an airfield happens to be close by.
     QString arrivalICAO;
     QGeoCoordinate arrivalCoordinate;
     auto* positionProvider = GlobalObject::positionProvider();
     if (positionProvider != nullptr) {
         auto info = positionProvider->positionInfo();
         if (info.isValid()) {
+            arrivalCoordinate = info.coordinate();
             auto closestAD = FlightLog::nearestAirfield(info.coordinate(), airfieldProximityM);
             if (closestAD.isValid()) {
                 arrivalICAO = closestAD.shortName();
-                arrivalCoordinate = closestAD.coordinate();
             }
         }
     }
-    auto landingCount = (m_detectionState == LandingPhase) ? m_landingCount : 1;
+    // endFlight() is only ever invoked externally (manual "End Flight",
+    // or the InFlight safety valve) to finalize a landing that the
+    // automatic LandingPhase confirmation hasn't completed yet — so this
+    // call always accounts for exactly one more landing than whatever
+    // prior touch-and-goes already incremented m_landingCount to.
+    auto landingCount = m_landingCount + 1;
 
     // Reset state before emitting signal
     m_detectionState = Idle;
@@ -245,6 +282,7 @@ void Flightlog::AirplaneFlightDetector::clearPendingState()
     m_pendingStartTime = {};
     m_landingPhaseEntryTime = {};
     m_landingCount = 0;
+    m_lowSpeedEntryTime = {};
 }
 
 
