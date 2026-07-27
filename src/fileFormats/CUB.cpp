@@ -463,6 +463,13 @@ QJsonDocument FileFormats::CUB::parse(const QString& fileName, QStringList& erro
                 throw QObject::tr("Airspace has no usable geometry", "CUB");
             }
             finalizePolygon(polygon);
+            // GeoJSON requires closed rings with at least 4 positions. Rings that
+            // collapse below that during cleanup would poison the whole map
+            // rendering, so they must not be emitted.
+            if (polygon.size() < 4)
+            {
+                throw QObject::tr("Airspace has no usable geometry", "CUB");
+            }
 
             const QString bottom = altitudeString(minAlt, altStyle & 0x0F);
             const QString top = altitudeString(maxAlt, altStyle >> 4);
@@ -476,15 +483,23 @@ QJsonDocument FileFormats::CUB::parse(const QString& fileName, QStringList& erro
             propObj.insert(u"TOP"_s, top);
             propObj.insert(u"SBO"_s, simplifiedBottomAltitude(bottom));
 
+            // Nesting is built with append() throughout: QJsonArray({x}) with a
+            // single QJsonArray element resolves to the copy constructor on some
+            // compilers (CWG 2137), silently flattening the ring nesting.
             QJsonArray coordArray;
             for (const auto& coordinate : polygon)
             {
-                coordArray.append(QJsonArray({coordinate.longitude(), coordinate.latitude()}));
+                QJsonArray coord;
+                coord.append(coordinate.longitude());
+                coord.append(coordinate.latitude());
+                coordArray.append(coord);
             }
+            QJsonArray polygonArray;
+            polygonArray.append(coordArray);
 
             QJsonObject geomObj;
             geomObj.insert(u"type"_s, u"Polygon"_s);
-            geomObj.insert(u"coordinates"_s, QJsonArray({coordArray}));
+            geomObj.insert(u"coordinates"_s, polygonArray);
 
             QJsonObject featureObj;
             featureObj.insert(u"type"_s, u"Feature"_s);

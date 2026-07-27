@@ -52,7 +52,20 @@
       "Bash(xenv/bin/python win_tool.py shot enroute shot3.png)",
       "Bash(xenv/bin/python win_tool.py key Escape)",
       "Bash(xenv/bin/python win_tool.py shot enroute shot4.png)",
-      "Bash(kill 372339)"
+      "Bash(kill 372339)",
+      "Bash(./test_cub \"/home/kebekus/Software/standards/Airspace/Sample CUB/UK_AltitudeOverlay_2026.cub\" \"/home/kebekus/Software/standards/Airspace/Sample CUB/W99_wavewindow_2024.cub\")",
+      "Bash(curl -sL -o UK_current.cub \"https://www.navboys.com/user/1_March2026_UK_AirspaceForLXorOudie.cub\")",
+      "Bash(curl -sL -o UK_overlay_current.cub \"https://www.navboys.com/user/2_March2026_AltitudeOverlay_UK_AirspaceForLXorOudie.cub\")",
+      "Bash(./test_cub UK_current.cub UK_overlay_current.cub)",
+      "Bash(command -v clang++)",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aosp-mirror/platform_libcore/main/luni/src/main/resources/res/android.mime.types\" -o android.mime.types)",
+      "Read(//etc/**)",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aosp-mirror/platform_libcore/master/luni/src/main/resources/res/android.mime.types\" -o android.mime.types)",
+      "Bash(curl -sL \"https://android.googlesource.com/platform/libcore/+/refs/heads/main/luni/src/main/resources/res/android.mime.types?format=TEXT\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aosp-mirror/platform_libcore/main/mimemap/src/main/resources/res/android.mime.types\" -o android.mime.types)",
+      "Bash(curl -sL \"https://android.googlesource.com/platform/libcore/+/master/luni/src/main/java/libcore/net/mime.types?format=TEXT\")",
+      "WebFetch(domain:android.googlesource.com)",
+      "Bash(python3 -c \"import xml.dom.minidom; xml.dom.minidom.parse\\('/home/kebekus/Software/projects/enroute/src/AndroidManifest.xml.in'\\); print\\('manifest XML parses OK'\\)\")"
     ],
     "additionalDirectories": [
       "/home/kebekus/Software/standards/Airspace/Sample CUB"
