@@ -54,7 +54,6 @@ public class MobileAdaptor extends de.akaflieg_freiburg.enroute.ShareActivity {
 
   public static native void onLanguageChanged();
   public static native void onWifiConnected();
-  public static native void onWindowSizeChanged();
 
   private static MobileAdaptor m_instance;
   private static Vibrator m_vibrator;
@@ -111,22 +110,6 @@ public class MobileAdaptor extends de.akaflieg_freiburg.enroute.ShareActivity {
       IntentFilter filter = new IntentFilter(Intent.ACTION_LOCALE_CHANGED);
       registerReceiver(m_localeChangedReceiver, filter);
     }
-
-    // Be informed when the window size changes, and call the C++ method
-    // onWindowSizeChanged() whenever it changes. The window size changes when
-    // the user starts/end the split view mode, or when the user drags the
-    // slider in order to adjust the relative size of the two windows shown.
-    View rootView = getWindow().getDecorView().getRootView();
-    rootView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() 
-      {
-        @Override
-        public void onLayoutChange(View view, int left, int top, int right, int bottom, int oldLeft,
-            int oldTop, int oldRight, int oldBottom) 
-        {
-          onWindowSizeChanged();
-        }
-      }
-    );
   }
 
   @Override
@@ -169,60 +152,53 @@ public class MobileAdaptor extends de.akaflieg_freiburg.enroute.ShareActivity {
         + android.os.Build.MODEL + ")";
   }
 
-  // Returns the height of the screen, taking the Android split view
-  // into account
-  public static double windowHeight() {
-    return m_instance.getWindow().getDecorView().getRootView().getHeight();
-  }
+  // The following methods return the safe-area insets of the window -- the
+  // union of the virtual keyboard, system bars and display cutout -- in
+  // physical pixels. These are the values that Android reports to this
+  // window, so they are also correct in split-screen mode and in any
+  // orientation, where Qt's own safe-area margins are not reliable. The
+  // keyboard inset is zero while the keyboard is hidden.
 
-  // Returns the width of the screen, taking the Android split view
-  // into account
-  public static double windowWidth() {
-    return m_instance.getWindow().getDecorView().getRootView().getWidth();
-  }
-
-  // Returns the bottom inset required to avoid system bars and display cutouts
-  public static double safeInsetBottom() {
-    if (Build.VERSION.SDK_INT >= 30) {
-      return m_instance.getWindow().getDecorView().getRootWindowInsets()
-          .getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.ime()
-              | WindowInsets.Type.displayCutout()).bottom;
+  private static double safeInset(int side) {
+    if (m_instance == null) {
+      return 0.0;
     }
-
-    return m_instance.getWindow().getDecorView().getRootWindowInsets().getSystemWindowInsetBottom();
+    WindowInsets insets = m_instance.getWindow().getDecorView().getRootWindowInsets();
+    if (insets == null) {
+      return 0.0;
+    }
+    if (Build.VERSION.SDK_INT >= 30) {
+      android.graphics.Insets in = insets.getInsets(WindowInsets.Type.ime()
+          | WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+      switch (side) {
+        case 0: return in.left;
+        case 1: return in.top;
+        case 2: return in.right;
+        default: return in.bottom;
+      }
+    }
+    switch (side) {
+      case 0: return insets.getSystemWindowInsetLeft();
+      case 1: return insets.getSystemWindowInsetTop();
+      case 2: return insets.getSystemWindowInsetRight();
+      default: return insets.getSystemWindowInsetBottom();
+    }
   }
 
-  // Returns the left inset required to avoid system bars and display cutouts
   public static double safeInsetLeft() {
-    if (Build.VERSION.SDK_INT >= 30) {
-      return m_instance.getWindow().getDecorView().getRootWindowInsets()
-          .getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.ime()
-              | WindowInsets.Type.displayCutout()).left;
-    }
-
-    return m_instance.getWindow().getDecorView().getRootWindowInsets().getSystemWindowInsetLeft();
+    return safeInset(0);
   }
 
-  // Returns the right inset required to avoid system bars and display cutouts
-  public static double safeInsetRight() {
-    if (Build.VERSION.SDK_INT >= 30) {
-      return m_instance.getWindow().getDecorView().getRootWindowInsets()
-          .getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.ime()
-              | WindowInsets.Type.displayCutout()).right;
-    }
-
-    return m_instance.getWindow().getDecorView().getRootWindowInsets().getSystemWindowInsetRight();
-  }
-
-  // Returns the top inset required to avoid system bars and display cutouts
   public static double safeInsetTop() {
-    if (Build.VERSION.SDK_INT >= 30) {
-      return m_instance.getWindow().getDecorView().getRootWindowInsets()
-          .getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.ime()
-              | WindowInsets.Type.displayCutout()).top;
-    }
+    return safeInset(1);
+  }
 
-    return m_instance.getWindow().getDecorView().getRootWindowInsets().getSystemWindowInsetTop();
+  public static double safeInsetRight() {
+    return safeInset(2);
+  }
+
+  public static double safeInsetBottom() {
+    return safeInset(3);
   }
 
   /*
