@@ -38,6 +38,10 @@ include(GNUInstallDirs)
 # Qt Setup
 #
 
+# LocationPrivate is a deliberate dependency (required by QMapLibre); silence the
+# private-module warning that Qt would otherwise print on every configure.
+set(QT_NO_PRIVATE_MODULE_WARNING ON)
+
 find_package(Qt6 6.9 COMPONENTS Bluetooth Concurrent Core Core5Compat Gui HttpServer LinguistTools Location LocationPrivate Positioning Quick QuickControls2 QuickWidgets Sql Svg TextToSpeech Widgets REQUIRED)
 set(QT_VERSION ${Qt6Core_VERSION})
 

@@ -65,7 +65,17 @@
       "Bash(curl -sL \"https://raw.githubusercontent.com/aosp-mirror/platform_libcore/main/mimemap/src/main/resources/res/android.mime.types\" -o android.mime.types)",
       "Bash(curl -sL \"https://android.googlesource.com/platform/libcore/+/master/luni/src/main/java/libcore/net/mime.types?format=TEXT\")",
       "WebFetch(domain:android.googlesource.com)",
-      "Bash(python3 -c \"import xml.dom.minidom; xml.dom.minidom.parse\\('/home/kebekus/Software/projects/enroute/src/AndroidManifest.xml.in'\\); print\\('manifest XML parses OK'\\)\")"
+      "Bash(python3 -c \"import xml.dom.minidom; xml.dom.minidom.parse\\('/home/kebekus/Software/projects/enroute/src/AndroidManifest.xml.in'\\); print\\('manifest XML parses OK'\\)\")",
+      "Bash(pkill -f 'build-android-release')",
+      "Bash(pkill -f 'fastlane android build')",
+      "Bash(FASTLANE_DISABLE_COLORS=1 fastlane android build)",
+      "Bash(git -C /home/kebekus/Software/projects/enroute diff --stat fastlane/README.md)",
+      "Read(//usr/lib/jvm/**)",
+      "Bash(java -version)",
+      "Bash(JAVA_HOME=/usr/lib/jvm/java-21-openjdk FASTLANE_DISABLE_COLORS=1 fastlane android build)",
+      "Bash(rpm -q java-21-openjdk-devel java-21-openjdk java-21-openjdk-headless)",
+      "Bash(/home/kebekus/Software/buildsystems/android-sdk/build-tools/36.0.0/aapt2 dump *)",
+      "Bash(git -C /home/kebekus/Software/projects/enroute diff --stat)"
     ],
     "additionalDirectories": [
       "/home/kebekus/Software/standards/Airspace/Sample CUB"

@@ -342,7 +342,7 @@ if(ANDROID)
 
     qt_add_executable(${PROJECT_NAME} ${SOURCES} ${ANDROID_EXTRA_SOURCES})
     qt_import_plugins(${PROJECT_NAME}
-        INCLUDE_BY_TYPE imageformats Qt::QSvgPlugin Qt::QJpegPlugin Qt::QWebpPlugin  Qt::QTiffPlugin Qt::QPngPlugin
+        INCLUDE_BY_TYPE imageformats Qt::QSvgPlugin Qt::QJpegPlugin Qt::QWebpPlugin  Qt::QTiffPlugin
         INCLUDE_BY_TYPE geoservices QMapLibre::PluginGeoServices
         EXCLUDE_BY_TYPE platforminputcontexts qmltooling
     )
@@ -356,6 +356,7 @@ if(ANDROID)
     add_android_openssl_libraries(${PROJECT_NAME})
     qmaplibre_location_setup_plugins(${PROJECT_NAME})
     set_target_properties(${PROJECT_NAME} PROPERTIES
+        QT_ANDROID_PACKAGE_NAME "de.akaflieg_freiburg.enroute"
         QT_ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/android"
         QT_ANDROID_TARGET_SDK_VERSION 35
         QT_ANDROID_MIN_SDK_VERSION 28
