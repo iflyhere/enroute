@@ -75,18 +75,18 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a9e59b713bde70fc8509f01dfafc9633f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Standard destructor. <br /></td></tr>
 <tr class="memitem:a0257d71c52c52752921333f4b9159616" id="r_a0257d71c52c52752921333f4b9159616"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a0257d71c52c52752921333f4b9159616">processPositionUpdate</a> (<a class="el" href="classFlightlog_1_1FlightDetector.html#a55c92fe2945c1541f2b95299089a237e">FlightDetector::DetectionState</a> state, const <a class="el" href="classPositioning_1_1PositionInfo.html">Positioning::PositionInfo</a> &amp;info, <a class="el" href="classUnits_1_1Distance.html">Units::Distance</a> pressureAltitude={})</td></tr>
 <tr class="memdesc:a0257d71c52c52752921333f4b9159616"><td class="mdescLeft">&#160;</td><td class="mdescRight">Process a position update with the current detection state.  <br /></td></tr>
-<tr class="memitem:ac17449ac2dd28a2d4c3c7ed0e9fa50a1" id="r_ac17449ac2dd28a2d4c3c7ed0e9fa50a1"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#ac17449ac2dd28a2d4c3c7ed0e9fa50a1">saveTrack</a> (<a class="el" href="classFlightlog_1_1Flight.html">Flight</a> &amp;flight)</td></tr>
-<tr class="memdesc:ac17449ac2dd28a2d4c3c7ed0e9fa50a1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Save the recorded track to an IGC file.  <br /></td></tr>
+<tr class="memitem:a8a1f47dc20e6ee88b6bf4deef68bec84" id="r_a8a1f47dc20e6ee88b6bf4deef68bec84"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#a8a1f47dc20e6ee88b6bf4deef68bec84">saveTrack</a> (<a class="el" href="classFlightlog_1_1Flight.html">Flight</a> &amp;flight)</td></tr>
+<tr class="memdesc:a8a1f47dc20e6ee88b6bf4deef68bec84"><td class="mdescLeft">&#160;</td><td class="mdescRight">Save the recorded track to an IGC file.  <br /></td></tr>
 <tr class="memitem:a9edb7843b424b3c0285fee9dd4de28d1" id="r_a9edb7843b424b3c0285fee9dd4de28d1"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a9edb7843b424b3c0285fee9dd4de28d1">clearTrack</a> ()</td></tr>
 <tr class="memdesc:a9edb7843b424b3c0285fee9dd4de28d1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Clear the in-memory track data.  <br /></td></tr>
 <tr class="memitem:a152ddb859630074875cff8105e6129a0" id="r_a152ddb859630074875cff8105e6129a0"><td class="memItemLeft">auto&#160;</td><td class="memItemRight"><a class="el" href="#a152ddb859630074875cff8105e6129a0">loadTrackPath</a> (const <a class="el" href="classFlightlog_1_1Flight.html">Flight</a> &amp;flight) const -&gt; QList&lt; QGeoCoordinate &gt;</td></tr>
 <tr class="memdesc:a152ddb859630074875cff8105e6129a0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load a track's coordinates from an IGC file.  <br /></td></tr>
-<tr class="memitem:a5656215fbae928a9b05488b7772ea310" id="r_a5656215fbae928a9b05488b7772ea310"><td class="memItemLeft">QByteArray&#160;</td><td class="memItemRight"><a class="el" href="#a5656215fbae928a9b05488b7772ea310">exportToIGC</a> (const <a class="el" href="classFlightlog_1_1Flight.html">Flight</a> &amp;flight)</td></tr>
-<tr class="memdesc:a5656215fbae928a9b05488b7772ea310"><td class="mdescLeft">&#160;</td><td class="mdescRight">Export a flight's track via the platform share dialog.  <br /></td></tr>
+<tr class="memitem:a235bf7bb532f738cde98f9a3524e744e" id="r_a235bf7bb532f738cde98f9a3524e744e"><td class="memItemLeft">QByteArray&#160;</td><td class="memItemRight"><a class="el" href="#a235bf7bb532f738cde98f9a3524e744e">exportToIGC</a> (const <a class="el" href="classFlightlog_1_1Flight.html">Flight</a> &amp;flight) const</td></tr>
+<tr class="memdesc:a235bf7bb532f738cde98f9a3524e744e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Export a flight's track via the platform share dialog.  <br /></td></tr>
 <tr class="memitem:ae11b9cafc1bf34e9c1dbb4e66abf0337" id="r_ae11b9cafc1bf34e9c1dbb4e66abf0337"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#ae11b9cafc1bf34e9c1dbb4e66abf0337">removeTrack</a> (<a class="el" href="classFlightlog_1_1Flight.html">Flight</a> &amp;flight)</td></tr>
 <tr class="memdesc:ae11b9cafc1bf34e9c1dbb4e66abf0337"><td class="mdescLeft">&#160;</td><td class="mdescRight">Delete the track file from disk.  <br /></td></tr>
-<tr class="memitem:a7d424e7c19647de9af1b79bf6b4f3f87" id="r_a7d424e7c19647de9af1b79bf6b4f3f87"><td class="memItemLeft">auto&#160;</td><td class="memItemRight"><a class="el" href="#a7d424e7c19647de9af1b79bf6b4f3f87">trackGeoPath</a> () const -&gt; QList&lt; QGeoCoordinate &gt;</td></tr>
-<tr class="memdesc:a7d424e7c19647de9af1b79bf6b4f3f87"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the current track as a list of coordinates.  <br /></td></tr>
+<tr class="memitem:a05eb691dcfa7f37a422bb39358389958" id="r_a05eb691dcfa7f37a422bb39358389958"><td class="memItemLeft">auto&#160;</td><td class="memItemRight"><a class="el" href="#a05eb691dcfa7f37a422bb39358389958">trackGeoPath</a> () const -&gt; QGeoPath</td></tr>
+<tr class="memdesc:a05eb691dcfa7f37a422bb39358389958"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the current track as a list of coordinates.  <br /></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-static-methods" class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
@@ -102,10 +102,10 @@ Static Public Member Functions</h2></td></tr>
 <ul>
 <li><b>TakeoffPhase → abort (Idle)</b>: Track is discarded on next cycle.</li>
 <li><b>LandingPhase → Idle</b>: Recording ends. Track saving is handled externally by FlightLog::onLandingDetected.</li>
-<li><b>LandingPhase → InFlight</b>: Touch-and-go — same as above, the detector transitions through Idle first. </li>
+<li><b>LandingPhase → InFlight</b>: Touch-and-go. <a class="el" href="classFlightlog_1_1FlightLog.html" title="Flight log manager with pluggable automatic flight detection.">FlightLog</a> must call <a class="el" href="#a0257d71c52c52752921333f4b9159616" title="Process a position update with the current detection state.">processPositionUpdate()</a> on the recorder <em>before</em> the detector so each position is committed to the correct leg regardless of whether the landingDetected connection is direct or queued. </li>
 </ul>
 
-<p class="definition">Definition at line <a class="el" href="FlightRecorder_8h_source.html#l00052">52</a> of file <a class="el" href="FlightRecorder_8h_source.html">FlightRecorder.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="FlightRecorder_8h_source.html#l00055">55</a> of file <a class="el" href="FlightRecorder_8h_source.html">FlightRecorder.h</a>.</p>
 </div><a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a56521012426e8929656977e82f0e42a2" name="a56521012426e8929656977e82f0e42a2"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a56521012426e8929656977e82f0e42a2">&#9670;&#160;</a></span>FlightRecorder()</h2>
@@ -157,23 +157,31 @@ Static Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Clear the in-memory track data. </p>
-<p>Frees the recorded track points from RAM. Call after <a class="el" href="#ac17449ac2dd28a2d4c3c7ed0e9fa50a1" title="Save the recorded track to an IGC file.">saveTrack()</a> and after caching the geo path for display. </p>
+<p>Frees the recorded track points from RAM. Call after <a class="el" href="#a8a1f47dc20e6ee88b6bf4deef68bec84" title="Save the recorded track to an IGC file.">saveTrack()</a> and after caching the geo path for display. </p>
 
 </div>
 </div>
-<a id="a5656215fbae928a9b05488b7772ea310" name="a5656215fbae928a9b05488b7772ea310"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5656215fbae928a9b05488b7772ea310">&#9670;&#160;</a></span>exportToIGC()</h2>
+<a id="a235bf7bb532f738cde98f9a3524e744e" name="a235bf7bb532f738cde98f9a3524e744e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a235bf7bb532f738cde98f9a3524e744e">&#9670;&#160;</a></span>exportToIGC()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">QByteArray Flightlog::FlightRecorder::exportToIGC </td>
           <td>(</td>
           <td class="paramtype">const <a class="el" href="classFlightlog_1_1Flight.html">Flight</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>flight</em></span></td><td>)</td>
-          <td></td>
+          <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Export a flight's track via the platform share dialog. </p>
@@ -286,14 +294,14 @@ Static Public Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="ac17449ac2dd28a2d4c3c7ed0e9fa50a1" name="ac17449ac2dd28a2d4c3c7ed0e9fa50a1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac17449ac2dd28a2d4c3c7ed0e9fa50a1">&#9670;&#160;</a></span>saveTrack()</h2>
+<a id="a8a1f47dc20e6ee88b6bf4deef68bec84" name="a8a1f47dc20e6ee88b6bf4deef68bec84"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8a1f47dc20e6ee88b6bf4deef68bec84">&#9670;&#160;</a></span>saveTrack()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void Flightlog::FlightRecorder::saveTrack </td>
+          <td class="memname">bool Flightlog::FlightRecorder::saveTrack </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="classFlightlog_1_1Flight.html">Flight</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>flight</em></span></td><td>)</td>
           <td></td>
@@ -305,10 +313,11 @@ Static Public Member Functions</h2></td></tr>
 <p>Writes the recorder's in-memory track as an IGC file in the tracks directory, using metadata from the flight. Sets the trackFile property on the flight.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">flight</td><td>The flight whose metadata to use for the IGC headers </td></tr>
+    <tr><td class="paramname">flight</td><td>The flight whose metadata to use for the IGC headers</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="section return"><dt>Returns</dt><dd>True if the track file was written successfully </dd></dl>
 
 </div>
 </div>
@@ -392,8 +401,8 @@ Static Public Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a7d424e7c19647de9af1b79bf6b4f3f87" name="a7d424e7c19647de9af1b79bf6b4f3f87"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7d424e7c19647de9af1b79bf6b4f3f87">&#9670;&#160;</a></span>trackGeoPath()</h2>
+<a id="a05eb691dcfa7f37a422bb39358389958" name="a05eb691dcfa7f37a422bb39358389958"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a05eb691dcfa7f37a422bb39358389958">&#9670;&#160;</a></span>trackGeoPath()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -405,7 +414,7 @@ Static Public Member Functions</h2></td></tr>
           <td class="memname">auto Flightlog::FlightRecorder::trackGeoPath </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td> const -&gt;  QList&lt; QGeoCoordinate &gt;</td>
+          <td> const -&gt;  QGeoPath</td>
         </tr>
       </table>
   </td>

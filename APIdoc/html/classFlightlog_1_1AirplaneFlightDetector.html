@@ -77,8 +77,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a09f6f2f70f475844f204c7ffa021d5f3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Standard destructor. <br /></td></tr>
 <tr class="memitem:a0284c27332c47411c1882db3029ee418" id="r_a0284c27332c47411c1882db3029ee418"><td class="memItemLeft">auto&#160;</td><td class="memItemRight"><a class="el" href="#a0284c27332c47411c1882db3029ee418">detectionState</a> () const -&gt; <a class="el" href="classFlightlog_1_1FlightDetector.html#a55c92fe2945c1541f2b95299089a237e">DetectionState</a> override</td></tr>
 <tr class="memdesc:a0284c27332c47411c1882db3029ee418"><td class="mdescLeft">&#160;</td><td class="mdescRight">Current detection state.  <br /></td></tr>
-<tr class="memitem:ae770086b45dbbc3aef3b5045f37b8781" id="r_ae770086b45dbbc3aef3b5045f37b8781"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#ae770086b45dbbc3aef3b5045f37b8781">processPositionUpdate</a> (<a class="el" href="classPositioning_1_1PositionInfo.html">Positioning::PositionInfo</a> info) override</td></tr>
-<tr class="memdesc:ae770086b45dbbc3aef3b5045f37b8781"><td class="mdescLeft">&#160;</td><td class="mdescRight">Process a position update.  <br /></td></tr>
+<tr class="memitem:a12c3483f511b62bed867866b927cd776" id="r_a12c3483f511b62bed867866b927cd776"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a12c3483f511b62bed867866b927cd776">processPositionUpdate</a> (const <a class="el" href="classPositioning_1_1PositionInfo.html">Positioning::PositionInfo</a> &amp;info) override</td></tr>
+<tr class="memdesc:a12c3483f511b62bed867866b927cd776"><td class="mdescLeft">&#160;</td><td class="mdescRight">Process a position update.  <br /></td></tr>
 <tr class="memitem:a027630bcd93a5ebd6e4a4fb9b5c736bd" id="r_a027630bcd93a5ebd6e4a4fb9b5c736bd"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a027630bcd93a5ebd6e4a4fb9b5c736bd">endFlight</a> () override</td></tr>
 <tr class="memdesc:a027630bcd93a5ebd6e4a4fb9b5c736bd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Manually end the current in-flight recording.  <br /></td></tr>
 <tr class="memitem:ad9eb7fdb00aeabe4d33d9f48849dac57" id="r_ad9eb7fdb00aeabe4d33d9f48849dac57"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#ad9eb7fdb00aeabe4d33d9f48849dac57">resetDetection</a> () override</td></tr>
@@ -103,10 +103,10 @@ Additional Inherited Members</h2></td></tr>
 <tr class="memitem:a89598c73612b9aeaf2df72fc01e726ed inherit signals_classFlightlog_1_1FlightDetector" id="r_a89598c73612b9aeaf2df72fc01e726ed"><td class="memItemLeft">
 void&#160;</td><td class="memItemRight"><b>detectionStateChanged</b> ()</td></tr>
 <tr class="memdesc:a89598c73612b9aeaf2df72fc01e726ed inherit signals_classFlightlog_1_1FlightDetector"><td class="mdescLeft">&#160;</td><td class="mdescRight">Emitted when the detection state changes. <br /></td></tr>
-<tr class="memitem:ac6b77b69f5d941e98c97c33c4d6abb2b inherit signals_classFlightlog_1_1FlightDetector" id="r_ac6b77b69f5d941e98c97c33c4d6abb2b"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="classFlightlog_1_1FlightDetector.html#ac6b77b69f5d941e98c97c33c4d6abb2b">takeoffDetected</a> (const QString &amp;departureICAO, const QGeoCoordinate &amp;departureCoordinate, const QDateTime &amp;startTime, const QString &amp;aircraftCallsign, const QString &amp;timeStr)</td></tr>
-<tr class="memdesc:ac6b77b69f5d941e98c97c33c4d6abb2b inherit signals_classFlightlog_1_1FlightDetector"><td class="mdescLeft">&#160;</td><td class="mdescRight">Emitted when a takeoff is confirmed.  <br /></td></tr>
-<tr class="memitem:a507016b2c94ba3fa5cea9217c5e1cffa inherit signals_classFlightlog_1_1FlightDetector" id="r_a507016b2c94ba3fa5cea9217c5e1cffa"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="classFlightlog_1_1FlightDetector.html#a507016b2c94ba3fa5cea9217c5e1cffa">landingDetected</a> (const QString &amp;arrivalICAO, const QGeoCoordinate &amp;arrivalCoordinate, const QDateTime &amp;landingTime, int landingCount, const QString &amp;timeStr)</td></tr>
-<tr class="memdesc:a507016b2c94ba3fa5cea9217c5e1cffa inherit signals_classFlightlog_1_1FlightDetector"><td class="mdescLeft">&#160;</td><td class="mdescRight">Emitted when a landing is confirmed.  <br /></td></tr>
+<tr class="memitem:ab3923149e23d20bc00c9d2c502815dd1 inherit signals_classFlightlog_1_1FlightDetector" id="r_ab3923149e23d20bc00c9d2c502815dd1"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="classFlightlog_1_1FlightDetector.html#ab3923149e23d20bc00c9d2c502815dd1">takeoffDetected</a> (const QString &amp;departureICAO, const QGeoCoordinate &amp;departureCoordinate, const QDateTime &amp;startTime, const QString &amp;aircraftCallsign)</td></tr>
+<tr class="memdesc:ab3923149e23d20bc00c9d2c502815dd1 inherit signals_classFlightlog_1_1FlightDetector"><td class="mdescLeft">&#160;</td><td class="mdescRight">Emitted when a takeoff is confirmed.  <br /></td></tr>
+<tr class="memitem:a43deb0febde973dd89c701c9ec5bbf8e inherit signals_classFlightlog_1_1FlightDetector" id="r_a43deb0febde973dd89c701c9ec5bbf8e"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="classFlightlog_1_1FlightDetector.html#a43deb0febde973dd89c701c9ec5bbf8e">landingDetected</a> (const QString &amp;arrivalICAO, const QGeoCoordinate &amp;arrivalCoordinate, const QDateTime &amp;landingTime, int landingCount)</td></tr>
+<tr class="memdesc:a43deb0febde973dd89c701c9ec5bbf8e inherit signals_classFlightlog_1_1FlightDetector"><td class="mdescLeft">&#160;</td><td class="mdescRight">Emitted when a landing is confirmed.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p><a class="el" href="classFlightlog_1_1Flight.html" title="A single flight log entry.">Flight</a> detection for powered aircraft. </p>
@@ -210,15 +210,15 @@ void&#160;</td><td class="memItemRight"><b>detectionStateChanged</b> ()</td></tr
 </div><div class="memdoc">
 
 <p>Manually end the current in-flight recording. </p>
-<p>If the detector is in the InFlight state, this creates a completed flight with the current UTC time as landing time and resolves the nearest airport if available. Resets the detection state to Idle.</p>
-<p>Does nothing if the detection state is not InFlight. </p>
+<p>If the detector is in the InFlight or LandingPhase state, this creates a completed flight with the current UTC time as landing time and resolves the nearest airport if available. The accumulated landing count from LandingPhase is preserved. Resets the detection state to Idle.</p>
+<p>Does nothing if the detection state is Idle or TakeoffPhase. </p>
 
 <p>Implements <a class="el" href="classFlightlog_1_1FlightDetector.html#a417e5ba6c519c5ac1eafb69aab63a831">Flightlog::FlightDetector</a>.</p>
 
 </div>
 </div>
-<a id="ae770086b45dbbc3aef3b5045f37b8781" name="ae770086b45dbbc3aef3b5045f37b8781"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae770086b45dbbc3aef3b5045f37b8781">&#9670;&#160;</a></span>processPositionUpdate()</h2>
+<a id="a12c3483f511b62bed867866b927cd776" name="a12c3483f511b62bed867866b927cd776"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a12c3483f511b62bed867866b927cd776">&#9670;&#160;</a></span>processPositionUpdate()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -229,7 +229,7 @@ void&#160;</td><td class="memItemRight"><b>detectionStateChanged</b> ()</td></tr
         <tr>
           <td class="memname">void Flightlog::AirplaneFlightDetector::processPositionUpdate </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classPositioning_1_1PositionInfo.html">Positioning::PositionInfo</a></td>          <td class="paramname"><span class="paramname"><em>info</em></span></td><td>)</td>
+          <td class="paramtype">const <a class="el" href="classPositioning_1_1PositionInfo.html">Positioning::PositionInfo</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>info</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -249,7 +249,7 @@ void&#160;</td><td class="memItemRight"><b>detectionStateChanged</b> ()</td></tr
   </dd>
 </dl>
 
-<p>Implements <a class="el" href="classFlightlog_1_1FlightDetector.html#af32a0aa22d83fa2b3f6bf382e8f7960d">Flightlog::FlightDetector</a>.</p>
+<p>Implements <a class="el" href="classFlightlog_1_1FlightDetector.html#a773c6b320850d47bd95ad1aa53f64eb8">Flightlog::FlightDetector</a>.</p>
 
 </div>
 </div>

@@ -52,6 +52,7 @@ $(function() {
 <a href="#signals">Signals</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-static-methods">Static Public Member Functions</a> &#124;
+<a href="#properties">Properties</a> &#124;
 <a href="classPlatform_1_1PlatformAdaptor__Abstract-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">Platform::PlatformAdaptor_Abstract Class Reference</div></div>
 </div><!--header-->
@@ -84,6 +85,9 @@ Public Slots</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-signals" class="groupheader"><a id="signals" name="signals"></a>
 Signals</h2></td></tr>
+<tr class="memitem:a510defb97c53bdbefda2aabe948aba28" id="r_a510defb97c53bdbefda2aabe948aba28"><td class="memItemLeft"><a id="a510defb97c53bdbefda2aabe948aba28" name="a510defb97c53bdbefda2aabe948aba28"></a>
+void&#160;</td><td class="memItemRight"><b>safeInsetsChanged</b> ()</td></tr>
+<tr class="memdesc:a510defb97c53bdbefda2aabe948aba28"><td class="mdescLeft">&#160;</td><td class="mdescRight">Notifier signal. <br /></td></tr>
 <tr class="memitem:a5e5b18d291a808d67af87f7442221fe2" id="r_a5e5b18d291a808d67af87f7442221fe2"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a5e5b18d291a808d67af87f7442221fe2">error</a> (const QString &amp;message)</td></tr>
 <tr class="memdesc:a5e5b18d291a808d67af87f7442221fe2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Emitted when an error occurs.  <br /></td></tr>
 <tr class="memitem:aeb6a8a24a09bad0e3a8571e66c78488a" id="r_aeb6a8a24a09bad0e3a8571e66c78488a"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#aeb6a8a24a09bad0e3a8571e66c78488a">languageChanged</a> ()</td></tr>
@@ -97,6 +101,8 @@ Signals</h2></td></tr>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:aac61d7122ddaae8c2fefd030826a655c" id="r_aac61d7122ddaae8c2fefd030826a655c"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="#aac61d7122ddaae8c2fefd030826a655c">PlatformAdaptor_Abstract</a> (QObject *parent=nullptr)</td></tr>
 <tr class="memdesc:aac61d7122ddaae8c2fefd030826a655c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Standard constructor.  <br /></td></tr>
+<tr class="memitem:a65a6ff0df333f361323c70648a6473e0" id="r_a65a6ff0df333f361323c70648a6473e0"><td class="memItemLeft">virtual QMarginsF&#160;</td><td class="memItemRight"><a class="el" href="#a65a6ff0df333f361323c70648a6473e0">safeInsets</a> () const</td></tr>
+<tr class="memdesc:a65a6ff0df333f361323c70648a6473e0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Getter function for the property with the same name.  <br /></td></tr>
 <tr class="memitem:ab845af74e1ffedd44b01cc8907db52db" id="r_ab845af74e1ffedd44b01cc8907db52db"><td class="memItemLeft">virtual Q_INVOKABLE QString&#160;</td><td class="memItemRight"><a class="el" href="#ab845af74e1ffedd44b01cc8907db52db">currentSSID</a> ()</td></tr>
 <tr class="memdesc:ab845af74e1ffedd44b01cc8907db52db"><td class="mdescLeft">&#160;</td><td class="mdescRight">SSID of current Wi-Fi network.  <br /></td></tr>
 <tr class="memitem:a4db6abd2332427f362c52b2e0ff034de" id="r_a4db6abd2332427f362c52b2e0ff034de"><td class="memItemLeft">virtual Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="#a4db6abd2332427f362c52b2e0ff034de">disableScreenSaver</a> ()</td></tr>
@@ -107,6 +113,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:ade510e669568d6c9fb3fa77994f7a303"><td class="mdescLeft">&#160;</td><td class="mdescRight">Open an external app or web site showing a satellite view.  <br /></td></tr>
 <tr class="memitem:a81fcd1a14c37093d15157b15daa50a96" id="r_a81fcd1a14c37093d15157b15daa50a96"><td class="memItemLeft">virtual Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="#a81fcd1a14c37093d15157b15daa50a96">setupInputMethodEventFilter</a> (QQuickItem *item)</td></tr>
 <tr class="memdesc:a81fcd1a14c37093d15157b15daa50a96"><td class="mdescLeft">&#160;</td><td class="mdescRight">Workaround for QTBUG-80790.  <br /></td></tr>
+<tr class="memitem:a34ac59c4a0d31554f7c6e49f1b5b5b3e" id="r_a34ac59c4a0d31554f7c6e49f1b5b5b3e"><td class="memItemLeft">virtual Q_INVOKABLE QString&#160;</td><td class="memItemRight"><a class="el" href="#a34ac59c4a0d31554f7c6e49f1b5b5b3e">versionNameForDisplay</a> ()</td></tr>
+<tr class="memdesc:a34ac59c4a0d31554f7c6e49f1b5b5b3e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the application version and adds git commit hash, if it's not the main branch.  <br /></td></tr>
 <tr class="memitem:ab6739c7b19f57e2a21079af9906ca56c" id="r_ab6739c7b19f57e2a21079af9906ca56c"><td class="memItemLeft">virtual Q_INVOKABLE QString&#160;</td><td class="memItemRight"><a class="el" href="#ab6739c7b19f57e2a21079af9906ca56c">systemInfo</a> ()</td></tr>
 <tr class="memdesc:ab6739c7b19f57e2a21079af9906ca56c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Information about the system, in HTML format.  <br /></td></tr>
 <tr class="memitem:a0490e905528b2edd36c77621f8f26814" id="r_a0490e905528b2edd36c77621f8f26814"><td class="memItemLeft">virtual Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="#a0490e905528b2edd36c77621f8f26814">vibrateBrief</a> ()</td></tr>
@@ -179,6 +187,11 @@ Static Public Member Functions</h2></td></tr>
 <tr class="memitem:abff9f661cf7e78967606d10692c03412 inherit pub_static_methods_classGlobalObject" id="r_abff9f661cf7e78967606d10692c03412"><td class="memItemLeft">static Q_INVOKABLE <a class="el" href="classWeather_1_1WeatherDataProvider.html">Weather::WeatherDataProvider</a> *&#160;</td><td class="memItemRight"><a class="el" href="classGlobalObject.html#abff9f661cf7e78967606d10692c03412">weatherDataProvider</a> ()</td></tr>
 <tr class="memdesc:abff9f661cf7e78967606d10692c03412 inherit pub_static_methods_classGlobalObject"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pointer to appplication-wide static WeatherDataProvider instance.  <br /></td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 id="header-properties" class="groupheader"><a id="properties" name="properties"></a>
+Properties</h2></td></tr>
+<tr class="memitem:a91875c0f9c24c9944d8b337d911205c5" id="r_a91875c0f9c24c9944d8b337d911205c5"><td class="memItemLeft">QMarginsF&#160;</td><td class="memItemRight"><a class="el" href="#a91875c0f9c24c9944d8b337d911205c5">safeInsets</a></td></tr>
+<tr class="memdesc:a91875c0f9c24c9944d8b337d911205c5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Safe-area insets of the application window (Android only).  <br /></td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-inherited" class="groupheader"><a id="inherited" name="inherited"></a>
 Additional Inherited Members</h2></td></tr>
 <tr class="inherit_header pro_methods_classGlobalObject"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pro_methods_classGlobalObject')"><span class="dynarrow"><span class="arrowhead closed"></span></span>Protected Member Functions inherited from <a class="el" href="classGlobalObject.html">GlobalObject</a></td></tr>
@@ -194,7 +207,7 @@ Additional Inherited Members</h2></td></tr>
 <li>If supported by the platform, child classes need to react to requests by the platform to open a file (e.g. a GeoJSON file containing a flight route). Once a request is received, the method processFileRequest() should be called. </li>
 </ul>
 
-<p class="definition">Definition at line <a class="el" href="PlatformAdaptor__Abstract_8h_source.html#l00053">53</a> of file <a class="el" href="PlatformAdaptor__Abstract_8h_source.html">PlatformAdaptor_Abstract.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PlatformAdaptor__Abstract_8h_source.html#l00054">54</a> of file <a class="el" href="PlatformAdaptor__Abstract_8h_source.html">PlatformAdaptor_Abstract.h</a>.</p>
 </div><a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="aac61d7122ddaae8c2fefd030826a655c" name="aac61d7122ddaae8c2fefd030826a655c"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aac61d7122ddaae8c2fefd030826a655c">&#9670;&#160;</a></span>PlatformAdaptor_Abstract()</h2>
@@ -286,7 +299,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented in <a class="el" href="classPlatform_1_1PlatformAdaptor.html#ac9afa49073d65afd354851379afe0986">Platform::PlatformAdaptor</a>, <a class="el" href="classPlatform_1_1PlatformAdaptor.html#ac9afa49073d65afd354851379afe0986">Platform::PlatformAdaptor</a>, <a class="el" href="classPlatform_1_1PlatformAdaptor.html#ac9afa49073d65afd354851379afe0986">Platform::PlatformAdaptor</a>, <a class="el" href="classPlatform_1_1PlatformAdaptor.html#ac9afa49073d65afd354851379afe0986">Platform::PlatformAdaptor</a>, and <a class="el" href="classPlatform_1_1PlatformAdaptor.html#ac9afa49073d65afd354851379afe0986">Platform::PlatformAdaptor</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="PlatformAdaptor__Abstract_8h_source.html#l00090">90</a> of file <a class="el" href="PlatformAdaptor__Abstract_8h_source.html">PlatformAdaptor_Abstract.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PlatformAdaptor__Abstract_8h_source.html#l00122">122</a> of file <a class="el" href="PlatformAdaptor__Abstract_8h_source.html">PlatformAdaptor_Abstract.h</a>.</p>
 
 </div>
 </div>
@@ -318,7 +331,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented in <a class="el" href="classPlatform_1_1PlatformAdaptor.html#aa576dfcc599121d187d40999654a67a3">Platform::PlatformAdaptor</a>, <a class="el" href="classPlatform_1_1PlatformAdaptor.html#aa576dfcc599121d187d40999654a67a3">Platform::PlatformAdaptor</a>, <a class="el" href="classPlatform_1_1PlatformAdaptor.html#aa576dfcc599121d187d40999654a67a3">Platform::PlatformAdaptor</a>, <a class="el" href="classPlatform_1_1PlatformAdaptor.html#aa576dfcc599121d187d40999654a67a3">Platform::PlatformAdaptor</a>, and <a class="el" href="classPlatform_1_1PlatformAdaptor.html#aa576dfcc599121d187d40999654a67a3">Platform::PlatformAdaptor</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="PlatformAdaptor__Abstract_8h_source.html#l00099">99</a> of file <a class="el" href="PlatformAdaptor__Abstract_8h_source.html">PlatformAdaptor_Abstract.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PlatformAdaptor__Abstract_8h_source.html#l00131">131</a> of file <a class="el" href="PlatformAdaptor__Abstract_8h_source.html">PlatformAdaptor_Abstract.h</a>.</p>
 
 </div>
 </div>
@@ -449,7 +462,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented in <a class="el" href="classPlatform_1_1PlatformAdaptor.html#ab3e670851224649b0eb2cead871fe50a">Platform::PlatformAdaptor</a>, <a class="el" href="classPlatform_1_1PlatformAdaptor.html#ab3e670851224649b0eb2cead871fe50a">Platform::PlatformAdaptor</a>, <a class="el" href="classPlatform_1_1PlatformAdaptor.html#ab3e670851224649b0eb2cead871fe50a">Platform::PlatformAdaptor</a>, and <a class="el" href="classPlatform_1_1PlatformAdaptor.html#ab3e670851224649b0eb2cead871fe50a">Platform::PlatformAdaptor</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="PlatformAdaptor__Abstract_8h_source.html#l00113">113</a> of file <a class="el" href="PlatformAdaptor__Abstract_8h_source.html">PlatformAdaptor_Abstract.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PlatformAdaptor__Abstract_8h_source.html#l00145">145</a> of file <a class="el" href="PlatformAdaptor__Abstract_8h_source.html">PlatformAdaptor_Abstract.h</a>.</p>
 
 </div>
 </div>
@@ -482,7 +495,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented in <a class="el" href="classPlatform_1_1PlatformAdaptor.html#a0594d8a1751db54ebd6155715d179b74">Platform::PlatformAdaptor</a>, <a class="el" href="classPlatform_1_1PlatformAdaptor.html#a0594d8a1751db54ebd6155715d179b74">Platform::PlatformAdaptor</a>, <a class="el" href="classPlatform_1_1PlatformAdaptor.html#a0594d8a1751db54ebd6155715d179b74">Platform::PlatformAdaptor</a>, <a class="el" href="classPlatform_1_1PlatformAdaptor.html#a0594d8a1751db54ebd6155715d179b74">Platform::PlatformAdaptor</a>, and <a class="el" href="classPlatform_1_1PlatformAdaptor.html#a0594d8a1751db54ebd6155715d179b74">Platform::PlatformAdaptor</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="PlatformAdaptor__Abstract_8h_source.html#l00193">193</a> of file <a class="el" href="PlatformAdaptor__Abstract_8h_source.html">PlatformAdaptor_Abstract.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PlatformAdaptor__Abstract_8h_source.html#l00231">231</a> of file <a class="el" href="PlatformAdaptor__Abstract_8h_source.html">PlatformAdaptor_Abstract.h</a>.</p>
 
 </div>
 </div>
@@ -517,6 +530,38 @@ Additional Inherited Members</h2></td></tr>
   </table>
   </dd>
 </dl>
+
+</div>
+</div>
+<a id="a65a6ff0df333f361323c70648a6473e0" name="a65a6ff0df333f361323c70648a6473e0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a65a6ff0df333f361323c70648a6473e0">&#9670;&#160;</a></span>safeInsets()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual QMarginsF Platform::PlatformAdaptor_Abstract::safeInsets </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel nodiscard">nodiscard</span><span class="mlabel virtual">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Getter function for the property with the same name. </p>
+<dl class="section return"><dt>Returns</dt><dd>Property safeInsets </dd></dl>
+
+<p>Reimplemented in <a class="el" href="classPlatform_1_1PlatformAdaptor.html#a689f5597818b777c8b779c43ad83088a">Platform::PlatformAdaptor</a>.</p>
+
+<p class="definition">Definition at line <a class="el" href="PlatformAdaptor__Abstract_8h_source.html#l00096">96</a> of file <a class="el" href="PlatformAdaptor__Abstract_8h_source.html">PlatformAdaptor_Abstract.h</a>.</p>
 
 </div>
 </div>
@@ -687,7 +732,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented in <a class="el" href="classPlatform_1_1PlatformAdaptor.html#a052242cc2a7e044f0666f33423f43054">Platform::PlatformAdaptor</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="PlatformAdaptor__Abstract_8h_source.html#l00138">138</a> of file <a class="el" href="PlatformAdaptor__Abstract_8h_source.html">PlatformAdaptor_Abstract.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PlatformAdaptor__Abstract_8h_source.html#l00170">170</a> of file <a class="el" href="PlatformAdaptor__Abstract_8h_source.html">PlatformAdaptor_Abstract.h</a>.</p>
 
 </div>
 </div>
@@ -721,6 +766,34 @@ Additional Inherited Members</h2></td></tr>
 
 </div>
 </div>
+<a id="a34ac59c4a0d31554f7c6e49f1b5b5b3e" name="a34ac59c4a0d31554f7c6e49f1b5b5b3e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a34ac59c4a0d31554f7c6e49f1b5b5b3e">&#9670;&#160;</a></span>versionNameForDisplay()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual Q_INVOKABLE QString Platform::PlatformAdaptor_Abstract::versionNameForDisplay </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel virtual">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Returns the application version and adds git commit hash, if it's not the main branch. </p>
+<dl class="section return"><dt>Returns</dt><dd>Version String </dd></dl>
+
+</div>
+</div>
 <a id="a0490e905528b2edd36c77621f8f26814" name="a0490e905528b2edd36c77621f8f26814"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a0490e905528b2edd36c77621f8f26814">&#9670;&#160;</a></span>vibrateBrief()</h2>
 
@@ -749,7 +822,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented in <a class="el" href="classPlatform_1_1PlatformAdaptor.html#aee82844ae442df23bdd2ab407c1887f6">Platform::PlatformAdaptor</a>, <a class="el" href="classPlatform_1_1PlatformAdaptor.html#aee82844ae442df23bdd2ab407c1887f6">Platform::PlatformAdaptor</a>, <a class="el" href="classPlatform_1_1PlatformAdaptor.html#aee82844ae442df23bdd2ab407c1887f6">Platform::PlatformAdaptor</a>, <a class="el" href="classPlatform_1_1PlatformAdaptor.html#aee82844ae442df23bdd2ab407c1887f6">Platform::PlatformAdaptor</a>, and <a class="el" href="classPlatform_1_1PlatformAdaptor.html#aee82844ae442df23bdd2ab407c1887f6">Platform::PlatformAdaptor</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="PlatformAdaptor__Abstract_8h_source.html#l00151">151</a> of file <a class="el" href="PlatformAdaptor__Abstract_8h_source.html">PlatformAdaptor_Abstract.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PlatformAdaptor__Abstract_8h_source.html#l00189">189</a> of file <a class="el" href="PlatformAdaptor__Abstract_8h_source.html">PlatformAdaptor_Abstract.h</a>.</p>
 
 </div>
 </div>
@@ -781,7 +854,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented in <a class="el" href="classPlatform_1_1PlatformAdaptor.html#a224659e7cce4e6cdf416183751c188c7">Platform::PlatformAdaptor</a>, <a class="el" href="classPlatform_1_1PlatformAdaptor.html#a224659e7cce4e6cdf416183751c188c7">Platform::PlatformAdaptor</a>, and <a class="el" href="classPlatform_1_1PlatformAdaptor.html#a224659e7cce4e6cdf416183751c188c7">Platform::PlatformAdaptor</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="PlatformAdaptor__Abstract_8h_source.html#l00159">159</a> of file <a class="el" href="PlatformAdaptor__Abstract_8h_source.html">PlatformAdaptor_Abstract.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PlatformAdaptor__Abstract_8h_source.html#l00197">197</a> of file <a class="el" href="PlatformAdaptor__Abstract_8h_source.html">PlatformAdaptor_Abstract.h</a>.</p>
 
 </div>
 </div>
@@ -810,6 +883,35 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Emitted when a new WiFi connections becomes available. </p>
 <p>This signal is emitted when a new WiFi connection becomes available. </p>
+
+</div>
+</div>
+<a name="doc-property-members" id="doc-property-members"></a><h2 id="header-doc-property-members" class="groupheader">Property Documentation</h2>
+<a id="a91875c0f9c24c9944d8b337d911205c5" name="a91875c0f9c24c9944d8b337d911205c5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a91875c0f9c24c9944d8b337d911205c5">&#9670;&#160;</a></span>safeInsets</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">QMarginsF Platform::PlatformAdaptor_Abstract::safeInsets</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel read">read</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Safe-area insets of the application window (Android only). </p>
+<p>On Android, this property holds the safe-area insets of the application window, in device-independent pixels: the union of the system bars, the display cutout and the virtual keyboard, as reported by the Android window system. The GUI uses these values instead of Qt's SafeArea margins, which are unreliable on Android in split-screen mode and do not handle the virtual keyboard consistently.</p>
+<p>On all other platforms, this property is a zero margin and unused; the GUI reads Qt's SafeArea attached property there. </p>
+
+<p class="definition">Definition at line <a class="el" href="PlatformAdaptor__Abstract_8h_source.html#l00085">85</a> of file <a class="el" href="PlatformAdaptor__Abstract_8h_source.html">PlatformAdaptor_Abstract.h</a>.</p>
 
 </div>
 </div>

@@ -106,24 +106,28 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a289f24ee86e8930c2116924126aa61ae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Standard destructor. <br /></td></tr>
 <tr class="memitem:ac7bfdf17956fb2f5813da91a798d8003" id="r_ac7bfdf17956fb2f5813da91a798d8003"><td class="memItemLeft">Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="#ac7bfdf17956fb2f5813da91a798d8003">addFlight</a> (const <a class="el" href="classFlightlog_1_1Flight.html">Flightlog::Flight</a> &amp;flight)</td></tr>
 <tr class="memdesc:ac7bfdf17956fb2f5813da91a798d8003"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a new flight to the log.  <br /></td></tr>
-<tr class="memitem:a5a76b9c013cdac88a534692601ceee08" id="r_a5a76b9c013cdac88a534692601ceee08"><td class="memItemLeft">Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="#a5a76b9c013cdac88a534692601ceee08">removeFlight</a> (int index)</td></tr>
-<tr class="memdesc:a5a76b9c013cdac88a534692601ceee08"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove a flight from the log.  <br /></td></tr>
-<tr class="memitem:a32c89bbc0e2d28e549a03123daac5b5c" id="r_a32c89bbc0e2d28e549a03123daac5b5c"><td class="memItemLeft">Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="#a32c89bbc0e2d28e549a03123daac5b5c">updateFlight</a> (int index, const <a class="el" href="classFlightlog_1_1Flight.html">Flightlog::Flight</a> &amp;flight)</td></tr>
-<tr class="memdesc:a32c89bbc0e2d28e549a03123daac5b5c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Update an existing flight in the log.  <br /></td></tr>
+<tr class="memitem:ae8a65e62bf349453450a0f418f3a8e50" id="r_ae8a65e62bf349453450a0f418f3a8e50"><td class="memItemLeft">Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="#ae8a65e62bf349453450a0f418f3a8e50">removeFlight</a> (const QString &amp;uuid)</td></tr>
+<tr class="memdesc:ae8a65e62bf349453450a0f418f3a8e50"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove a flight from the log by UUID.  <br /></td></tr>
+<tr class="memitem:a69173b90d2525591a4bf84c0cf4331d2" id="r_a69173b90d2525591a4bf84c0cf4331d2"><td class="memItemLeft">Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="#a69173b90d2525591a4bf84c0cf4331d2">removeFlights</a> (const QStringList &amp;uuids)</td></tr>
+<tr class="memdesc:a69173b90d2525591a4bf84c0cf4331d2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove multiple flights from the log by UUID.  <br /></td></tr>
+<tr class="memitem:aa17be5d9e9126f59c763b71695d875b7" id="r_aa17be5d9e9126f59c763b71695d875b7"><td class="memItemLeft">Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="#aa17be5d9e9126f59c763b71695d875b7">clearFlights</a> ()</td></tr>
+<tr class="memdesc:aa17be5d9e9126f59c763b71695d875b7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove all flights from the log.  <br /></td></tr>
+<tr class="memitem:ac942745b939e6dcc90e28a2588366a3c" id="r_ac942745b939e6dcc90e28a2588366a3c"><td class="memItemLeft">Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="#ac942745b939e6dcc90e28a2588366a3c">updateFlight</a> (const QString &amp;uuid, const <a class="el" href="classFlightlog_1_1Flight.html">Flightlog::Flight</a> &amp;flight)</td></tr>
+<tr class="memdesc:ac942745b939e6dcc90e28a2588366a3c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Update an existing flight in the log.  <br /></td></tr>
 <tr class="memitem:a8752a929f7c1c97c77f59463473a65ea" id="r_a8752a929f7c1c97c77f59463473a65ea"><td class="memItemLeft">Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="#a8752a929f7c1c97c77f59463473a65ea">endFlight</a> ()</td></tr>
 <tr class="memdesc:a8752a929f7c1c97c77f59463473a65ea"><td class="mdescLeft">&#160;</td><td class="mdescRight">Manually end the current in-flight recording.  <br /></td></tr>
 <tr class="memitem:a6145784132470ffa48aa309e52244148" id="r_a6145784132470ffa48aa309e52244148"><td class="memItemLeft">Q_INVOKABLE QString&#160;</td><td class="memItemRight"><a class="el" href="#a6145784132470ffa48aa309e52244148">lastArrivalICAO</a> (const QString &amp;aircraftCallsign) const</td></tr>
 <tr class="memdesc:a6145784132470ffa48aa309e52244148"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find the last arrival ICAO for a given aircraft.  <br /></td></tr>
-<tr class="memitem:aa1fbb7abc5f734c1460c3a7252b5c0b7" id="r_aa1fbb7abc5f734c1460c3a7252b5c0b7"><td class="memItemLeft">Q_INVOKABLE QByteArray&#160;</td><td class="memItemRight"><a class="el" href="#aa1fbb7abc5f734c1460c3a7252b5c0b7">exportToIGC</a> (int index)</td></tr>
-<tr class="memdesc:aa1fbb7abc5f734c1460c3a7252b5c0b7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get IGC track content for a flight.  <br /></td></tr>
-<tr class="memitem:ad62decd28051bd0e61e454d6eb36f92b" id="r_ad62decd28051bd0e61e454d6eb36f92b"><td class="memItemLeft">Q_INVOKABLE QByteArray&#160;</td><td class="memItemRight"><a class="el" href="#ad62decd28051bd0e61e454d6eb36f92b">exportToForeFlight</a> (const QVariantList &amp;indices)</td></tr>
-<tr class="memdesc:ad62decd28051bd0e61e454d6eb36f92b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate ForeFlight CSV content for selected flights.  <br /></td></tr>
-<tr class="memitem:adb8cd65ff496ead537f182f687100616" id="r_adb8cd65ff496ead537f182f687100616"><td class="memItemLeft">Q_INVOKABLE QByteArray&#160;</td><td class="memItemRight"><a class="el" href="#adb8cd65ff496ead537f182f687100616">exportToJSON</a> (const QVariantList &amp;indices)</td></tr>
-<tr class="memdesc:adb8cd65ff496ead537f182f687100616"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate JSON content for selected flights.  <br /></td></tr>
-<tr class="memitem:a9bed2e8f015091c8a1dafb5b0b792f78" id="r_a9bed2e8f015091c8a1dafb5b0b792f78"><td class="memItemLeft">Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="#a9bed2e8f015091c8a1dafb5b0b792f78">removeTrack</a> (int index)</td></tr>
-<tr class="memdesc:a9bed2e8f015091c8a1dafb5b0b792f78"><td class="mdescLeft">&#160;</td><td class="mdescRight">Delete the recorded track for a flight.  <br /></td></tr>
-<tr class="memitem:a56ac60f94f4c2b7dadfc13eaa8709bcd" id="r_a56ac60f94f4c2b7dadfc13eaa8709bcd"><td class="memItemLeft">Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="#a56ac60f94f4c2b7dadfc13eaa8709bcd">showTrack</a> (int index)</td></tr>
-<tr class="memdesc:a56ac60f94f4c2b7dadfc13eaa8709bcd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Show a flight's track on the map.  <br /></td></tr>
+<tr class="memitem:ae25fa207500ec133239f27a9304a6af8" id="r_ae25fa207500ec133239f27a9304a6af8"><td class="memItemLeft">Q_INVOKABLE QByteArray&#160;</td><td class="memItemRight"><a class="el" href="#ae25fa207500ec133239f27a9304a6af8">exportToIGC</a> (const QString &amp;uuid) const</td></tr>
+<tr class="memdesc:ae25fa207500ec133239f27a9304a6af8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get IGC track content for a flight.  <br /></td></tr>
+<tr class="memitem:a02dc509ffd20c8a9f88cba5b0eb86eeb" id="r_a02dc509ffd20c8a9f88cba5b0eb86eeb"><td class="memItemLeft">Q_INVOKABLE QByteArray&#160;</td><td class="memItemRight"><a class="el" href="#a02dc509ffd20c8a9f88cba5b0eb86eeb">exportToForeFlight</a> (const QStringList &amp;uuids) const</td></tr>
+<tr class="memdesc:a02dc509ffd20c8a9f88cba5b0eb86eeb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate ForeFlight CSV content for selected flights.  <br /></td></tr>
+<tr class="memitem:a63ef59615a9b7840f249c9768f95ff35" id="r_a63ef59615a9b7840f249c9768f95ff35"><td class="memItemLeft">Q_INVOKABLE QByteArray&#160;</td><td class="memItemRight"><a class="el" href="#a63ef59615a9b7840f249c9768f95ff35">exportToJSON</a> (const QStringList &amp;uuids) const</td></tr>
+<tr class="memdesc:a63ef59615a9b7840f249c9768f95ff35"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate JSON content for selected flights.  <br /></td></tr>
+<tr class="memitem:aadc8dd375ef86a1ecc595298e6f11c1c" id="r_aadc8dd375ef86a1ecc595298e6f11c1c"><td class="memItemLeft">Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="#aadc8dd375ef86a1ecc595298e6f11c1c">removeTrack</a> (const QString &amp;uuid)</td></tr>
+<tr class="memdesc:aadc8dd375ef86a1ecc595298e6f11c1c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Delete the recorded track for a flight.  <br /></td></tr>
+<tr class="memitem:a660c46267e58da175caed97a28c2a43c" id="r_a660c46267e58da175caed97a28c2a43c"><td class="memItemLeft">Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="#a660c46267e58da175caed97a28c2a43c">showTrack</a> (const QString &amp;uuid)</td></tr>
+<tr class="memdesc:a660c46267e58da175caed97a28c2a43c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Show a flight's track on the map.  <br /></td></tr>
 <tr class="memitem:a6c3efc538dd2ca57553a25cca16db5dd" id="r_a6c3efc538dd2ca57553a25cca16db5dd"><td class="memItemLeft"><a id="a6c3efc538dd2ca57553a25cca16db5dd" name="a6c3efc538dd2ca57553a25cca16db5dd"></a>
 Q_INVOKABLE void&#160;</td><td class="memItemRight"><b>hideTrack</b> ()</td></tr>
 <tr class="memdesc:a6c3efc538dd2ca57553a25cca16db5dd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Hide the currently displayed track from the map. <br /></td></tr>
@@ -137,8 +141,8 @@ Q_INVOKABLE void&#160;</td><td class="memItemRight"><b>hideTrack</b> ()</td></tr
 Static Public Member Functions</h2></td></tr>
 <tr class="memitem:ac4b77b90436fab2e527c1ac6d4d7099a" id="r_ac4b77b90436fab2e527c1ac6d4d7099a"><td class="memItemLeft">static Q_INVOKABLE <a class="el" href="classFlightlog_1_1Flight.html">Flightlog::Flight</a>&#160;</td><td class="memItemRight"><a class="el" href="#ac4b77b90436fab2e527c1ac6d4d7099a">createFlight</a> (const QString &amp;departureICAO, const QString &amp;arrivalICAO, const QString &amp;date, const QString &amp;offBlockTimeStr, const QString &amp;startTimeStr, const QString &amp;landingTimeStr, const QString &amp;onBlockTimeStr, const QString &amp;pilotName, const QString &amp;aircraftCallsign, const QString &amp;comments)</td></tr>
 <tr class="memdesc:ac4b77b90436fab2e527c1ac6d4d7099a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a <a class="el" href="classFlightlog_1_1Flight.html" title="A single flight log entry.">Flight</a> value from individual field strings.  <br /></td></tr>
-<tr class="memitem:ac40080184d8547c374a5cd7c8efe320f" id="r_ac40080184d8547c374a5cd7c8efe320f"><td class="memItemLeft">static Q_INVOKABLE <a class="el" href="classGeoMaps_1_1Waypoint.html">GeoMaps::Waypoint</a>&#160;</td><td class="memItemRight"><a class="el" href="#ac40080184d8547c374a5cd7c8efe320f">nearestAirfield</a> (const QGeoCoordinate &amp;position={})</td></tr>
-<tr class="memdesc:ac40080184d8547c374a5cd7c8efe320f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find the nearest airfield within 5 km.  <br /></td></tr>
+<tr class="memitem:a66f3ea4814c97a09cd21cd0ec85536df" id="r_a66f3ea4814c97a09cd21cd0ec85536df"><td class="memItemLeft">static Q_INVOKABLE <a class="el" href="classGeoMaps_1_1Waypoint.html">GeoMaps::Waypoint</a>&#160;</td><td class="memItemRight"><a class="el" href="#a66f3ea4814c97a09cd21cd0ec85536df">nearestAirfield</a> (const QGeoCoordinate &amp;position={}, double proximityM=5000.0)</td></tr>
+<tr class="memdesc:a66f3ea4814c97a09cd21cd0ec85536df"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find the nearest airfield within 5 km.  <br /></td></tr>
 <tr class="inherit_header pub_static_methods_classGlobalObject"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_static_methods_classGlobalObject')"><span class="dynarrow"><span class="arrowhead closed"></span></span>Static Public Member Functions inherited from <a class="el" href="classGlobalObject.html">GlobalObject</a></td></tr>
 <tr class="memitem:ae5d0c94af509c9744e1b344201928715 inherit pub_static_methods_classGlobalObject" id="r_ae5d0c94af509c9744e1b344201928715"><td class="memItemLeft">static void&#160;</td><td class="memItemRight"><a class="el" href="classGlobalObject.html#ae5d0c94af509c9744e1b344201928715">clear</a> ()</td></tr>
 <tr class="memdesc:ae5d0c94af509c9744e1b344201928715 inherit pub_static_methods_classGlobalObject"><td class="mdescLeft">&#160;</td><td class="mdescRight">Deletes all globally defined objects.  <br /></td></tr>
@@ -198,10 +202,10 @@ QList&lt; <a class="el" href="classFlightlog_1_1Flight.html">Flightlog::Flight</
 <tr class="memitem:a653279d9e11ec56df9a27f718368bc30" id="r_a653279d9e11ec56df9a27f718368bc30"><td class="memItemLeft"><a id="a653279d9e11ec56df9a27f718368bc30" name="a653279d9e11ec56df9a27f718368bc30"></a>
 int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 <tr class="memdesc:a653279d9e11ec56df9a27f718368bc30"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of recorded flights. <br /></td></tr>
-<tr class="memitem:a794bcb219f48beae35eb0a0945528aeb" id="r_a794bcb219f48beae35eb0a0945528aeb"><td class="memItemLeft">QList&lt; QGeoCoordinate &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a794bcb219f48beae35eb0a0945528aeb">displayedTrackPath</a></td></tr>
-<tr class="memdesc:a794bcb219f48beae35eb0a0945528aeb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Coordinates of the track currently displayed on the map.  <br /></td></tr>
-<tr class="memitem:a0cdd20aba30b47915000c7e09a20266d" id="r_a0cdd20aba30b47915000c7e09a20266d"><td class="memItemLeft">int&#160;</td><td class="memItemRight"><a class="el" href="#a0cdd20aba30b47915000c7e09a20266d">displayedTrackIndex</a></td></tr>
-<tr class="memdesc:a0cdd20aba30b47915000c7e09a20266d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Index of the flight whose track is displayed, or -1 if none.  <br /></td></tr>
+<tr class="memitem:af829025e455ac8770785d566d4b81a45" id="r_af829025e455ac8770785d566d4b81a45"><td class="memItemLeft">QGeoPath&#160;</td><td class="memItemRight"><a class="el" href="#af829025e455ac8770785d566d4b81a45">displayedTrackPath</a></td></tr>
+<tr class="memdesc:af829025e455ac8770785d566d4b81a45"><td class="mdescLeft">&#160;</td><td class="mdescRight">Coordinates of the track currently displayed on the map.  <br /></td></tr>
+<tr class="memitem:a76a727a77370a0adffbe06514938d0b4" id="r_a76a727a77370a0adffbe06514938d0b4"><td class="memItemLeft">QString&#160;</td><td class="memItemRight"><a class="el" href="#a76a727a77370a0adffbe06514938d0b4">displayedTrackUuid</a></td></tr>
+<tr class="memdesc:a76a727a77370a0adffbe06514938d0b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">UUID of the flight whose track is displayed, or empty string if none.  <br /></td></tr>
 <tr class="memitem:ac4968fa19aab49a2ac2488775dea5184" id="r_ac4968fa19aab49a2ac2488775dea5184"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#ac4968fa19aab49a2ac2488775dea5184">trackRecording</a></td></tr>
 <tr class="memdesc:ac4968fa19aab49a2ac2488775dea5184"><td class="mdescLeft">&#160;</td><td class="mdescRight">Whether GPS track recording is enabled.  <br /></td></tr>
 <tr class="memitem:a711d529d30b6632d6f2fe1806e2d1007" id="r_a711d529d30b6632d6f2fe1806e2d1007"><td class="memItemLeft">bool&#160;</td><td class="memItemRight"><a class="el" href="#a711d529d30b6632d6f2fe1806e2d1007">showCurrentFlightTrace</a></td></tr>
@@ -212,7 +216,7 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 <p>This class manages a persistent list of flight log entries and provides CRUD operations for flights. Automatic takeoff/landing detection is delegated to a <a class="el" href="classFlightlog_1_1FlightDetector.html" title="Abstract base class for automatic flight detection strategies.">FlightDetector</a> subclass, which can be swapped at runtime to support different types of flying (e.g. powered aircraft, paragliders).</p>
 <p>The detection state is forwarded from the active <a class="el" href="classFlightlog_1_1FlightDetector.html" title="Abstract base class for automatic flight detection strategies.">FlightDetector</a> and exposed to QML via the detectionState property. </p>
 
-<p class="definition">Definition at line <a class="el" href="FlightLog_8h_source.html#l00049">49</a> of file <a class="el" href="FlightLog_8h_source.html">FlightLog.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="FlightLog_8h_source.html#l00052">52</a> of file <a class="el" href="FlightLog_8h_source.html">FlightLog.h</a>.</p>
 </div><a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a553f021ac75d268ae8599633f309772d" name="a553f021ac75d268ae8599633f309772d"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a553f021ac75d268ae8599633f309772d">&#9670;&#160;</a></span>FlightLog()</h2>
@@ -271,6 +275,26 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
   </table>
   </dd>
 </dl>
+
+</div>
+</div>
+<a id="aa17be5d9e9126f59c763b71695d875b7" name="aa17be5d9e9126f59c763b71695d875b7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa17be5d9e9126f59c763b71695d875b7">&#9670;&#160;</a></span>clearFlights()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">Q_INVOKABLE void Flightlog::FlightLog::clearFlights </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Remove all flights from the log. </p>
+<p>Deletes every flight entry and its associated track file, then saves and emits <a class="el" href="#a05df8a8cdb8aa725562f3113299bc5ca" title="Notifier signal.">flightsChanged()</a> once. </p>
 
 </div>
 </div>
@@ -408,30 +432,38 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 </div><div class="memdoc">
 
 <p>Manually end the current in-flight recording. </p>
-<p>Delegates to the active <a class="el" href="classFlightlog_1_1FlightDetector.html" title="Abstract base class for automatic flight detection strategies.">FlightDetector</a>. If the detector is in InFlight state, it completes the flight entry with the current UTC time. Does nothing if not in InFlight state. </p>
+<p>Delegates to the active <a class="el" href="classFlightlog_1_1FlightDetector.html" title="Abstract base class for automatic flight detection strategies.">FlightDetector</a>. If the detector is in InFlight or LandingPhase state, it completes the flight entry with the current UTC time. Does nothing if not in InFlight or LandingPhase. </p>
 
 </div>
 </div>
-<a id="ad62decd28051bd0e61e454d6eb36f92b" name="ad62decd28051bd0e61e454d6eb36f92b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad62decd28051bd0e61e454d6eb36f92b">&#9670;&#160;</a></span>exportToForeFlight()</h2>
+<a id="a02dc509ffd20c8a9f88cba5b0eb86eeb" name="a02dc509ffd20c8a9f88cba5b0eb86eeb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a02dc509ffd20c8a9f88cba5b0eb86eeb">&#9670;&#160;</a></span>exportToForeFlight()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">Q_INVOKABLE QByteArray Flightlog::FlightLog::exportToForeFlight </td>
           <td>(</td>
-          <td class="paramtype">const QVariantList &amp;</td>          <td class="paramname"><span class="paramname"><em>indices</em></span></td><td>)</td>
-          <td></td>
+          <td class="paramtype">const QStringList &amp;</td>          <td class="paramname"><span class="paramname"><em>uuids</em></span></td><td>)</td>
+          <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Generate ForeFlight CSV content for selected flights. </p>
-<p>Returns the CSV bytes ready for sharing. If <code class="param">indices</code> is empty, all flights are included.</p>
+<p>Returns the CSV bytes ready for sharing. If <code class="param">uuids</code> is empty, all flights are included.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">indices</td><td>Indices of the flights to include; empty means all </td></tr>
+    <tr><td class="paramname">uuids</td><td>UUIDs of the flights to include; empty means all </td></tr>
   </table>
   </dd>
 </dl>
@@ -439,26 +471,34 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 
 </div>
 </div>
-<a id="aa1fbb7abc5f734c1460c3a7252b5c0b7" name="aa1fbb7abc5f734c1460c3a7252b5c0b7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa1fbb7abc5f734c1460c3a7252b5c0b7">&#9670;&#160;</a></span>exportToIGC()</h2>
+<a id="ae25fa207500ec133239f27a9304a6af8" name="ae25fa207500ec133239f27a9304a6af8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae25fa207500ec133239f27a9304a6af8">&#9670;&#160;</a></span>exportToIGC()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">Q_INVOKABLE QByteArray Flightlog::FlightLog::exportToIGC </td>
           <td>(</td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>index</em></span></td><td>)</td>
-          <td></td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>uuid</em></span></td><td>)</td>
+          <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Get IGC track content for a flight. </p>
 <p>Returns the raw IGC file bytes ready for sharing. Returns an empty array if the flight has no track or the file cannot be read.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">index</td><td>The index of the flight to export </td></tr>
+    <tr><td class="paramname">uuid</td><td>UUID of the flight to export (with or without braces) </td></tr>
   </table>
   </dd>
 </dl>
@@ -466,26 +506,34 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 
 </div>
 </div>
-<a id="adb8cd65ff496ead537f182f687100616" name="adb8cd65ff496ead537f182f687100616"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adb8cd65ff496ead537f182f687100616">&#9670;&#160;</a></span>exportToJSON()</h2>
+<a id="a63ef59615a9b7840f249c9768f95ff35" name="a63ef59615a9b7840f249c9768f95ff35"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a63ef59615a9b7840f249c9768f95ff35">&#9670;&#160;</a></span>exportToJSON()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">Q_INVOKABLE QByteArray Flightlog::FlightLog::exportToJSON </td>
           <td>(</td>
-          <td class="paramtype">const QVariantList &amp;</td>          <td class="paramname"><span class="paramname"><em>indices</em></span></td><td>)</td>
-          <td></td>
+          <td class="paramtype">const QStringList &amp;</td>          <td class="paramname"><span class="paramname"><em>uuids</em></span></td><td>)</td>
+          <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Generate JSON content for selected flights. </p>
-<p>Returns the JSON bytes ready for sharing. Uses the same internal format as the persisted flight log file. If <code class="param">indices</code> is empty, all flights are included.</p>
+<p>Returns the JSON bytes ready for sharing. Uses the same internal format as the persisted flight log file. If <code class="param">uuids</code> is empty, all flights are included.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">indices</td><td>Indices of the flights to include; empty means all </td></tr>
+    <tr><td class="paramname">uuids</td><td>UUIDs of the flights to include; empty means all </td></tr>
   </table>
   </dd>
 </dl>
@@ -553,8 +601,8 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 
 </div>
 </div>
-<a id="ac40080184d8547c374a5cd7c8efe320f" name="ac40080184d8547c374a5cd7c8efe320f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac40080184d8547c374a5cd7c8efe320f">&#9670;&#160;</a></span>nearestAirfield()</h2>
+<a id="a66f3ea4814c97a09cd21cd0ec85536df" name="a66f3ea4814c97a09cd21cd0ec85536df"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a66f3ea4814c97a09cd21cd0ec85536df">&#9670;&#160;</a></span>nearestAirfield()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -565,8 +613,12 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
         <tr>
           <td class="memname">Q_INVOKABLE <a class="el" href="classGeoMaps_1_1Waypoint.html">GeoMaps::Waypoint</a> Flightlog::FlightLog::nearestAirfield </td>
           <td>(</td>
-          <td class="paramtype">const QGeoCoordinate &amp;</td>          <td class="paramname"><span class="paramname"><em>position</em></span><span class="paramdefsep"> = </span><span class="paramdefval">{}</span></td><td>)</td>
+          <td class="paramtype">const QGeoCoordinate &amp;</td>          <td class="paramname"><span class="paramname"><em>position</em></span><span class="paramdefsep"> = </span><span class="paramdefval">{}</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>proximityM</em></span><span class="paramdefsep"> = </span><span class="paramdefval">5000.0</span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -577,10 +629,11 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 </div><div class="memdoc">
 
 <p>Find the nearest airfield within 5 km. </p>
-<p>Returns the closest airfield (type "AD") to the given position, provided it is within 5 km. Returns an invalid Waypoint if none found. If no position is given (or an invalid one), the last valid coordinate from PositionProvider is used.</p>
+<p>Returns the closest airfield (type "AD") to the given position, provided it is within <code class="param">proximityM</code> metres. Returns an invalid Waypoint if none found. If no position is given (or an invalid one), the last valid coordinate from PositionProvider is used.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">position</td><td>The geographic position to search near (default: current GPS position) </td></tr>
+    <tr><td class="paramname">proximityM</td><td>Maximum search radius in metres (default: 5000) </td></tr>
   </table>
   </dd>
 </dl>
@@ -588,8 +641,8 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 
 </div>
 </div>
-<a id="a5a76b9c013cdac88a534692601ceee08" name="a5a76b9c013cdac88a534692601ceee08"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5a76b9c013cdac88a534692601ceee08">&#9670;&#160;</a></span>removeFlight()</h2>
+<a id="ae8a65e62bf349453450a0f418f3a8e50" name="ae8a65e62bf349453450a0f418f3a8e50"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae8a65e62bf349453450a0f418f3a8e50">&#9670;&#160;</a></span>removeFlight()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -597,24 +650,51 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
         <tr>
           <td class="memname">Q_INVOKABLE void Flightlog::FlightLog::removeFlight </td>
           <td>(</td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>index</em></span></td><td>)</td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>uuid</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p>Remove a flight from the log. </p>
+<p>Remove a flight from the log by UUID. </p>
+<p>Does nothing if no flight with the given UUID exists.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">index</td><td>The index of the flight to remove </td></tr>
+    <tr><td class="paramname">uuid</td><td>The UUID of the flight to remove (with or without braces) </td></tr>
   </table>
   </dd>
 </dl>
 
 </div>
 </div>
-<a id="a9bed2e8f015091c8a1dafb5b0b792f78" name="a9bed2e8f015091c8a1dafb5b0b792f78"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9bed2e8f015091c8a1dafb5b0b792f78">&#9670;&#160;</a></span>removeTrack()</h2>
+<a id="a69173b90d2525591a4bf84c0cf4331d2" name="a69173b90d2525591a4bf84c0cf4331d2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a69173b90d2525591a4bf84c0cf4331d2">&#9670;&#160;</a></span>removeFlights()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">Q_INVOKABLE void Flightlog::FlightLog::removeFlights </td>
+          <td>(</td>
+          <td class="paramtype">const QStringList &amp;</td>          <td class="paramname"><span class="paramname"><em>uuids</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Remove multiple flights from the log by UUID. </p>
+<p>Removes all flights whose UUIDs appear in <code class="param">uuids</code>. Saves and emits <a class="el" href="#a05df8a8cdb8aa725562f3113299bc5ca" title="Notifier signal.">flightsChanged()</a> exactly once regardless of how many are removed. Does nothing if none of the UUIDs match.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">uuids</td><td>UUIDs of the flights to remove (with or without braces) </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="aadc8dd375ef86a1ecc595298e6f11c1c" name="aadc8dd375ef86a1ecc595298e6f11c1c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aadc8dd375ef86a1ecc595298e6f11c1c">&#9670;&#160;</a></span>removeTrack()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -622,7 +702,7 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
         <tr>
           <td class="memname">Q_INVOKABLE void Flightlog::FlightLog::removeTrack </td>
           <td>(</td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>index</em></span></td><td>)</td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>uuid</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -632,7 +712,7 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 <p>Removes the IGC file from disk and clears the trackFile property on the flight entry.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">index</td><td>The index of the flight whose track to delete </td></tr>
+    <tr><td class="paramname">uuid</td><td>UUID of the flight whose track to delete (with or without braces) </td></tr>
   </table>
   </dd>
 </dl>
@@ -673,8 +753,8 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 
 </div>
 </div>
-<a id="a56ac60f94f4c2b7dadfc13eaa8709bcd" name="a56ac60f94f4c2b7dadfc13eaa8709bcd"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a56ac60f94f4c2b7dadfc13eaa8709bcd">&#9670;&#160;</a></span>showTrack()</h2>
+<a id="a660c46267e58da175caed97a28c2a43c" name="a660c46267e58da175caed97a28c2a43c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a660c46267e58da175caed97a28c2a43c">&#9670;&#160;</a></span>showTrack()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -682,7 +762,7 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
         <tr>
           <td class="memname">Q_INVOKABLE void Flightlog::FlightLog::showTrack </td>
           <td>(</td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>index</em></span></td><td>)</td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>uuid</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -692,7 +772,7 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 <p>Loads the track if needed and sets it as the displayed track. Only one track can be displayed at a time.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">index</td><td>The index of the flight whose track to show </td></tr>
+    <tr><td class="paramname">uuid</td><td>UUID of the flight whose track to show (with or without braces) </td></tr>
   </table>
   </dd>
 </dl>
@@ -732,8 +812,8 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 
 </div>
 </div>
-<a id="a32c89bbc0e2d28e549a03123daac5b5c" name="a32c89bbc0e2d28e549a03123daac5b5c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a32c89bbc0e2d28e549a03123daac5b5c">&#9670;&#160;</a></span>updateFlight()</h2>
+<a id="ac942745b939e6dcc90e28a2588366a3c" name="ac942745b939e6dcc90e28a2588366a3c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac942745b939e6dcc90e28a2588366a3c">&#9670;&#160;</a></span>updateFlight()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -741,7 +821,7 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
         <tr>
           <td class="memname">Q_INVOKABLE void Flightlog::FlightLog::updateFlight </td>
           <td>(</td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>index</em></span>, </td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>uuid</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -755,7 +835,7 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 <p>Coordinates are re-resolved from the ICAO codes. If resolution fails, old coordinates are preserved.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">index</td><td>The index of the flight to update </td></tr>
+    <tr><td class="paramname">uuid</td><td>UUID of the flight to update (with or without braces) </td></tr>
     <tr><td class="paramname">flight</td><td>The updated flight data </td></tr>
   </table>
   </dd>
@@ -764,8 +844,8 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 </div>
 </div>
 <a name="doc-property-members" id="doc-property-members"></a><h2 id="header-doc-property-members" class="groupheader">Property Documentation</h2>
-<a id="a0cdd20aba30b47915000c7e09a20266d" name="a0cdd20aba30b47915000c7e09a20266d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0cdd20aba30b47915000c7e09a20266d">&#9670;&#160;</a></span>displayedTrackIndex</h2>
+<a id="af829025e455ac8770785d566d4b81a45" name="af829025e455ac8770785d566d4b81a45"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af829025e455ac8770785d566d4b81a45">&#9670;&#160;</a></span>displayedTrackPath</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -774,34 +854,7 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">int Flightlog::FlightLog::displayedTrackIndex</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel read">read</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Index of the flight whose track is displayed, or -1 if none. </p>
-<p>Computed from the displayed track file. Returns -1 when showing the live track or no track. </p>
-
-<p class="definition">Definition at line <a class="el" href="FlightLog_8h_source.html#l00113">113</a> of file <a class="el" href="FlightLog_8h_source.html">FlightLog.h</a>.</p>
-
-</div>
-</div>
-<a id="a794bcb219f48beae35eb0a0945528aeb" name="a794bcb219f48beae35eb0a0945528aeb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a794bcb219f48beae35eb0a0945528aeb">&#9670;&#160;</a></span>displayedTrackPath</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">QList&lt;QGeoCoordinate&gt; Flightlog::FlightLog::displayedTrackPath</td>
+          <td class="memname">QGeoPath Flightlog::FlightLog::displayedTrackPath</td>
         </tr>
       </table>
   </td>
@@ -814,7 +867,34 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 <p>Coordinates of the track currently displayed on the map. </p>
 <p>Returns the geo path of the selected saved track, or the live recording track if in flight and no saved track is selected. Empty when no track is displayed. </p>
 
-<p class="definition">Definition at line <a class="el" href="FlightLog_8h_source.html#l00105">105</a> of file <a class="el" href="FlightLog_8h_source.html">FlightLog.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="FlightLog_8h_source.html#l00108">108</a> of file <a class="el" href="FlightLog_8h_source.html">FlightLog.h</a>.</p>
+
+</div>
+</div>
+<a id="a76a727a77370a0adffbe06514938d0b4" name="a76a727a77370a0adffbe06514938d0b4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a76a727a77370a0adffbe06514938d0b4">&#9670;&#160;</a></span>displayedTrackUuid</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">QString Flightlog::FlightLog::displayedTrackUuid</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel read">read</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>UUID of the flight whose track is displayed, or empty string if none. </p>
+<p>Computed from the displayed track file. Returns an empty string when showing the live track or no track. </p>
+
+<p class="definition">Definition at line <a class="el" href="FlightLog_8h_source.html#l00116">116</a> of file <a class="el" href="FlightLog_8h_source.html">FlightLog.h</a>.</p>
 
 </div>
 </div>
@@ -841,7 +921,7 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 <p>Whether the live trace of the current flight is shown on map. </p>
 <p>When true, the current in-memory live track is exposed through displayedTrackPath while no saved track is selected. Default is true. </p>
 
-<p class="definition">Definition at line <a class="el" href="FlightLog_8h_source.html#l00130">130</a> of file <a class="el" href="FlightLog_8h_source.html">FlightLog.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="FlightLog_8h_source.html#l00133">133</a> of file <a class="el" href="FlightLog_8h_source.html">FlightLog.h</a>.</p>
 
 </div>
 </div>
@@ -868,7 +948,7 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 <p>Whether GPS track recording is enabled. </p>
 <p>When true, the recorder captures track points during flight and saves them as IGC files on landing. Default is true. </p>
 
-<p class="definition">Definition at line <a class="el" href="FlightLog_8h_source.html#l00121">121</a> of file <a class="el" href="FlightLog_8h_source.html">FlightLog.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="FlightLog_8h_source.html#l00124">124</a> of file <a class="el" href="FlightLog_8h_source.html">FlightLog.h</a>.</p>
 
 </div>
 </div>

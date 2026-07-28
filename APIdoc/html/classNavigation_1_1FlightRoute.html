@@ -136,6 +136,10 @@ Q_INVOKABLE void&#160;</td><td class="memItemRight"><b>reverse</b> ()</td></tr>
 <tr class="memdesc:a30ee6879225c4314e21fb7a6f2c2ebb5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Exports to route to GeoJSON.  <br /></td></tr>
 <tr class="memitem:ab1ad073b327824c9fe76fbe23bb20ea6" id="r_ab1ad073b327824c9fe76fbe23bb20ea6"><td class="memItemLeft">Q_INVOKABLE QByteArray&#160;</td><td class="memItemRight"><a class="el" href="#ab1ad073b327824c9fe76fbe23bb20ea6">toGpx</a> () const</td></tr>
 <tr class="memdesc:ab1ad073b327824c9fe76fbe23bb20ea6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Exports to route to GPX.  <br /></td></tr>
+<tr class="memitem:a0cbc0fb476b635badceee2d1f52b8f86" id="r_a0cbc0fb476b635badceee2d1f52b8f86"><td class="memItemLeft">Q_INVOKABLE QByteArray&#160;</td><td class="memItemRight"><a class="el" href="#a0cbc0fb476b635badceee2d1f52b8f86">toFpl</a> () const</td></tr>
+<tr class="memdesc:a0cbc0fb476b635badceee2d1f52b8f86"><td class="mdescLeft">&#160;</td><td class="mdescRight">Exports to route to Garmin FPL.  <br /></td></tr>
+<tr class="memitem:a1089719f80633f7622cf8e70e634f3a5" id="r_a1089719f80633f7622cf8e70e634f3a5"><td class="memItemLeft">Q_INVOKABLE QByteArray&#160;</td><td class="memItemRight"><a class="el" href="#a1089719f80633f7622cf8e70e634f3a5">toPln</a> () const</td></tr>
+<tr class="memdesc:a1089719f80633f7622cf8e70e634f3a5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Exports to route to MSFS PLN.  <br /></td></tr>
 <tr class="memitem:a9d47d3bae6d9795c95581925e79968b9" id="r_a9d47d3bae6d9795c95581925e79968b9"><td class="memItemLeft">Q_INVOKABLE QString&#160;</td><td class="memItemRight"><a class="el" href="#a9d47d3bae6d9795c95581925e79968b9">toVfrFlightPlan</a> () const</td></tr>
 <tr class="memdesc:a9d47d3bae6d9795c95581925e79968b9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Exports to route to VFR Flight Plan Format.  <br /></td></tr>
 <tr class="memitem:a379303853fa1ba20f0ec8741179a58d8" id="r_a379303853fa1ba20f0ec8741179a58d8"><td class="memItemLeft">Q_INVOKABLE bool&#160;</td><td class="memItemRight"><a class="el" href="#a379303853fa1ba20f0ec8741179a58d8">operator==</a> (const <a class="el" href="classNavigation_1_1FlightRoute.html">Navigation::FlightRoute</a> &amp;other) const</td></tr>
@@ -799,7 +803,7 @@ qsizetype&#160;</td><td class="memItemRight"><b>size</b></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True on equality </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="FlightRoute_8h_source.html#l00411">411</a> of file <a class="el" href="FlightRoute_8h_source.html">FlightRoute.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="FlightRoute_8h_source.html#l00431">431</a> of file <a class="el" href="FlightRoute_8h_source.html">FlightRoute.h</a>.</p>
 
 </div>
 </div>
@@ -982,6 +986,35 @@ qsizetype&#160;</td><td class="memItemRight"><b>size</b></td></tr>
 
 </div>
 </div>
+<a id="a0cbc0fb476b635badceee2d1f52b8f86" name="a0cbc0fb476b635badceee2d1f52b8f86"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0cbc0fb476b635badceee2d1f52b8f86">&#9670;&#160;</a></span>toFpl()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">Q_INVOKABLE QByteArray Navigation::FlightRoute::toFpl </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Exports to route to Garmin FPL. </p>
+<p>This method serialises the current flight route as a Garmin FPL document. The document conforms to the specification outlined <a href="https://www8.garmin.com/xmlschemas/FlightPlanv1.xsd">here</a></p>
+<dl class="section return"><dt>Returns</dt><dd>QByteArray containing FPL data describing the flight route </dd></dl>
+
+</div>
+</div>
 <a id="a30ee6879225c4314e21fb7a6f2c2ebb5" name="a30ee6879225c4314e21fb7a6f2c2ebb5"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a30ee6879225c4314e21fb7a6f2c2ebb5">&#9670;&#160;</a></span>toGeoJSON()</h2>
 
@@ -1037,6 +1070,35 @@ qsizetype&#160;</td><td class="memItemRight"><b>size</b></td></tr>
 <p>Exports to route to GPX. </p>
 <p>This method serialises the current flight route as a GPX document. The document conforms to the specification outlined <a href="https://www.topografix.com/gpx.asp">here</a></p>
 <dl class="section return"><dt>Returns</dt><dd>QByteArray containing GPX data describing the flight route </dd></dl>
+
+</div>
+</div>
+<a id="a1089719f80633f7622cf8e70e634f3a5" name="a1089719f80633f7622cf8e70e634f3a5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1089719f80633f7622cf8e70e634f3a5">&#9670;&#160;</a></span>toPln()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">Q_INVOKABLE QByteArray Navigation::FlightRoute::toPln </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Exports to route to MSFS PLN. </p>
+<p>This method serialises the current flight route as an MSFS PLN document. The document conforms to the specification outlined <a href="https://docs.flightsimulator.com/html/Content_Configuration/Flights_And_Missions/Flight_Plan_Definitions.htm">here</a></p>
+<dl class="section return"><dt>Returns</dt><dd>QByteArray containing PLN data describing the flight route </dd></dl>
 
 </div>
 </div>

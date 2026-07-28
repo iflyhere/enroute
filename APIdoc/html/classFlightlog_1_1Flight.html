@@ -63,9 +63,9 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-methods" class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a05699901e7187084d266fefb3b555855" id="r_a05699901e7187084d266fefb3b555855"><td class="memItemLeft"><a id="a05699901e7187084d266fefb3b555855" name="a05699901e7187084d266fefb3b555855"></a>
-&#160;</td><td class="memItemRight"><b>Flight</b> ()=default</td></tr>
-<tr class="memdesc:a05699901e7187084d266fefb3b555855"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor. <br /></td></tr>
+<tr class="memitem:a64becd28cbc6387cb14e26875d0ba022" id="r_a64becd28cbc6387cb14e26875d0ba022"><td class="memItemLeft"><a id="a64becd28cbc6387cb14e26875d0ba022" name="a64becd28cbc6387cb14e26875d0ba022"></a>
+&#160;</td><td class="memItemRight"><b>Flight</b> ()</td></tr>
+<tr class="memdesc:a64becd28cbc6387cb14e26875d0ba022"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor — generates a unique identity. <br /></td></tr>
 <tr class="memitem:aba3b9c936fb8160225ca402a3307890e" id="r_aba3b9c936fb8160225ca402a3307890e"><td class="memItemLeft">auto&#160;</td><td class="memItemRight"><a class="el" href="#aba3b9c936fb8160225ca402a3307890e">departureICAO</a> () const -&gt; QString</td></tr>
 <tr class="memdesc:aba3b9c936fb8160225ca402a3307890e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Getter function for property of the same name.  <br /></td></tr>
 <tr class="memitem:a6cf4739e578c12572fb41aab9bddacb2" id="r_a6cf4739e578c12572fb41aab9bddacb2"><td class="memItemLeft">auto&#160;</td><td class="memItemRight"><a class="el" href="#a6cf4739e578c12572fb41aab9bddacb2">arrivalICAO</a> () const -&gt; QString</td></tr>
@@ -135,11 +135,14 @@ Public Member Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-static-methods" class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
-<tr class="memitem:ae94043af20f606127ad6657363bdb9d3" id="r_ae94043af20f606127ad6657363bdb9d3"><td class="memItemLeft">static auto&#160;</td><td class="memItemRight"><a class="el" href="#ae94043af20f606127ad6657363bdb9d3">fromJSON</a> (const QJsonObject &amp;json) -&gt; <a class="el" href="#a05699901e7187084d266fefb3b555855">Flight</a></td></tr>
+<tr class="memitem:ae94043af20f606127ad6657363bdb9d3" id="r_ae94043af20f606127ad6657363bdb9d3"><td class="memItemLeft">static auto&#160;</td><td class="memItemRight"><a class="el" href="#ae94043af20f606127ad6657363bdb9d3">fromJSON</a> (const QJsonObject &amp;json) -&gt; <a class="el" href="#a64becd28cbc6387cb14e26875d0ba022">Flight</a></td></tr>
 <tr class="memdesc:ae94043af20f606127ad6657363bdb9d3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Deserialize from JSON.  <br /></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-properties" class="groupheader"><a id="properties" name="properties"></a>
 Properties</h2></td></tr>
+<tr class="memitem:a411f85aae3574069ccdc80094acff835" id="r_a411f85aae3574069ccdc80094acff835"><td class="memItemLeft"><a id="a411f85aae3574069ccdc80094acff835" name="a411f85aae3574069ccdc80094acff835"></a>
+QUuid&#160;</td><td class="memItemRight"><b>uuid</b></td></tr>
+<tr class="memdesc:a411f85aae3574069ccdc80094acff835"><td class="mdescLeft">&#160;</td><td class="mdescRight">Unique identity of this flight entry (stable across sorting and edits). <br /></td></tr>
 <tr class="memitem:aebed0fd917da079cd6c865373983fffb" id="r_aebed0fd917da079cd6c865373983fffb"><td class="memItemLeft"><a id="aebed0fd917da079cd6c865373983fffb" name="aebed0fd917da079cd6c865373983fffb"></a>
 QString&#160;</td><td class="memItemRight"><b>departureICAO</b></td></tr>
 <tr class="memdesc:aebed0fd917da079cd6c865373983fffb"><td class="mdescLeft">&#160;</td><td class="mdescRight">ICAO code of the departure airport. <br /></td></tr>
@@ -181,7 +184,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
 <div class="textblock"><p>A single flight log entry. </p>
 <p>This class represents a single flight with departure/arrival airports, times, and optional metadata. It can compute the direct distance between departure and arrival, and the flight duration. </p>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00039">39</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00040">40</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 </div><a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
 <a id="a49ff9a9575f02f40a27871ca8d6e0b50" name="a49ff9a9575f02f40a27871ca8d6e0b50"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a49ff9a9575f02f40a27871ca8d6e0b50">&#9670;&#160;</a></span>aircraftCallsign()</h2>
@@ -209,7 +212,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
 <p>Getter function for property of the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property aircraftCallsign </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00134">134</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00140">140</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -239,7 +242,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
 <p>Coordinate of the arrival airport. </p>
 <dl class="section return"><dt>Returns</dt><dd>The arrival airport coordinate, or an invalid coordinate if unknown </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00158">158</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00164">164</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -269,7 +272,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
 <p>Getter function for property of the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property arrivalICAO </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00098">98</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00104">104</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -328,7 +331,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
 <p>Getter function for property of the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property comments </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00140">140</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00146">146</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -358,7 +361,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
 <p>Coordinate of the departure airport. </p>
 <dl class="section return"><dt>Returns</dt><dd>The departure airport coordinate, or an invalid coordinate if unknown </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00152">152</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00158">158</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -388,7 +391,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
 <p>Getter function for property of the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property departureICAO </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00092">92</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00098">98</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -489,7 +492,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
           <td class="memname">auto Flightlog::Flight::fromJSON </td>
           <td>(</td>
           <td class="paramtype">const QJsonObject &amp;</td>          <td class="paramname"><span class="paramname"><em>json</em></span></td><td>)</td>
-          <td> -&gt;  <a class="el" href="#a05699901e7187084d266fefb3b555855">Flight</a></td>
+          <td> -&gt;  <a class="el" href="#a64becd28cbc6387cb14e26875d0ba022">Flight</a></td>
         </tr>
       </table>
   </td>
@@ -536,7 +539,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
 <p>Check if this flight has a recorded GPS track. </p>
 <dl class="section return"><dt>Returns</dt><dd>True if a track file is associated with this flight </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00164">164</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00170">170</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -566,7 +569,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
 <p>Getter function for property of the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property landingCount </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00146">146</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00152">152</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -596,7 +599,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
 <p>Getter function for property of the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property landingTime </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00116">116</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00122">122</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -626,7 +629,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
 <p>Getter function for property of the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property offBlockTime </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00104">104</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00110">110</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -656,7 +659,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
 <p>Getter function for property of the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property onBlockTime </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00122">122</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00128">128</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -712,7 +715,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
 <p>Getter function for property of the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property pilotName </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00128">128</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00134">134</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -747,7 +750,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00222">222</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00228">228</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -782,7 +785,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00246">246</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00252">252</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -817,7 +820,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00186">186</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00192">192</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -852,7 +855,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00228">228</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00234">234</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -887,7 +890,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00240">240</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00246">246</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -922,7 +925,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00180">180</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00186">186</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -957,7 +960,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00234">234</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00240">240</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -992,7 +995,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00204">204</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00210">210</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -1027,7 +1030,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00192">192</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00198">198</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -1062,7 +1065,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00210">210</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00216">216</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -1097,7 +1100,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00216">216</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00222">222</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -1132,7 +1135,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00198">198</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00204">204</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -1167,7 +1170,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00252">252</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00258">258</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -1197,7 +1200,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
 <p>Getter function for property of the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property startTime </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00110">110</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00116">116</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>
@@ -1255,7 +1258,7 @@ QString&#160;</td><td class="memItemRight"><b>trackFile</b></td></tr>
 <p>Get the track file name. </p>
 <dl class="section return"><dt>Returns</dt><dd>The track file name (relative to tracks directory), or empty </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00170">170</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="Flight_8h_source.html#l00176">176</a> of file <a class="el" href="Flight_8h_source.html">Flight.h</a>.</p>
 
 </div>
 </div>

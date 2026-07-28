@@ -84,6 +84,8 @@ Inheritance diagram for Platform::PlatformAdaptor:</div>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a2e767fa1e4b2a4e9c2227f3639ff62c0" id="r_a2e767fa1e4b2a4e9c2227f3639ff62c0"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="#a2e767fa1e4b2a4e9c2227f3639ff62c0">PlatformAdaptor</a> (QObject *parent=nullptr)</td></tr>
 <tr class="memdesc:a2e767fa1e4b2a4e9c2227f3639ff62c0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Standard constructor.  <br /></td></tr>
+<tr class="memitem:a689f5597818b777c8b779c43ad83088a" id="r_a689f5597818b777c8b779c43ad83088a"><td class="memItemLeft">QMarginsF&#160;</td><td class="memItemRight"><a class="el" href="#a689f5597818b777c8b779c43ad83088a">safeInsets</a> () const override</td></tr>
+<tr class="memdesc:a689f5597818b777c8b779c43ad83088a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Re-implements a virtual method from <a class="el" href="classPlatform_1_1PlatformAdaptor__Abstract.html" title="Interface to platform-specific functionality.">PlatformAdaptor_Abstract</a>.  <br /></td></tr>
 <tr class="memitem:ac9afa49073d65afd354851379afe0986" id="r_ac9afa49073d65afd354851379afe0986"><td class="memItemLeft">QString&#160;</td><td class="memItemRight"><a class="el" href="#ac9afa49073d65afd354851379afe0986">currentSSID</a> () override</td></tr>
 <tr class="memdesc:ac9afa49073d65afd354851379afe0986"><td class="mdescLeft">&#160;</td><td class="mdescRight">Implements a pure virtual method from <a class="el" href="classPlatform_1_1PlatformAdaptor__Abstract.html" title="Interface to platform-specific functionality.">PlatformAdaptor_Abstract</a>.  <br /></td></tr>
 <tr class="memitem:aa576dfcc599121d187d40999654a67a3" id="r_aa576dfcc599121d187d40999654a67a3"><td class="memItemLeft"><a id="aa576dfcc599121d187d40999654a67a3" name="aa576dfcc599121d187d40999654a67a3"></a>
@@ -189,6 +191,8 @@ void&#160;</td><td class="memItemRight"><b>onGUISetupCompleted</b> () override</
 <tr class="memdesc:aac61d7122ddaae8c2fefd030826a655c inherit pub_methods_classPlatform_1_1PlatformAdaptor__Abstract"><td class="mdescLeft">&#160;</td><td class="mdescRight">Standard constructor.  <br /></td></tr>
 <tr class="memitem:ade510e669568d6c9fb3fa77994f7a303 inherit pub_methods_classPlatform_1_1PlatformAdaptor__Abstract" id="r_ade510e669568d6c9fb3fa77994f7a303"><td class="memItemLeft">virtual Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="classPlatform_1_1PlatformAdaptor__Abstract.html#ade510e669568d6c9fb3fa77994f7a303">openSatView</a> (const QGeoCoordinate &amp;coordinate)</td></tr>
 <tr class="memdesc:ade510e669568d6c9fb3fa77994f7a303 inherit pub_methods_classPlatform_1_1PlatformAdaptor__Abstract"><td class="mdescLeft">&#160;</td><td class="mdescRight">Open an external app or web site showing a satellite view.  <br /></td></tr>
+<tr class="memitem:a34ac59c4a0d31554f7c6e49f1b5b5b3e inherit pub_methods_classPlatform_1_1PlatformAdaptor__Abstract" id="r_a34ac59c4a0d31554f7c6e49f1b5b5b3e"><td class="memItemLeft">virtual Q_INVOKABLE QString&#160;</td><td class="memItemRight"><a class="el" href="classPlatform_1_1PlatformAdaptor__Abstract.html#a34ac59c4a0d31554f7c6e49f1b5b5b3e">versionNameForDisplay</a> ()</td></tr>
+<tr class="memdesc:a34ac59c4a0d31554f7c6e49f1b5b5b3e inherit pub_methods_classPlatform_1_1PlatformAdaptor__Abstract"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the application version and adds git commit hash, if it's not the main branch.  <br /></td></tr>
 <tr class="inherit_header pub_methods_classGlobalObject"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classGlobalObject')"><span class="dynarrow"><span class="arrowhead closed"></span></span>Public Member Functions inherited from <a class="el" href="classGlobalObject.html">GlobalObject</a></td></tr>
 <tr class="memitem:ac8dfa53c492975de42fa7972e77abbc1 inherit pub_methods_classGlobalObject" id="r_ac8dfa53c492975de42fa7972e77abbc1"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="classGlobalObject.html#ac8dfa53c492975de42fa7972e77abbc1">GlobalObject</a> (QObject *parent=nullptr)</td></tr>
 <tr class="memdesc:ac8dfa53c492975de42fa7972e77abbc1 inherit pub_methods_classGlobalObject"><td class="mdescLeft">&#160;</td><td class="mdescRight">Standard constructor.  <br /></td></tr>
@@ -204,6 +208,9 @@ void&#160;</td><td class="memItemRight"><b>deferredInitialization</b> () overrid
 <tr class="heading"><td colspan="2"><h2 id="header-inherited" class="groupheader"><a id="inherited" name="inherited"></a>
 Additional Inherited Members</h2></td></tr>
 <tr class="inherit_header signals_classPlatform_1_1PlatformAdaptor__Abstract"><td colspan="2" onclick="javascript:dynsection.toggleInherit('signals_classPlatform_1_1PlatformAdaptor__Abstract')"><span class="dynarrow"><span class="arrowhead closed"></span></span>Signals inherited from <a class="el" href="classPlatform_1_1PlatformAdaptor__Abstract.html">Platform::PlatformAdaptor_Abstract</a></td></tr>
+<tr class="memitem:a510defb97c53bdbefda2aabe948aba28 inherit signals_classPlatform_1_1PlatformAdaptor__Abstract" id="r_a510defb97c53bdbefda2aabe948aba28"><td class="memItemLeft">
+void&#160;</td><td class="memItemRight"><b>safeInsetsChanged</b> ()</td></tr>
+<tr class="memdesc:a510defb97c53bdbefda2aabe948aba28 inherit signals_classPlatform_1_1PlatformAdaptor__Abstract"><td class="mdescLeft">&#160;</td><td class="mdescRight">Notifier signal. <br /></td></tr>
 <tr class="memitem:a5e5b18d291a808d67af87f7442221fe2 inherit signals_classPlatform_1_1PlatformAdaptor__Abstract" id="r_a5e5b18d291a808d67af87f7442221fe2"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="classPlatform_1_1PlatformAdaptor__Abstract.html#a5e5b18d291a808d67af87f7442221fe2">error</a> (const QString &amp;message)</td></tr>
 <tr class="memdesc:a5e5b18d291a808d67af87f7442221fe2 inherit signals_classPlatform_1_1PlatformAdaptor__Abstract"><td class="mdescLeft">&#160;</td><td class="mdescRight">Emitted when an error occurs.  <br /></td></tr>
 <tr class="memitem:aeb6a8a24a09bad0e3a8571e66c78488a inherit signals_classPlatform_1_1PlatformAdaptor__Abstract" id="r_aeb6a8a24a09bad0e3a8571e66c78488a"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="classPlatform_1_1PlatformAdaptor__Abstract.html#aeb6a8a24a09bad0e3a8571e66c78488a">languageChanged</a> ()</td></tr>
@@ -266,13 +273,16 @@ Additional Inherited Members</h2></td></tr>
 <tr class="memdesc:a0fe5454852ab2b913efe469bfd2630b4 inherit pub_static_methods_classGlobalObject"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pointer to appplication-wide static WaypointLibrary instance.  <br /></td></tr>
 <tr class="memitem:abff9f661cf7e78967606d10692c03412 inherit pub_static_methods_classGlobalObject" id="r_abff9f661cf7e78967606d10692c03412"><td class="memItemLeft">static Q_INVOKABLE <a class="el" href="classWeather_1_1WeatherDataProvider.html">Weather::WeatherDataProvider</a> *&#160;</td><td class="memItemRight"><a class="el" href="classGlobalObject.html#abff9f661cf7e78967606d10692c03412">weatherDataProvider</a> ()</td></tr>
 <tr class="memdesc:abff9f661cf7e78967606d10692c03412 inherit pub_static_methods_classGlobalObject"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pointer to appplication-wide static WeatherDataProvider instance.  <br /></td></tr>
+<tr class="inherit_header properties_classPlatform_1_1PlatformAdaptor__Abstract"><td colspan="2" onclick="javascript:dynsection.toggleInherit('properties_classPlatform_1_1PlatformAdaptor__Abstract')"><span class="dynarrow"><span class="arrowhead closed"></span></span>Properties inherited from <a class="el" href="classPlatform_1_1PlatformAdaptor__Abstract.html">Platform::PlatformAdaptor_Abstract</a></td></tr>
+<tr class="memitem:a91875c0f9c24c9944d8b337d911205c5 inherit properties_classPlatform_1_1PlatformAdaptor__Abstract" id="r_a91875c0f9c24c9944d8b337d911205c5"><td class="memItemLeft">QMarginsF&#160;</td><td class="memItemRight"><a class="el" href="classPlatform_1_1PlatformAdaptor__Abstract.html#a91875c0f9c24c9944d8b337d911205c5">safeInsets</a></td></tr>
+<tr class="memdesc:a91875c0f9c24c9944d8b337d911205c5 inherit properties_classPlatform_1_1PlatformAdaptor__Abstract"><td class="mdescLeft">&#160;</td><td class="mdescRight">Safe-area insets of the application window (Android only).  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Implementation of <a class="el" href="classPlatform_1_1PlatformAdaptor.html" title="Implementation of PlatformAdaptor for Android devices.">PlatformAdaptor</a> for Android devices. </p>
 <p>Implementation of <a class="el" href="classPlatform_1_1PlatformAdaptor.html" title="Implementation of PlatformAdaptor for Android devices.">PlatformAdaptor</a> for Linux desktop devices.</p>
 <p>Template implementation of <a class="el" href="classPlatform_1_1PlatformAdaptor.html" title="Implementation of PlatformAdaptor for Android devices.">PlatformAdaptor</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="PlatformAdaptor__Android_8h_source.html#l00034">34</a> of file <a class="el" href="PlatformAdaptor__Android_8h_source.html">PlatformAdaptor_Android.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PlatformAdaptor__Android_8h_source.html#l00036">36</a> of file <a class="el" href="PlatformAdaptor__Android_8h_source.html">PlatformAdaptor_Android.h</a>.</p>
 </div><a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a2e767fa1e4b2a4e9c2227f3639ff62c0" name="a2e767fa1e4b2a4e9c2227f3639ff62c0"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a2e767fa1e4b2a4e9c2227f3639ff62c0">&#9670;&#160;</a></span>PlatformAdaptor() <span class="overload">[1/6]</span></h2>
@@ -846,6 +856,38 @@ Additional Inherited Members</h2></td></tr>
 </dl>
 
 <p>Reimplemented from <a class="el" href="classPlatform_1_1PlatformAdaptor__Abstract.html#acedc161efcac0e8c88b0374869665910">Platform::PlatformAdaptor_Abstract</a>.</p>
+
+</div>
+</div>
+<a id="a689f5597818b777c8b779c43ad83088a" name="a689f5597818b777c8b779c43ad83088a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a689f5597818b777c8b779c43ad83088a">&#9670;&#160;</a></span>safeInsets()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">QMarginsF Platform::PlatformAdaptor::safeInsets </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel nodiscard">nodiscard</span><span class="mlabel override">override</span><span class="mlabel virtual">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Re-implements a virtual method from <a class="el" href="classPlatform_1_1PlatformAdaptor__Abstract.html" title="Interface to platform-specific functionality.">PlatformAdaptor_Abstract</a>. </p>
+<dl class="section return"><dt>Returns</dt><dd>Property safeInsets </dd></dl>
+
+<p>Reimplemented from <a class="el" href="classPlatform_1_1PlatformAdaptor__Abstract.html#a65a6ff0df333f361323c70648a6473e0">Platform::PlatformAdaptor_Abstract</a>.</p>
+
+<p class="definition">Definition at line <a class="el" href="PlatformAdaptor__Android_8h_source.html#l00069">69</a> of file <a class="el" href="PlatformAdaptor__Android_8h_source.html">PlatformAdaptor_Android.h</a>.</p>
 
 </div>
 </div>
