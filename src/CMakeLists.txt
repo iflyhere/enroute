@@ -90,7 +90,6 @@ set(SOURCES
     platform/FileExchange_Abstract.h
     platform/PlatformAdaptor.h
     platform/PlatformAdaptor_Abstract.h
-    platform/SafeInsets_Abstract.h
     positioning/Geoid.h
     positioning/PositionInfo.h
     positioning/PositionInfoSource_Abstract.h
@@ -200,7 +199,6 @@ set(SOURCES
     notification/NotificationManager.cpp
     platform/FileExchange_Abstract.cpp
     platform/PlatformAdaptor_Abstract.cpp
-    platform/SafeInsets_Abstract.cpp
     positioning/Geoid.cpp
     positioning/PositionInfo.cpp
     positioning/PositionInfoSource_Abstract.cpp
@@ -312,8 +310,6 @@ if(ANDROID)
         platform/FileExchange_Android.cpp
         platform/PlatformAdaptor_Android.h
         platform/PlatformAdaptor_Android.cpp
-        platform/SafeInsets_Android.h
-        platform/SafeInsets_Android.cpp
         android/src/de/akaflieg_freiburg/enroute/MobileAdaptor.java
         android/src/de/akaflieg_freiburg/enroute/ShareActivity.java
         android/src/de/akaflieg_freiburg/enroute/UsbSerialHelper.java
@@ -342,7 +338,7 @@ if(ANDROID)
 
     qt_add_executable(${PROJECT_NAME} ${SOURCES} ${ANDROID_EXTRA_SOURCES})
     qt_import_plugins(${PROJECT_NAME}
-        INCLUDE_BY_TYPE imageformats Qt::QSvgPlugin Qt::QJpegPlugin Qt::QWebpPlugin  Qt::QTiffPlugin Qt::QPngPlugin
+        INCLUDE_BY_TYPE imageformats Qt::QSvgPlugin Qt::QJpegPlugin Qt::QWebpPlugin  Qt::QTiffPlugin
         INCLUDE_BY_TYPE geoservices QMapLibre::PluginGeoServices
         EXCLUDE_BY_TYPE platforminputcontexts qmltooling multimedia
     )
@@ -356,8 +352,9 @@ if(ANDROID)
     add_android_openssl_libraries(${PROJECT_NAME})
     qmaplibre_location_setup_plugins(${PROJECT_NAME})
     set_target_properties(${PROJECT_NAME} PROPERTIES
+        QT_ANDROID_PACKAGE_NAME "de.akaflieg_freiburg.enroute"
         QT_ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/android"
-        QT_ANDROID_TARGET_SDK_VERSION 35
+        QT_ANDROID_TARGET_SDK_VERSION 36
         QT_ANDROID_MIN_SDK_VERSION 28
     )
 
@@ -388,8 +385,6 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
         platform/FileExchange_Linux.cpp
         platform/PlatformAdaptor_Linux.h
         platform/PlatformAdaptor_Linux.cpp
-        platform/SafeInsets_Desktop.h
-        platform/SafeInsets_Desktop.cpp
     )
 
 # Compile definitions
@@ -442,8 +437,6 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         platform/FileExchange_MacOS.cpp
         platform/PlatformAdaptor_MacOS.h
         platform/PlatformAdaptor_MacOS.cpp
-        platform/SafeInsets_Desktop.h
-        platform/SafeInsets_Desktop.cpp
     )
 
     # Compile definitions
@@ -482,14 +475,10 @@ if (IOS)
         platform/FileExchange_iOS.cpp
         platform/PlatformAdaptor_iOS.h
         platform/PlatformAdaptor_iOS.cpp
-        platform/SafeInsets_iOS.h
-        platform/SafeInsets_iOS.cpp
         ios/ObjCAdapter.mm
         ios/ObjCAdapter.h
         ios/ObjectiveC.h
         ios/ObjectiveC.m
-        ios/SafeAreaService.h
-        ios/SafeAreaService.m
     )
 
     # Compile definitions
@@ -574,7 +563,7 @@ target_include_directories(${PROJECT_NAME}
     nunicode/include
 )
 
-set_source_files_properties(qml/items/Global.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+set_source_files_properties(qml/items/Global.qml qml/items/SafeInsets.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 qt_add_qml_module(${PROJECT_NAME}
     URI akaflieg_freiburg.enroute
     VERSION 1.0
@@ -628,6 +617,7 @@ qt_add_qml_module(${PROJECT_NAME}
     qml/items/PageHeader.qml
     qml/items/+Material/PageHeader.qml
     qml/items/RemainingRouteBar.qml
+    qml/items/SafeInsets.qml
     qml/items/Sideview.qml
     qml/items/StandardHeader.qml
     qml/items/SwipeToDeleteDelegate.qml

@@ -14,7 +14,7 @@ option(QTDEPLOY "Generate and run Qt deployment scripts" OFF)
 # Project data
 #
 
-project(enroute VERSION 3.4.0)
+project(enroute VERSION 4.0.0)
 set(APP_ID de.akaflieg_freiburg.enroute)
 set(DISPLAY_NAME "Enroute")
 math(EXPR PROJECT_VERSION_CODE 10000*${PROJECT_VERSION_MAJOR}+100*${PROJECT_VERSION_MINOR}+${PROJECT_VERSION_PATCH})
@@ -37,6 +37,10 @@ include(GNUInstallDirs)
 #
 # Qt Setup
 #
+
+# LocationPrivate is a deliberate dependency (required by QMapLibre); silence the
+# private-module warning that Qt would otherwise print on every configure.
+set(QT_NO_PRIVATE_MODULE_WARNING ON)
 
 find_package(Qt6 6.9 COMPONENTS Bluetooth Concurrent Core Core5Compat Gui HttpServer LinguistTools Location LocationPrivate Positioning Quick QuickControls2 QuickWidgets Sql Svg TextToSpeech Widgets REQUIRED)
 set(QT_VERSION ${Qt6Core_VERSION})

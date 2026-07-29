@@ -2,14 +2,9 @@
 
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
-    package="de.akaflieg_freiburg.enroute"
     android:versionName="${PROJECT_VERSION}"
     android:versionCode="${PROJECT_VERSION_CODE}0"
     android:installLocation="auto">
-  <uses-sdk
-    android:minSdkVersion="28"
-    android:targetSdkVersion="35"/>
-  
   <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
   <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
@@ -91,6 +86,14 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <data android:mimeType="application/octet-stream"/>
       </intent-filter>
+      <!-- Android's built-in MIME table maps the extension ".cub" to the
+      Gaussian-cube chemistry format, so file managers send CUB airspace files
+      with this MIME type -->
+      <intent-filter>
+        <action android:name="android.intent.action.SEND"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <data android:mimeType="chemical/x-gaussian-cube"/>
+      </intent-filter>
       <intent-filter>
         <action android:name="android.intent.action.SEND"/>
         <category android:name="android.intent.category.DEFAULT"/>
@@ -122,6 +125,14 @@
         <action android:name="android.intent.action.VIEW"/>
         <category android:name="android.intent.category.DEFAULT"/>
         <data android:mimeType="application/octet-stream"/>
+      </intent-filter>
+      <!-- Android's built-in MIME table maps the extension ".cub" to the
+      Gaussian-cube chemistry format, so file managers send CUB airspace files
+      with this MIME type -->
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <data android:mimeType="chemical/x-gaussian-cube"/>
       </intent-filter>
       <intent-filter>
         <action android:name="android.intent.action.VIEW"/>

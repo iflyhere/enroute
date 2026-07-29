@@ -47,7 +47,9 @@ public:
      *
      *  @param fileName Name of the openAIR file
      *
-     *  @param error Reference to a QStringList where error messages will be appended.
+     *  @param errorList Reference to a QStringList where error messages will be appended.
+     *
+     *  @param warningList Reference to a QStringList where warning messages will be appended.
      *
      *  @return If no error messages were appended, returns a QJsonDocument with GeoJSON as specified
      *  in https://github.com/Akaflieg-Freiburg/enrouteServer/wiki/GeoJSON-files-used-in-enroute-flight-navigation.

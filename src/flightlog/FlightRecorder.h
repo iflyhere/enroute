@@ -87,6 +87,8 @@ public:
      *  property on the flight.
      *
      *  @param flight The flight whose metadata to use for the IGC headers
+     *
+     *  @returns True if the track file was written successfully
      */
     bool saveTrack(Flight& flight);
 
