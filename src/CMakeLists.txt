@@ -344,7 +344,7 @@ if(ANDROID)
     qt_import_plugins(${PROJECT_NAME}
         INCLUDE_BY_TYPE imageformats Qt::QSvgPlugin Qt::QJpegPlugin Qt::QWebpPlugin  Qt::QTiffPlugin Qt::QPngPlugin
         INCLUDE_BY_TYPE geoservices QMapLibre::PluginGeoServices
-        EXCLUDE_BY_TYPE platforminputcontexts qmltooling
+        EXCLUDE_BY_TYPE platforminputcontexts qmltooling multimedia
     )
     target_link_libraries(${PROJECT_NAME}
         PRIVATE
