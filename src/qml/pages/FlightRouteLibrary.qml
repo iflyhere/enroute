@@ -145,7 +145,7 @@ Page {
                             else
                             {
                                 Global.toast.doToast(qsTr("Flight Route Imported"))
-                                textInput.displayTextChanged()
+                                textInput.reload()
                             }
                         }
                         onRejected: {
@@ -162,8 +162,11 @@ Page {
 
     }
 
-    RowLayout {
-        id: filterRow
+    FilterField {
+        id: textInput
+
+        // Return opens the top hit.
+        listView: wpList
 
         anchors.left: parent.left
         anchors.leftMargin: SafeInsets.left+font.pixelSize
@@ -171,24 +174,11 @@ Page {
         anchors.rightMargin: SafeInsets.right+font.pixelSize
         anchors.top: parent.top
         anchors.topMargin: page.font.pixelSize
-
-        Label {
-            Layout.alignment: Qt.AlignBaseline
-
-            text: qsTr("Filter")
-        }
-
-        MyTextField {
-            id: textInput
-
-            Layout.alignment: Qt.AlignBaseline
-            Layout.fillWidth: true
-        }
     }
 
     Pane {
 
-        anchors.top: filterRow.bottom
+        anchors.top: textInput.bottom
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right
@@ -415,7 +405,13 @@ Page {
 
             clip: true
 
-            model: Librarian.entries(Librarian.Routes, textInput.displayText)
+            model: {
+                // Mention reloadTrigger: Librarian.entries() has no change
+                // notification, so reload() is the only way to re-evaluate.
+                textInput.reloadTrigger
+
+                return Librarian.entries(Librarian.Routes, textInput.filter)
+            }
             delegate: flightRouteDelegate
         }
 
@@ -431,7 +427,7 @@ Page {
 
             textFormat: Text.StyledText
             wrapMode: Text.Wrap
-            text: (textInput.text === "")
+            text: (textInput.filter === "")
                   ? qsTr("<h3>Sorry!</h3><p>No flight routes available. To add a route here, choose 'Flight Route' from the main menu, edit a route and save it to the library.</p>")
                   : qsTr("<h3>Sorry!</h3><p>No flight routes match your filter criteria.</p>")
         }
@@ -452,9 +448,7 @@ Page {
     }
 
     function reloadFlightRouteList() {
-        var cache = textInput.text
-        textInput.text = textInput.text+"XXXXX"
-        textInput.text = cache
+        textInput.reload()
     }
 
     CenteringDialog {

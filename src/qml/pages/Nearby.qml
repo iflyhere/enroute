@@ -157,12 +157,12 @@ Page {
         ColumnLayout {
             id: searchTab
 
-            Item {
-                Layout.preferredHeight: textInput.font.pixelSize/4.0
-            }
 
-            MyTextField {
+            FilterField {
                 id: textInput
+
+                // Return opens the top hit.
+                listView: naList2
 
                 Layout.fillWidth: true
                 Layout.leftMargin: font.pixelSize/2.0
@@ -170,8 +170,6 @@ Page {
 
                 // Search tab focuses the filter field, not its result list.
                 focus: searchTab.SwipeView.isCurrentItem
-
-                placeholderText: qsTr("Filter by Name")
             }
 
             DecoratedListView {
@@ -188,8 +186,8 @@ Page {
 
                 delegate: waypointDelegate
 
-                Binding {
-                    naList2.model: GeoMapProvider.filteredWaypoints(textInput.displayText)
+                Binding on model {
+                    value: GeoMapProvider.filteredWaypoints(textInput.filter)
                     delayed: true
                 }
 

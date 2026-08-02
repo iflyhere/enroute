@@ -19,6 +19,7 @@
  ***************************************************************************/
 
 #include <QTemporaryFile>
+#include <QUrl>
 
 #include "fileFormats/DataFileAbstract.h"
 
@@ -29,7 +30,9 @@ QSharedPointer<QFile> FileFormats::DataFileAbstract::openFileURL(const QString& 
 {
     if (fileName.startsWith(u"file://"_s))
     {
-        auto* file = new QFile(fileName.mid(7));
+        // Desktop file managers hand over percent-encoded URLs, so the path
+        // must be decoded rather than obtained by stripping the scheme.
+        auto* file = new QFile(QUrl(fileName).toLocalFile());
         return QSharedPointer<QFile>(file);
     }
 

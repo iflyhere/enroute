@@ -339,78 +339,131 @@ Page {
 
         clip: true
 
-        DecoratedListView {
-            Layout.fillHeight: true
-            Layout.fillWidth: true
-            clip: true
-            focus: SwipeView.isCurrentItem
-            model: DataManager.mapSets.downloadables
-            delegate: MapSet {}
+        ColumnLayout {
+            id: mapsTab
 
-            section.property: "section"
-            section.delegate: sectionHeading
+            FilterField {
+                id: mapsFilter
 
-            // Refresh list of maps on overscroll
-            property int refreshFlick: 0
-            onFlickStarted: {
-                refreshFlick = atYBeginning
+                Layout.fillWidth: true
+                Layout.leftMargin: font.pixelSize/2.0
+                Layout.rightMargin: font.pixelSize/2.0
             }
-            onFlickEnded: {
-                if ( atYBeginning && refreshFlick ) {
-                    PlatformAdaptor.vibrateBrief()
-                    DataManager.mapList.startDownload()
+
+            DecoratedListView {
+                id: mapsList
+
+                Layout.fillHeight: true
+                Layout.fillWidth: true
+                clip: true
+                // The list, not the filter field, owns focus here: this page is
+                // primarily browsed, and the keyboard navigation of
+                // DecoratedListView must keep working. The field is reached by
+                // tap or by Tab.
+                focus: mapsTab.SwipeView.isCurrentItem
+                model: Array.from(DataManager.mapSets.downloadables)
+                            .filter((mapSet) => Librarian.matches(mapSet.objectName, mapsFilter.filter))
+                delegate: MapSet {}
+
+                section.property: "section"
+                section.delegate: sectionHeading
+
+                // Refresh list of maps on overscroll
+                property int refreshFlick: 0
+                onFlickStarted: {
+                    refreshFlick = atYBeginning
+                }
+                onFlickEnded: {
+                    if ( atYBeginning && refreshFlick ) {
+                        PlatformAdaptor.vibrateBrief()
+                        DataManager.mapList.startDownload()
+                    }
+                }
+
+                Label {
+                    anchors.fill: parent
+                    anchors.topMargin: font.pixelSize*2
+
+                    // Only shown for an active filter. The empty-library cases
+                    // are covered by the page-wide labels further below.
+                    visible: (mapsList.count === 0) && (mapsFilter.filter !== "")
+
+                    horizontalAlignment: Text.AlignHCenter
+                    leftPadding: font.pixelSize*2
+                    rightPadding: font.pixelSize*2
+                    textFormat: Text.StyledText
+                    wrapMode: Text.Wrap
+
+                    text: qsTr("<h3>Sorry!</h3><p>No maps match your filter.</p>")
                 }
             }
         }
 
-        DecoratedListView {
-            Layout.fillHeight: true
-            Layout.fillWidth: true
-            clip: true
-            focus: SwipeView.isCurrentItem
-            // This delayed binding is necessary, or else there will be terrible delays
-            // when the user deletes all VACs -- the GUI is re-rendered after
-            // every delete, which takes very long time.
-            Binding on model {
-                value: VACLibrary.vacs
-                delayed: true    // Prevent intermediary values from being assigned
+        ColumnLayout {
+            id: vacTab
+
+            FilterField {
+                id: vacFilter
+
+                Layout.fillWidth: true
+                Layout.leftMargin: font.pixelSize/2.0
+                Layout.rightMargin: font.pixelSize/2.0
             }
 
-            delegate: vacDelegate
+            DecoratedListView {
+                id: vacList
 
-            section.property: "section"
-            section.delegate: sectionHeading
-
-            // Refresh list of maps on overscroll
-            property int refreshFlick: 0
-            onFlickStarted: {
-                refreshFlick = atYBeginning
-            }
-            onFlickEnded: {
-                if ( atYBeginning && refreshFlick ) {
-                    PlatformAdaptor.vibrateBrief()
-                    DataManager.mapList.startDownload()
+                Layout.fillHeight: true
+                Layout.fillWidth: true
+                clip: true
+                focus: vacTab.SwipeView.isCurrentItem
+                // This delayed binding is necessary, or else there will be terrible delays
+                // when the user deletes all VACs -- the GUI is re-rendered after
+                // every delete, which takes very long time.
+                Binding on model {
+                    value: Array.from(VACLibrary.vacs)
+                                .filter((vac) => Librarian.matches(vac.name, vacFilter.filter))
+                    delayed: true    // Prevent intermediary values from being assigned
                 }
-            }
 
-            Label {
-                anchors.fill: parent
-                anchors.bottomMargin: font.pixelSize
-                anchors.leftMargin: font.pixelSize
-                anchors.rightMargin: font.pixelSize
-                anchors.topMargin: font.pixelSize
+                delegate: vacDelegate
 
-                background: Rectangle {color: Global.pageBackgroundColor}
-                visible: VACLibrary.isEmpty
+                section.property: "section"
+                section.delegate: sectionHeading
 
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment : Text.AlignVCenter
-                textFormat: Text.RichText
-                wrapMode: Text.Wrap
+                // Refresh list of maps on overscroll
+                property int refreshFlick: 0
+                onFlickStarted: {
+                    refreshFlick = atYBeginning
+                }
+                onFlickEnded: {
+                    if ( atYBeginning && refreshFlick ) {
+                        PlatformAdaptor.vibrateBrief()
+                        DataManager.mapList.startDownload()
+                    }
+                }
 
-                text: Global.withLinkColor("<p>" + qsTr("There are no approach charts installed. The <a href='x'>manual</a> explains how to install and use them.") + "</p>")
-                onLinkActivated: openManual("forward.html#vac-tutorial")
+                Label {
+                    anchors.fill: parent
+                    anchors.bottomMargin: font.pixelSize
+                    anchors.leftMargin: font.pixelSize
+                    anchors.rightMargin: font.pixelSize
+                    anchors.topMargin: font.pixelSize
 
+                    background: Rectangle {color: Global.pageBackgroundColor}
+                    visible: VACLibrary.isEmpty || (vacList.count === 0)
+
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment : Text.AlignVCenter
+                    textFormat: Text.RichText
+                    wrapMode: Text.Wrap
+
+                    text: VACLibrary.isEmpty
+                          ? Global.withLinkColor("<p>" + qsTr("There are no approach charts installed. The <a href='x'>manual</a> explains how to install and use them.") + "</p>")
+                          : qsTr("<h3>Sorry!</h3><p>No approach charts match your filter.</p>")
+                    onLinkActivated: openManual("forward.html#vac-tutorial")
+
+                }
             }
         }
 

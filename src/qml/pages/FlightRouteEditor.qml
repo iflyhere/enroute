@@ -1047,15 +1047,16 @@ Page {
                 visible: textInput.displayText === ""
             }
 
-            MyTextField {
+            FilterField {
                 id: textInput
 
                 Layout.fillWidth: true
 
-                placeholderText: qsTr("Filter by Name")
-
                 focus: true
 
+                // Deliberately replaces FilterField's default Return handler:
+                // here Return must add the waypoint and close the dialog, not
+                // open the waypoint description that a click would bring up.
                 onAccepted: {
                     if (wpList.model.length > 0) {
                         PlatformAdaptor.vibrateBrief()
@@ -1063,9 +1064,6 @@ Page {
                         flightRouteAddWPDialog.close()
                     }
                 }
-
-                // On iOS17, the property displayText sees many bounces.
-                onDisplayTextChanged: debounceTimer.restart()
             }
 
             Label {
@@ -1089,14 +1087,7 @@ Page {
 
                 clip: true
 
-                // Debounce timer to update the property model only 200ms after the last change of textInput.displayText
-                Timer {
-                    id: debounceTimer
-                    interval: 200 // 200ms
-                    onTriggered: wpList.model = GeoMapProvider.filteredWaypoints(textInput.displayText)
-                }
-
-                model: GeoMapProvider.filteredWaypoints(textInput.displayText)
+                model: GeoMapProvider.filteredWaypoints(textInput.filter)
                 delegate: waypointDelegate
 
                 Label {
@@ -1107,7 +1098,7 @@ Page {
                     horizontalAlignment: Text.AlignHCenter
                     textFormat: Text.StyledText
                     wrapMode: Text.Wrap
-                    text: (textInput.text === "")
+                    text: (textInput.filter === "")
                           ? qsTr("<h3>Sorry!</h3><p>No waypoints available. Please make sure that an aviation map is installed.</p>")
                           : qsTr("<h3>Sorry!</h3><p>No waypoints match your filter criteria.</p>")
                     onLinkActivated: Qt.openUrlExternally(link)

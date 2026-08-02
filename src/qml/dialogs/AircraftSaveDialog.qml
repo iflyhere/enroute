@@ -91,7 +91,9 @@ CenteringDialog {
             Layout.preferredHeight: contentHeight
 
             clip: true
-            model: Librarian.entries(Librarian.Aircraft)
+            // The name that is being typed doubles as a filter, so that the
+            // list narrows down to the entries that would be overwritten.
+            model: Librarian.entries(Librarian.Aircraft, fileName.displayText)
 
             delegate: fileDelegate
         }

@@ -22,6 +22,7 @@
 #include <QStandardPaths>
 #include <QSysInfo>
 #include <QtGlobal>
+#include <algorithm>
 
 #include "config.h"
 #include "Librarian.h"
@@ -552,14 +553,25 @@ auto Librarian::entries(Library library, const QString &filter) -> QStringList
 }
 
 
+auto Librarian::matches(const QString& text, const QString& filter) -> bool
+{
+    // Split before simplifying: simplifySpecialChars() removes whitespace, so
+    // "EDDF EDDM" would otherwise collapse into one word that never matches.
+    auto const words = filter.split(u' ', Qt::SkipEmptyParts);
+    auto const simplifiedText = simplifySpecialChars(text);
+
+    return std::ranges::all_of(words, [this, &simplifiedText](const QString& word) {
+        return simplifiedText.contains(simplifySpecialChars(word), Qt::CaseInsensitive);
+    });
+}
+
+
 auto Librarian::permissiveFilter(const QStringList &inputStrings, const QString &filter) -> QStringList
 {
-    QString const simplifiedFilter = simplifySpecialChars(filter);
-
     QStringList result;
     foreach(auto inputString, inputStrings)
     {
-        if (simplifySpecialChars(inputString).contains(simplifiedFilter, Qt::CaseInsensitive))
+        if (matches(inputString, filter))
         {
             result << inputString;
         }
@@ -571,12 +583,22 @@ auto Librarian::permissiveFilter(const QStringList &inputStrings, const QString 
 
 auto Librarian::simplifySpecialChars(const QString &string) -> QString
 {
-    QString cacheString = simplifySpecialChars_cache.value(string);
-    if (!cacheString.isEmpty())
+    auto const it = simplifySpecialChars_cache.constFind(string);
+    if (it != simplifySpecialChars_cache.constEnd())
     {
-        return cacheString;
+        return *it;
     }
 
-    QString normalizedString = string.normalized(QString::NormalizationForm_KD);
-    return normalizedString.remove(specialChars);
+    QString simplified = string.normalized(QString::NormalizationForm_KD);
+    simplified.remove(specialChars);
+
+    // Bound the cache: every prefix that a user ever types into a filter field
+    // becomes a key here.
+    if (simplifySpecialChars_cache.size() > 10000)
+    {
+        simplifySpecialChars_cache.clear();
+    }
+    simplifySpecialChars_cache.insert(string, simplified);
+
+    return simplified;
 }

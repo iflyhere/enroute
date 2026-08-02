@@ -175,6 +175,12 @@ CenteringDialog {
 
         }
 
+        FilterField {
+            id: notamFilter
+
+            Layout.fillWidth: true
+        }
+
         DecoratedListView {
             id: notamlistview
 
@@ -184,13 +190,27 @@ CenteringDialog {
 
             clip: true
 
-            model: notamListDialog.notamList.notams
+            model: Array.from(notamListDialog.notamList.notams)
+                        .filter((notam) => Librarian.matches(notam.icaoLocation + " " + notam.number + " " + notam.text,
+                                                             notamFilter.filter))
 
             section.property: "sectionTitle"
             section.delegate: sectionHeading
 
             delegate: notamDelegate
 
+            Label {
+                anchors.fill: parent
+                anchors.topMargin: font.pixelSize*2
+
+                visible: (notamlistview.count === 0) && (notamFilter.filter !== "")
+
+                horizontalAlignment: Text.AlignHCenter
+                textFormat: Text.StyledText
+                wrapMode: Text.Wrap
+
+                text: qsTr("<h3>Sorry!</h3><p>No NOTAMs match your filter.</p>")
+            }
         }
 
         CheckDelegate {

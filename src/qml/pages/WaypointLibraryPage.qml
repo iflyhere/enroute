@@ -365,19 +365,17 @@ Page {
         anchors.leftMargin: SafeInsets.left
         anchors.rightMargin: SafeInsets.right
 
-        Item {
-            Layout.preferredHeight: textInput.font.pixelSize/4.0
-        }
 
 
-        MyTextField {
+        FilterField {
             id: textInput
+
+            // Return opens the top hit.
+            listView: wpList
 
             Layout.fillWidth: true
             Layout.leftMargin: font.pixelSize/2.0
             Layout.rightMargin: font.pixelSize/2.0
-
-            placeholderText: qsTr("Filter by Name")
         }
 
         DecoratedListView {
@@ -388,13 +386,14 @@ Page {
 
             clip: true
 
-            model:
-            Binding {
-                wpList.model: {
-                    // Mention waypoints to ensure that the list gets updated
+            Binding on model {
+                value: {
+                    // Mention waypoints and reloadTrigger to ensure that the
+                    // list gets updated
                     WaypointLibrary.waypoints
+                    textInput.reloadTrigger
 
-                    return WaypointLibrary.filteredWaypoints(textInput.displayText)
+                    return WaypointLibrary.filteredWaypoints(textInput.filter)
                 }
                 delayed: true
             }
@@ -414,7 +413,7 @@ Page {
 
             textFormat: Text.RichText
             wrapMode: Text.Wrap
-            text: (textInput.text === "")
+            text: (textInput.filter === "")
                   ? qsTr("<h3>Sorry!</h3><p>No waypoint available. To add a waypoint here, choose 'Add Waypoint' below or double-tap on a point in the moving map.</p>")
                   : qsTr("<h3>Sorry!</h3><p>No waypoints match your filter.</p>")
         }
@@ -448,9 +447,7 @@ Page {
     property string finalFileName;
 
     function reloadWaypointList() {
-        var cache = textInput.text
-        textInput.text = textInput.text+"XXXXX"
-        textInput.text = cache
+        textInput.reload()
     }
 
     LongTextDialog {

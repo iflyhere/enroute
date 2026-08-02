@@ -217,17 +217,38 @@ public:
      */
     Q_INVOKABLE static void rename(Librarian::Library library, const QString& oldName, const QString& newName);
 
+    /*! \brief Checks if a text matches a filter string, in a fuzzy way
+     *
+     * This method splits the filter into words at whitespace. The text matches
+     * if it contains every one of these words. The comparison ignores case and
+     * special characters, so that "Zürich" matches "u", "Ü", "ù" and "zurich".
+     * An empty filter matches every text.
+     *
+     * This is the single filter primitive of this app. Use it from QML to
+     * filter list models, as in
+     *
+     * model: Array.from(SomeSingleton.items).filter((i) => Librarian.matches(i.name, filterField.filter))
+     *
+     * @param text Text that is searched
+     *
+     * @param filter Filter, possibly consisting of several words
+     *
+     * @returns True if the text matches the filter
+     */
+    Q_INVOKABLE bool matches(const QString& text, const QString& filter);
+
     /*! \brief Filters a QStringList in a fuzzy way
      *
      * This helper method filters a QStringList. It returns a sublist of those
-     * entries whose name approximately contain the filter string.  For
-     * instance, "Zürich" is supposed to contain "u", "Ü" and "ù"
+     * entries that match the filter, in the sense of the method matches().
      *
      * @param input QStringList that is to be filtered
      *
      * @param filter Filter
      *
      * @returns Filteres QStringList
+     *
+     * @see matches
      */
     QStringList permissiveFilter(const QStringList &input, const QString &filter);
 

@@ -54,6 +54,29 @@ Page {
         page.selectedUuids = []
     }
 
+    // The flights that the filter field currently lets through. Single source of
+    // truth for both the list model and the selection: if these drifted apart,
+    // 'N selected' would stop matching what the user can see.
+    function visibleFlights() {
+        return Array.from(FlightLog.flights).filter((flight) => Librarian.matches(
+                                                        [flight.departureICAO,
+                                                         flight.arrivalICAO,
+                                                         flight.pilotName,
+                                                         flight.aircraftCallsign].join(" "),
+                                                        flightFilter.filter))
+    }
+
+    // Filtering narrows the selection: a flight that the filter hides is
+    // deselected, so that the count in the header, and the flights that the
+    // export and remove actions operate on, are always the ones on screen.
+    function narrowSelection() {
+        if (page.selectedUuids.length === 0) {
+            return
+        }
+        var visible = page.visibleFlights().map((flight) => flight.uuid.toString())
+        page.selectedUuids = page.selectedUuids.filter((uuid) => visible.indexOf(uuid) >= 0)
+    }
+
     header: PageHeader {
 
         height: 60 + SafeInsets.top
@@ -301,6 +324,16 @@ Page {
             }
         }
 
+        FilterField {
+            id: flightFilter
+
+            Layout.fillWidth: true
+            Layout.leftMargin: font.pixelSize/2.0
+            Layout.rightMargin: font.pixelSize/2.0
+
+            onFilterChanged: page.narrowSelection()
+        }
+
         DecoratedListView {
             id: flightList
 
@@ -309,9 +342,8 @@ Page {
 
             clip: true
 
-            model:
-            Binding {
-                flightList.model: FlightLog.flights
+            Binding on model {
+                value: page.visibleFlights()
                 delayed: true
             }
 
@@ -331,7 +363,9 @@ Page {
 
             textFormat: Text.RichText
             wrapMode: Text.Wrap
-            text: qsTr("<h3>No flights recorded</h3><p>Flights will be automatically recorded when takeoff and landing are detected near airfields. You can also add flights manually using the button below.</p>")
+            text: (flightFilter.filter === "")
+                  ? qsTr("<h3>No flights recorded</h3><p>Flights will be automatically recorded when takeoff and landing are detected near airfields. You can also add flights manually using the button below.</p>")
+                  : qsTr("<h3>Sorry!</h3><p>No flights match your filter.</p>")
         }
     }
 
@@ -356,12 +390,14 @@ Page {
                 id: iDel
                 Layout.fillWidth: true
 
+                // Horizontal margins must come from the delegate's padding, not
+                // from anchors on the contentItem: a SwipeDelegate moves its
+                // contentItem sideways while swiping, so it refuses to lay out a
+                // contentItem that carries horizontal anchors.
+                leftPadding: font.pixelSize
+                rightPadding: font.pixelSize
+
                 contentItem: ColumnLayout {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.leftMargin: iDel.font.pixelSize
-                    anchors.rightMargin: iDel.font.pixelSize
-                    anchors.verticalCenter: parent.verticalCenter
                     spacing: 2
 
                     RowLayout {

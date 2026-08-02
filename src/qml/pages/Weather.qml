@@ -133,21 +133,39 @@ Page {
         id: obsList
     }
 
-    DecoratedListView {
+    ColumnLayout {
+        anchors.fill: parent
+        anchors.leftMargin: SafeInsets.left
+        anchors.rightMargin: SafeInsets.right
+
+        FilterField {
+            id: stationFilter
+
+            // Return opens the top hit.
+            listView: stationList
+
+            Layout.fillWidth: true
+            Layout.leftMargin: font.pixelSize/2.0
+            Layout.rightMargin: font.pixelSize/2.0
+        }
+
+        DecoratedListView {
             id: stationList
 
-            anchors.fill: parent
-            anchors.leftMargin: SafeInsets.left
-            anchors.rightMargin: SafeInsets.right
+            Layout.fillWidth: true
+            Layout.fillHeight: true
 
             clip: true
 
-            model: obsList.observers
+            model: Array.from(obsList.observers)
+                        .filter((observer) => Librarian.matches(
+                                    observer.waypoint.name + " " + observer.waypoint.ICAOCode,
+                                    stationFilter.filter))
             delegate: stationDelegate
 
             Rectangle {  // No data label
                 anchors.fill: parent
-                color: "white"
+                color: Global.pageBackgroundColor
                 visible: stationList.count === 0
 
                 Text {
@@ -161,7 +179,9 @@ Page {
                     verticalAlignment: Text.AlignVCenter
                     textFormat: Text.StyledText
                     wrapMode: Text.Wrap
-                    text: qsTr("<h3>Sorry!</h3><p>No METAR/TAF data available. Updates will be requested automatically.</p>")
+                    text: (stationFilter.filter === "")
+                          ? qsTr("<h3>Sorry!</h3><p>No METAR/TAF data available. Updates will be requested automatically.</p>")
+                          : qsTr("<h3>Sorry!</h3><p>No weather stations match your filter.</p>")
                 }
             }
 
@@ -193,6 +213,7 @@ Page {
             }
 
         }
+    }
 
     footer: Footer {
         visible: (sunLabel.text !== "") || (qnhLabel.text !== "")
