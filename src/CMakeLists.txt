@@ -85,6 +85,7 @@ set(SOURCES
     notam/NOTAMProvider.h
     notification/Notification.h
     notification/Notification_DataUpdateAvailable.h
+    notification/Notification_OversizedMap.h
     notification/NotificationManager.h
     platform/FileExchange.h
     platform/FileExchange_Abstract.h
@@ -196,6 +197,7 @@ set(SOURCES
     notam/NOTAMProvider.cpp
     notification/Notification.cpp
     notification/Notification_DataUpdateAvailable.cpp
+    notification/Notification_OversizedMap.cpp
     notification/NotificationManager.cpp
     platform/FileExchange_Abstract.cpp
     platform/PlatformAdaptor_Abstract.cpp

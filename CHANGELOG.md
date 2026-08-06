@@ -31,6 +31,12 @@
 - GDL90 Traffic: suppress "No GPS reception" warning when phone GNSS is primary
   source #673
 
+## [3.4.1] - 2026-08-06
+
+### Fixed
+- The app no longer crashes at startup when an unreasonably large aviation map
+  is installed. Oversized maps are now skipped, and a warning asks the user to
+  update the map data (#676).
 
 ## [3.4.0] - 2026-07-14
 

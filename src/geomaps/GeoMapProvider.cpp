@@ -18,6 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QFileInfo>
 #include <QImage>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -50,6 +51,14 @@ GeoMaps::GeoMapProvider::GeoMapProvider(QObject *parent)
     : GlobalObject(parent)
 {
     m_combinedGeoJSON = emptyGeoJSON();
+
+    // An oversized cache file cannot be held in memory on mobile devices.
+    // Delete it; it will be regenerated (respecting maxAviationMapFileSize)
+    // by onAviationMapsChanged().
+    if (QFileInfo(geoJSONCache).size() > maxGeoJSONCacheSize)
+    {
+        QFile::remove(geoJSONCache);
+    }
 
     QFile geoJSONCacheFile(geoJSONCache);
     if (geoJSONCacheFile.open(QFile::ReadOnly))
@@ -589,6 +598,7 @@ void GeoMaps::GeoMapProvider::onAviationMapsChanged()
     // Generate new GeoJSON array and new list of waypoints
     //
     QStringList JSONFileNames;
+    QStringList oversizedMapNames;
     for(auto* geoMapPtrX : GlobalObject::dataManager()->aviationMaps()->downloadables())
     {
         auto *geoMapPtr = qobject_cast<DataManagement::Downloadable_SingleFile*>(geoMapPtrX);
@@ -605,8 +615,17 @@ void GeoMaps::GeoMapProvider::onAviationMapsChanged()
         {
             continue;
         }
+        // Ignore oversized files, whose processing would exhaust the memory
+        // available on mobile devices. The files remain on disk, so a map
+        // update can replace them with reasonably-sized versions.
+        if (QFileInfo(geoMapPtr->fileName()).size() > maxAviationMapFileSize)
+        {
+            oversizedMapNames += geoMapPtr->objectName();
+            continue;
+        }
         JSONFileNames += geoMapPtr->fileName();
     }
+    m_oversizedMaps = oversizedMapNames;
 
     _aviationDataCacheFuture = QtConcurrent::run(&GeoMaps::GeoMapProvider::fillAviationDataCache, this, JSONFileNames, GlobalObject::globalSettings()->hideGlidingSectors());
     _aviationDataCacheFuture.then(this, [this](GeoMaps::GeoMapProvider::aviationDataCacheResult result) {
@@ -784,7 +803,7 @@ GeoMaps::GeoMapProvider::aviationDataCacheResult GeoMaps::GeoMapProvider::fillAv
         resultObject.insert(QStringLiteral("type"), "FeatureCollection");
         resultObject.insert(QStringLiteral("features"), newFeatures);
         QJsonDocument const geoDoc(resultObject);
-        newGeoJSON = geoDoc.toJson();
+        newGeoJSON = geoDoc.toJson(QJsonDocument::Compact);
     }
 
     // Sort waypoints by name

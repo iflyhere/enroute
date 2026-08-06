@@ -142,6 +142,16 @@ public:
      */
     Q_PROPERTY(QByteArray geoJSON READ geoJSON BINDABLE bindableGeoJSON)
 
+    /*! \brief Names of installed aviation maps that are too large to load
+     *
+     *  This property holds the names of installed aviation maps whose file
+     *  size exceeds a sanity limit. These maps are ignored when compiling the
+     *  aviation data, because processing them would exhaust the memory
+     *  available on mobile devices. The files remain on disk, so an update
+     *  can replace them with reasonably-sized versions.
+     */
+    Q_PROPERTY(QStringList oversizedMaps READ oversizedMaps BINDABLE bindableOversizedMaps)
+
     /*! \brief URL under which this server is presently reachable
      *
      *  The property holds returns the Url where the server is listening to
@@ -249,6 +259,18 @@ public:
      * @returns Property geoJSON
      */
     [[nodiscard]] QBindable<QByteArray> bindableGeoJSON() {return &m_combinedGeoJSON;}
+
+    /*! \brief Getter function for the property with the same name
+     *
+     * @returns Property oversizedMaps
+     */
+    [[nodiscard]] QStringList oversizedMaps() const {return m_oversizedMaps.value();}
+
+    /*! \brief Getter function for the property with the same name
+     *
+     * @returns Property oversizedMaps
+     */
+    [[nodiscard]] QBindable<QStringList> bindableOversizedMaps() {return &m_oversizedMaps;}
 
     /*! \brief Getter function for the property with the same name
      *
@@ -382,6 +404,9 @@ signals:
     void geoJSONChanged();
 
     /*! \brief Notification signal for the property with the same name */
+    void oversizedMapsChanged();
+
+    /*! \brief Notification signal for the property with the same name */
     void styleFileURLChanged();
 
     /*! \brief Notification signal for the property with the same name */
@@ -453,6 +478,14 @@ private:
     Q_OBJECT_BINDABLE_PROPERTY(GeoMaps::GeoMapProvider, QByteArray, m_combinedGeoJSON, &GeoMaps::GeoMapProvider::geoJSONChanged)
     QList<Waypoint> _waypoints_; // Cache: Waypoints
     QProperty<QList<Airspace>> m_airspaces; // Cache: Airspaces
+
+    // Aviation maps whose file size exceeds maxAviationMapFileSize are ignored
+    // when compiling the aviation data; parsing them would exhaust the memory
+    // available on mobile devices (see issue #676). The peak memory used when
+    // parsing is roughly ten times the file size.
+    static constexpr qint64 maxAviationMapFileSize = 50*1024*1024;
+    static constexpr qint64 maxGeoJSONCacheSize = 150*1024*1024;
+    Q_OBJECT_BINDABLE_PROPERTY(GeoMaps::GeoMapProvider, QStringList, m_oversizedMaps, &GeoMaps::GeoMapProvider::oversizedMapsChanged)
 
     // TerrainImageCache
     QCache<qint64,QImage> terrainTileCache {6}; // Hold 6 tiles, roughly 1.2MB
