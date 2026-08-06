@@ -423,7 +423,7 @@ private:
     // is active, it clears only when the difference drops below this value.
     static constexpr Units::Distance pressureAltitudePlausibleThreshold = Units::Distance::fromFT(3000.0);
     // The difference must persist for at least this long before the warning is raised.
-    static constexpr qint64 pressureAltitudeImplausibleDwellTime_ms = 30*1000;
+    static constexpr qint64 pressureAltitudeImplausibleDwellTime_ms = 30LL*1000;
     // Measures for how long pressure altitude and geometric altitude have been
     // differing by more than pressureAltitudeImplausibleThreshold.
     QElapsedTimer m_pressureAltitudeDivergenceTimer;

@@ -65,7 +65,7 @@ public:
      *
      *  @returns All flights currently stored, in unspecified order
      */
-    [[nodiscard]] auto loadAll() const -> QList<Flight>;
+    [[nodiscard]] auto loadAll() -> QList<Flight>;
 
     /*! \brief Insert a flight, or update it if its uuid already exists
      *
@@ -125,7 +125,7 @@ private:
     // Emit saveError() via a queued connection, safe to call from the constructor.
     // Const so it can also be called from loadAll(); emitting a signal doesn't
     // change any observable state of this object.
-    void reportError(const QString& message) const;
+    void reportError(const QString& message);
 
     // Bind all fields of a flight to a prepared INSERT query, in column order
     static void bindFlight(QSqlQuery& query, const Flight& flight);

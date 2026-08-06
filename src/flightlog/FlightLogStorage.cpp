@@ -153,15 +153,14 @@ void Flightlog::FlightLogStorage::quarantineFile(const QString& fileName, const 
 }
 
 
-void Flightlog::FlightLogStorage::reportError(const QString& message) const
+void Flightlog::FlightLogStorage::reportError(const QString& message)
 {
     // Queued so it's safe to call from the constructor: FlightLog connects to
     // this signal in its own constructor body, which runs after this object
     // (a member) has been fully constructed but before the queued event is
     // dispatched.
-    auto* self = const_cast<FlightLogStorage*>(this);
-    QMetaObject::invokeMethod(self, [self, message]() {
-        emit self->saveError(message);
+    QMetaObject::invokeMethod(this, [this, message]() {
+        emit saveError(message);
     }, Qt::QueuedConnection);
 }
 
@@ -197,7 +196,7 @@ void Flightlog::FlightLogStorage::bindFlight(QSqlQuery& query, const Flight& fli
 }
 
 
-auto Flightlog::FlightLogStorage::loadAll() const -> QList<Flight>
+auto Flightlog::FlightLogStorage::loadAll() -> QList<Flight>
 {
     QList<Flight> result;
 
@@ -222,8 +221,14 @@ auto Flightlog::FlightLogStorage::loadAll() const -> QList<Flight>
         if (!offBlockTimeStr.isEmpty()) {
             f.setOffBlockTime(QDateTime::fromString(offBlockTimeStr, Qt::ISODate));
         }
-        f.setStartTime(QDateTime::fromString(query.value(u"startTime"_s).toString(), Qt::ISODate));
-        f.setLandingTime(QDateTime::fromString(query.value(u"landingTime"_s).toString(), Qt::ISODate));
+        const auto startTimeStr = query.value(u"startTime"_s).toString();
+        if (!startTimeStr.isEmpty()) {
+            f.setStartTime(QDateTime::fromString(startTimeStr, Qt::ISODate));
+        }
+        const auto landingTimeStr = query.value(u"landingTime"_s).toString();
+        if (!landingTimeStr.isEmpty()) {
+            f.setLandingTime(QDateTime::fromString(landingTimeStr, Qt::ISODate));
+        }
         const auto onBlockTimeStr = query.value(u"onBlockTime"_s).toString();
         if (!onBlockTimeStr.isEmpty()) {
             f.setOnBlockTime(QDateTime::fromString(onBlockTimeStr, Qt::ISODate));
