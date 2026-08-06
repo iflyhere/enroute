@@ -27,9 +27,11 @@
 #include "GlobalObject.h"
 #include "GlobalSettings.h"
 #include "dataManagement/DataManager.h"
+#include "geomaps/GeoMapProvider.h"
 #include "navigation/Navigator.h"
 #include "notification/NotificationManager.h"
 #include "notification/Notification_DataUpdateAvailable.h"
+#include "notification/Notification_OversizedMap.h"
 #include "platform/PlatformAdaptor.h"
 #include "traffic/TrafficDataProvider.h"
 #include <chrono>
@@ -80,6 +82,11 @@ void Notifications::NotificationManager::deferredInitialization()
     mapsAndDataNotificationTimer.setSingleShot(true);
 
     onMapAndDataUpdateSizeChanged();
+
+    // Oversized aviation maps
+    connect(GlobalObject::geoMapProvider(), &GeoMaps::GeoMapProvider::oversizedMapsChanged,
+            this, &Notifications::NotificationManager::onOversizedMapsChanged);
+    onOversizedMapsChanged();
 }
 
 
@@ -328,6 +335,26 @@ void Notifications::NotificationManager::onMapAndDataUpdateSizeChanged()
     auto* notification = new Notifications::Notification_DataUpdateAvailable(this);
     addNotification(notification);
     settings.setValue(QStringLiteral("lastGeoMapUpdateNotification"), QDateTime::currentDateTimeUtc());
+}
+
+void Notifications::NotificationManager::onOversizedMapsChanged()
+{
+    // If there are no oversized maps, then we end here. An existing
+    // notification deletes itself in this case.
+    if (GlobalObject::geoMapProvider()->oversizedMaps().isEmpty())
+    {
+        return;
+    }
+
+    // If a notification is already shown, then we end here.
+    if (!m_oversizedMapNotification.isNull())
+    {
+        return;
+    }
+
+    // Notify!
+    m_oversizedMapNotification = new Notifications::Notification_OversizedMap(this);
+    addNotification(m_oversizedMapNotification);
 }
 
 void Notifications::NotificationManager::onTrafficReceiverRuntimeError()

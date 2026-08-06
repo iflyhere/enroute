@@ -215,6 +215,9 @@ private:
     // Called whenever map and data updates become (un)available
     void onMapAndDataUpdateSizeChanged();
 
+    // Called whenever the list of oversized aviation maps changes
+    void onOversizedMapsChanged();
+
     // Called whenever the traffic receiver reports a runtime error, or clears
     // the error status.
     void onTrafficReceiverRuntimeError();
@@ -226,6 +229,10 @@ private:
     // When notifications for maps and data are temporarily not possible, then
     // use this timer to notify again.
     QTimer mapsAndDataNotificationTimer;
+
+    // Notification for oversized aviation maps; this pointer guards against
+    // showing the notification more than once.
+    QPointer<Notifications::Notification> m_oversizedMapNotification;
 };
 
 
