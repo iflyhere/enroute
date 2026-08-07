@@ -35,6 +35,7 @@ import android.net.NetworkRequest;
 import android.net.Uri;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.PowerManager;
 
 /**
  * Foreground service that keeps the app alive while recording a flight.
@@ -71,6 +72,11 @@ public class FlightLogService extends Service {
     // Keeps local hotspots like Stratux connected even when they have no internet.
     private ConnectivityManager m_connectivityManager;
     private ConnectivityManager.NetworkCallback m_networkCallback;
+
+    // Partial wake lock: keeps the CPU awake (screen may still turn off) so
+    // Qt's main-thread event loop continues to process incoming GPS callbacks
+    // from the OS location service even when the screen is locked.
+    private PowerManager.WakeLock m_wakeLock;
 
     @Override
     public void onCreate() {
@@ -126,6 +132,20 @@ public class FlightLogService extends Service {
         startForeground(NOTIFICATION_ID, notification,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
 
+        // Keep the CPU awake so Qt's event loop processes GPS callbacks
+        // even when the screen is locked.
+        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        if (pm != null) {
+            if (m_wakeLock == null) {
+                m_wakeLock = pm.newWakeLock(
+                        PowerManager.PARTIAL_WAKE_LOCK,
+                        "Enroute:FlightLogService");
+            }
+            if (!m_wakeLock.isHeld()) {
+                m_wakeLock.acquire();
+            }
+        }
+
         // Request WiFi networks without internet access (e.g. Stratux hotspots).
         // This tells Android to keep these connections alive. We don't bind the
         // process to a specific network — the kernel routing table handles traffic
@@ -157,6 +177,12 @@ public class FlightLogService extends Service {
 
     @Override
     public void onDestroy() {
+        // Release the wake lock so the CPU can sleep again.
+        if (m_wakeLock != null && m_wakeLock.isHeld()) {
+            m_wakeLock.release();
+            m_wakeLock = null;
+        }
+
         // Unregister the network callback.
         if (m_connectivityManager != null && m_networkCallback != null) {
             m_connectivityManager.unregisterNetworkCallback(m_networkCallback);
