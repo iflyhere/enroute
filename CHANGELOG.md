@@ -41,6 +41,10 @@
 - OpenAIR files that specify activation times now warn that these times are not
   evaluated, so that seasonal airspace is not mistaken for permanent airspace.
 
+- The app no longer hangs on exit when there is no network connection. It used
+  to wait for pending host name lookups, which take the full resolver timeout
+  to fail when the network is unreachable (#544).
+
 ## [3.4.1] - 2026-08-06
 
 ### Fixed

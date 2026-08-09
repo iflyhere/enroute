@@ -30,6 +30,7 @@
 #include <QQuickWindow>
 #include <QSettings>
 #include <QTranslator>
+#include <cstdlib>
 
 #if __has_include (<QtWebView/QtWebView>)
 #include <QtWebView/QtWebView>
@@ -282,7 +283,20 @@ auto main(int argc, char *argv[]) -> int
     delete engine;
     GlobalObject::clear();
 
-    return result;
+    // Terminate without running the destructor of QGuiApplication.
+    //
+    // Qt resolves host names on a thread pool inside QHostInfoLookupManager,
+    // and blocks in QThreadPool::waitForDone() when QCoreApplication is
+    // destroyed. A running getaddrinfo() cannot be interrupted, so with a dead
+    // network the app would linger for the full resolver timeout after the
+    // window is gone. See https://github.com/Akaflieg-Freiburg/enroute/issues/544
+    //
+    // At this point all state has been written to disk: the aboutToQuit
+    // handlers have run inside exec(), and GlobalObject::clear() has destructed
+    // GlobalSettings along with its QSettings member. The lock file and local
+    // socket of KDSingleApplication are left behind, which is harmless; the
+    // next start detects and removes them, exactly as it does after a crash.
+    std::_Exit(result);
 }
 
 
