@@ -121,7 +121,10 @@
       "Bash(/tmp/claude-1000/-home-kebekus-Software-projects-enroute/c8674a44-2430-4523-b472-c51591a12fa1/scratchpad/oatest/build/oatest_orig /tmp/claude-1000/-home-kebekus-Software-projects-enroute/c8674a44-2430-4523-b472-c51591a12fa1/scratchpad/vanoise_converted.txt json)",
       "Bash(grep -c '`' CHANGELOG.md)",
       "Bash(xxd -p)",
-      "Bash(printf 'AY\\\\n' >> .vscode/ltex.dictionary.en-US.txt && tail -3 .vscode/ltex.dictionary.en-US.txt)"
+      "Bash(printf 'AY\\\\n' >> .vscode/ltex.dictionary.en-US.txt && tail -3 .vscode/ltex.dictionary.en-US.txt)",
+      "Bash(git ls-remote *)",
+      "Bash(doxygen --version)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{url_effective}\\\\n\" -L https://akaflieg-freiburg.github.io/enroute/APIdoc https://akaflieg-freiburg.github.io/enroute/APIdoc/ https://akaflieg-freiburg.github.io/enroute/APIdoc/html/)"
     ],
     "additionalDirectories": [
       "/home/kebekus/Software/standards/Airspace/Sample CUB",
