@@ -19,10 +19,14 @@
 
 #include <QFile>
 #include <QGeoCoordinate>
+#include <QHash>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QRegularExpression>
+#include <QSet>
 #include <QTextStream>
+#include <QtMath>
 
 #include "fileFormats/DataFileAbstract.h"
 #include "fileFormats/OpenAir.h"
@@ -34,6 +38,7 @@ using namespace Qt::Literals::StringLiterals;
 class AirSpace {
 public:
     QString ac;
+    QString ay;
     QString an;
     QString al;
     QString ah;
@@ -72,6 +77,10 @@ public:
     {
         bool ok = false;
         QStringList items = qs.split(u',', Qt::SkipEmptyParts);
+        if (items.size() < 3)
+        {
+            throw QObject::tr("Invalid arc specification", "OpenAir");
+        }
         double const radius = items[0].toDouble(&ok) * 1852;
         if (!ok)
         {
@@ -87,48 +96,22 @@ public:
         {
             throw QObject::tr("Invalid number found: %1", "OpenAir").arg(items[2]);
         }
-        if (variableX.isValid())
-        {
-            if (variableD == '-')
-            {
-                if (angleEnd > angleStart)
-                {
-                    addArcCounterClockwise(radius, angleStart, 0);
-                    addArcCounterClockwise(radius, 360, angleEnd);
-                }
-                else
-                {
-                    addArcCounterClockwise(radius, angleStart, angleEnd);
-                }
-            }
-            else
-            {
-                if (angleEnd < angleStart)
-                {
-                    addArcClockwise(radius,angleStart, 360);
-                    addArcClockwise(radius, 0, angleEnd);
-                }
-                else
-                {
-                    addArcClockwise(radius,angleStart, angleEnd);
-                }
-            }
-            polygon.prepend(variableX.atDistanceAndAzimuth(radius, angleEnd));
-        }
-        else
+        if (!variableX.isValid())
         {
             throw QObject::tr("Variable X is not set but Circle should be drawn", "OpenAir");
         }
+        addArcBetweenAngles(radius, angleStart, angleEnd);
     }
 
     void addArcPoints(const QString& qs)
     {
-        QStringList items = qs.split(u',', Qt::SkipEmptyParts);
-        QGeoCoordinate const startPoint = toCoord(items[0]);
-        if (items[1].startsWith(u" "_s))
+        QStringList const items = qs.split(u',', Qt::SkipEmptyParts);
+        if (items.size() < 2)
         {
-            items[1] = items[1].sliced(1);
+            throw QObject::tr("Invalid arc specification", "OpenAir");
         }
+        // Leading blanks after the comma are handled by the tokenizer in toCoord.
+        QGeoCoordinate const startPoint = toCoord(items[0]);
         QGeoCoordinate const endPoint = toCoord(items[1]);
         if (!variableX.isValid())
         {
@@ -137,12 +120,35 @@ public:
         double const radius = variableX.distanceTo(startPoint);
         double const angleStart = variableX.azimuthTo(startPoint);
         double const angleEnd = variableX.azimuthTo(endPoint);
+        addArcBetweenAngles(radius, angleStart, angleEnd);
+    }
+
+    /* Draws the arc of the circle around variableX that runs from angleStart to
+     * angleEnd in the direction given by variableD, and appends its end point.
+     * The DA and DB records differ only in how they spell out the arc, so both
+     * end up here.
+     */
+    void addArcBetweenAngles(double radius, double angleStart, double angleEnd)
+    {
         if (variableD == '-')
         {
             if (angleEnd > angleStart)
             {
-                addArcCounterClockwise(radius, angleStart, 0);
-                addArcCounterClockwise(radius, 360, angleEnd);
+                /* The arc runs counterclockwise across the discontinuity at
+                 * 0/360 degrees and is therefore drawn in two halves. A half is
+                 * empty when the arc begins or ends exactly on the
+                 * discontinuity, and asking for it would request an arc of zero
+                 * length. This happens for perfectly ordinary airspace, such as
+                 * a DB arc whose start point lies due north of the center.
+                 */
+                if (angleStart > 0)
+                {
+                    addArcCounterClockwise(radius, angleStart, 0);
+                }
+                if (angleEnd < 360)
+                {
+                    addArcCounterClockwise(radius, 360, angleEnd);
+                }
             }
             else
             {
@@ -153,12 +159,19 @@ public:
         {
             if (angleEnd < angleStart)
             {
-                addArcClockwise(radius,angleStart, 360);
-                addArcClockwise(radius, 0, angleEnd);
+                // As above, for the clockwise direction.
+                if (angleStart < 360)
+                {
+                    addArcClockwise(radius, angleStart, 360);
+                }
+                if (angleEnd > 0)
+                {
+                    addArcClockwise(radius, 0, angleEnd);
+                }
             }
             else
             {
-                addArcClockwise(radius,angleStart, angleEnd);
+                addArcClockwise(radius, angleStart, angleEnd);
             }
         }
         polygon.prepend(variableX.atDistanceAndAzimuth(radius, angleEnd));
@@ -224,33 +237,67 @@ public:
                 reversePolygon();
             }
         }
+        /* A GeoJSON linear ring needs at least three distinct points plus the
+         * repeated closing point. An airspace with fewer cannot be drawn, and
+         * emitting a feature without geometry would produce invalid GeoJSON.
+         */
+        if (polygon.size() < 4)
+        {
+            errorList.append(QObject::tr("Airspace %1 has no valid outline.", "OpenAir").arg(an.trimmed()));
+        }
         if (al.size() < 1)
         {
-            errorList.append("Lower Limit not set for AirSpace " + an);
+            errorList.append(QObject::tr("Airspace %1 has no lower limit.", "OpenAir").arg(an.trimmed()));
         }
         if (ah.size() < 1)
         {
-            errorList.append("Upper Limit not set for AirSpace " + an);
+            errorList.append(QObject::tr("Airspace %1 has no upper limit.", "OpenAir").arg(an.trimmed()));
         }
-        if ((ac.compare(u"A"_s)   != 0) &&
-            (ac.compare(u"ATZ"_s) != 0) &&
-            (ac.compare(u"B"_s)   != 0) &&
-            (ac.compare(u"CTR"_s) != 0) &&
-            (ac.compare(u"C"_s)   != 0) &&
-            (ac.compare(u"D"_s)   != 0) &&
-            (ac.compare(u"DNG"_s) != 0) &&
-            (ac.compare(u"FIR"_s) != 0) &&
-            (ac.compare(u"FIS"_s) != 0) &&
-            (ac.compare(u"GLD"_s) != 0) &&
-            (ac.compare(u"NRA"_s) != 0) &&
-            (ac.compare(u"P"_s)   != 0) &&
-            (ac.compare(u"PJE"_s) != 0) &&
-            (ac.compare(u"R"_s)   != 0) &&
-            (ac.compare(u"TMZ"_s) != 0) &&
-            (ac.compare(u"SUA"_s) != 0)   )
+        setCategory();
+    }
+
+    /* Determines the category used in this app's GeoJSON files from the OpenAir
+     * airspace class (AC) and the OpenAir airspace type (AY). The type is the
+     * more specific of the two, so it wins whenever it names a category that
+     * this app can draw. Everything that cannot be mapped becomes SUA, which is
+     * drawn as a generic special use airspace.
+     */
+    void setCategory()
+    {
+        static const QHash<QString, QString> typeToCategory {
+            {u"ATZ"_s,  u"ATZ"_s},
+            {u"CTR"_s,  u"CTR"_s},
+            {u"FIR"_s,  u"FIR"_s},
+            {u"FIS"_s,  u"FIS"_s},
+            {u"GSEC"_s, u"GLD"_s}, // Gliding sector
+            {u"P"_s,    u"P"_s},
+            {u"Q"_s,    u"DNG"_s}, // OpenAir names danger areas Q
+            {u"R"_s,    u"R"_s},
+            {u"RMZ"_s,  u"RMZ"_s},
+            {u"TIA"_s,  u"TIA"_s},
+            {u"TIZ"_s,  u"TIZ"_s},
+            {u"TMZ"_s,  u"TMZ"_s}
+        };
+        auto const fromType = typeToCategory.value(ay.toUpper());
+        if (!fromType.isEmpty())
         {
-            ac = u"SUA"_s;
+            ac = fromType;
+            return;
         }
+
+        /* Airspace classes A-G, plus the airspace types that older OpenAir files
+         * put into the AC record, back when AC was used for classes and types
+         * alike. The class UNC is deliberately absent: unclassified airspace has
+         * no category of its own and becomes SUA below.
+         */
+        static const QSet<QString> knownCategories {
+            u"A"_s,   u"ATZ"_s, u"B"_s,   u"C"_s,   u"CTR"_s, u"D"_s,
+            u"DNG"_s, u"E"_s,   u"F"_s,   u"FIR"_s, u"FIS"_s, u"G"_s,
+            u"GLD"_s, u"NRA"_s, u"P"_s,   u"PJE"_s, u"R"_s,   u"RMZ"_s,
+            u"SUA"_s, u"TIA"_s, u"TIZ"_s, u"TMZ"_s
+        };
+        auto const fromClass = ac.toUpper();
+        ac = knownCategories.contains(fromClass) ? fromClass : u"SUA"_s;
     }
 
     [[nodiscard]] bool isSet() const
@@ -258,32 +305,16 @@ public:
         return (ac.length() > 0);
     }
 
-    void setHeight(QString qs, bool higher)
+    void setHeight(const QString& qs, bool higher)
     {
-        qs.replace(u"FL"_s, u"FL "_s);
-        qs.replace(u"ft"_s, u" ft"_s);
-        qs.replace(u"SFC"_s, u"GND"_s);
-        qs.replace(u"agl"_s, u"AGL"_s);
-        QStringList items = qs.split(u' ', Qt::SkipEmptyParts);
-        if (items[0].compare(u"0"_s) == 0)
-        {
-            items[0] = u"GND"_s;
-        }
-        if ((items.size() > 1) && (items[1].compare(u"ft"_s) == 0))
-        {
-            items.removeAt(1);
-        }
-        if ((items.size() > 1) && ((items[0].compare(u"FL"_s) == 0) || (items[1].compare(u"AGL"_s) == 0)))
-        {
-            items[0] = items[0] + " " + items[1];
-        }
+        auto const height = toHeight(qs);
         if (higher)
         {
-            ah = items[0];
+            ah = height;
         }
         else
         {
-            al = items[0];
+            al = height;
         }
     }
 
@@ -295,6 +326,10 @@ public:
         }
         else if (qs.startsWith(u"D="_s))
         {
+            if (qs.size() < 3)
+            {
+                throw QObject::tr("Invalid content for VariableD (direction): %1", "OpenAir").arg(qs);
+            }
             variableD = qs.at(2);
             if ((variableD != '-') && (variableD != '+'))
             {
@@ -305,6 +340,67 @@ public:
     }
 
 private:
+    /* Renders an OpenAir altitude specification as a string of the form used in
+     * this app's GeoJSON files: "GND", "1500", "1500 AGL" (both in feet) or
+     * "FL 65". OpenAir writes altitudes in feet or in meters, with an optional
+     * reference; unlike the CUB format, it states them exactly, so the
+     * conversion to feet does not round to whole decades. Throws if the
+     * specification cannot be understood, rather than guessing at an altitude.
+     */
+    static QString toHeight(const QString& qs)
+    {
+        auto const spec = qs.simplified();
+
+        // Ground and unlimited carry no numeric value.
+        if ((spec.compare(u"GND"_s, Qt::CaseInsensitive) == 0) ||
+            (spec.compare(u"SFC"_s, Qt::CaseInsensitive) == 0) ||
+            (spec.compare(u"0"_s) == 0))
+        {
+            return u"GND"_s;
+        }
+        if (spec.compare(u"UNL"_s, Qt::CaseInsensitive) == 0)
+        {
+            /* Unlimited has no equivalent in the GeoJSON vocabulary. Follow the
+             * CUB reader, which uses FL 660, above the ceiling of all airspace
+             * systems worldwide.
+             */
+            return u"FL 660"_s;
+        }
+
+        // Flight level, as in "FL65" or "FL 65".
+        static const QRegularExpression flightLevel(u"^FL\\s*(\\d+(?:\\.\\d+)?)$"_s,
+                                                    QRegularExpression::CaseInsensitiveOption);
+        auto const flMatch = flightLevel.match(spec);
+        if (flMatch.hasMatch())
+        {
+            return u"FL %1"_s.arg(qRound(flMatch.captured(1).toDouble()));
+        }
+
+        /* Numeric altitude with optional unit and optional reference, as in
+         * "2500", "2500ft AMSL", "1000 ft AGL" or "3400m AMSL". The references
+         * AMSL, MSL and STD all end up as a plain number, which this app reads
+         * as an altitude above the QNH.
+         */
+        static const QRegularExpression altitude(u"^(\\d+(?:\\.\\d+)?)\\s*(FT|M)?\\s*(AGL|AMSL|MSL|STD)?$"_s,
+                                                 QRegularExpression::CaseInsensitiveOption);
+        auto const altMatch = altitude.match(spec);
+        if (!altMatch.hasMatch())
+        {
+            throw QObject::tr("Invalid altitude specification: %1", "OpenAir").arg(qs);
+        }
+
+        auto feet = altMatch.captured(1).toDouble();
+        if (altMatch.captured(2).compare(u"M"_s, Qt::CaseInsensitive) == 0)
+        {
+            feet /= 0.3048;
+        }
+        if (altMatch.captured(3).compare(u"AGL"_s, Qt::CaseInsensitive) == 0)
+        {
+            return u"%1 AGL"_s.arg(qRound(feet));
+        }
+        return QString::number(qRound(feet));
+    }
+
     static double getNumber(const QString& degree)
     {
         bool ok = false;
@@ -351,34 +447,51 @@ private:
 
     static QGeoCoordinate toCoord(const QString& qs)
     {
-        double latitude = NAN;
-        double longitude = NAN;
-        QStringList items = qs.split(u' ', Qt::SkipEmptyParts);
-        if (items[0].endsWith('N') || items[0].endsWith('S'))
-        {
-            items.insert(1, items[0].sliced(items[0].length() - 1));
-            items[0].chop(1);
-        }
-        latitude = getNumber(items[0]);
-        if (items[1].compare(u"S"_s) == 0)
-        {
-            latitude *= -1;
-        }
-        else if (items[1].compare(u"N"_s) != 0)
+        /* The standard spelling is "45:19:40N 006:53:02E", but files found in
+         * the wild also separate the hemisphere letters by spaces, or attach
+         * them to the wrong number, as in "45:19:40 N006:53:02 E". Isolating the
+         * hemisphere letters makes all of these spellings tokenize alike. Since
+         * the numbers consist of digits, colons and periods only, the letters
+         * are unambiguous.
+         */
+        static const QRegularExpression hemisphere(u"([NSEW])"_s, QRegularExpression::CaseInsensitiveOption);
+        auto normalized = qs;
+        normalized.replace(hemisphere, u" \\1 "_s);
+
+        QStringList const items = normalized.split(u' ', Qt::SkipEmptyParts);
+        if (items.size() < 4)
         {
             throw QObject::tr("Invalid coordinate found: %1", "OpenAir").arg(qs);
         }
-        if (items[2].endsWith('W') || items[2].endsWith('E'))
+
+        double latitude = NAN;
+        double longitude = NAN;
+        try
         {
-            items.insert(3, items[2].sliced(items[2].length() - 1));
-            items[2].chop(1);
+            latitude = getNumber(items[0]);
+            longitude = getNumber(items[2]);
         }
-        longitude = getNumber(items[2]);
-        if (items[3].compare(u"W"_s) == 0)
+        catch (QString&)
+        {
+            /* Report the coordinate as a whole. The individual tokens are the
+             * result of the normalization above, so naming one of them would
+             * point at text that does not appear in the file.
+             */
+            throw QObject::tr("Invalid coordinate found: %1", "OpenAir").arg(qs);
+        }
+        if (items[1].compare(u"S"_s, Qt::CaseInsensitive) == 0)
+        {
+            latitude *= -1;
+        }
+        else if (items[1].compare(u"N"_s, Qt::CaseInsensitive) != 0)
+        {
+            throw QObject::tr("Invalid coordinate found: %1", "OpenAir").arg(qs);
+        }
+        if (items[3].compare(u"W"_s, Qt::CaseInsensitive) == 0)
         {
             longitude *= -1;
         }
-        else if (items[3].compare(u"E"_s) != 0)
+        else if (items[3].compare(u"E"_s, Qt::CaseInsensitive) != 0)
         {
             throw QObject::tr("Invalid coordinate found: %1", "OpenAir").arg(qs);
         }
@@ -408,6 +521,10 @@ public:
 
     QGeoCoordinate getLastX()
     {
+        if (airSpaceVector.isEmpty())
+        {
+            return {};
+        }
         return airSpaceVector.last().variableX;
     }
 
@@ -428,6 +545,12 @@ public:
 
         for (const auto &i : std::as_const(airSpaceVector))
         {
+            /* Reset the objects that are reused across iterations. Without this,
+             * an airspace whose outline is too small to be written below would
+             * silently inherit the geometry of the preceding airspace.
+             */
+            featureObj = QJsonObject();
+            geomObj = QJsonObject();
             featureObj.insert(u"type"_s, QJsonValue::fromVariant("Feature"));
             propObj = QJsonObject();
             propObj.insert(u"NAM"_s, QJsonValue::fromVariant(i.an));
@@ -516,6 +639,16 @@ bool FileFormats::OpenAir::isValid(const QString& fileName, QString* info)
     if (info != nullptr)
     {
         *info = {};
+        if (!errorList.isEmpty())
+        {
+            *info += u"<p>"_s + QObject::tr("Errors", "OpenAir") + u"</p>"_s;
+            *info += u"<ul style='margin-left:-25px;'>"_s;
+            foreach(auto error, errorList)
+            {
+                *info += u"<li>"_s + error + u"</li>"_s;
+            }
+            *info += u"</ul>"_s;
+        }
         if (!warnings.isEmpty())
         {
             *info += u"<p>"_s + QObject::tr("Warnings", "OpenAir") + u"</p>"_s;
@@ -550,6 +683,29 @@ QJsonDocument FileFormats::OpenAir::parse(const QString& fileName, QStringList& 
     inputStream.setEncoding(QStringConverter::Latin1);
 
     bool hadError = false;
+    bool hasActivationTimes = false;
+
+    /* Concludes the airspace that has just been read. An airspace whose
+     * definition contains errors is not imported. Dropping it silently would
+     * leave the user with a map that looks complete but is not, so this is
+     * reported as an error and not merely as a warning.
+     */
+    auto finishAirSpace = [&airSpace, &airSpaceVector, &errorList, &hadError]()
+    {
+        if (hadError)
+        {
+            errorList.append(QObject::tr("Airspace %1 was not imported because its definition contains errors.", "OpenAir")
+                                 .arg(airSpace.an.trimmed()));
+        }
+        else
+        {
+            airSpace.finalize(errorList);
+            airSpaceVector.addAirSpace(airSpace);
+        }
+        airSpace = AirSpace();
+        hadError = false;
+    };
+
     int lineNo = 0;
     while (inputStream.readLineInto(&line))
     {
@@ -565,15 +721,24 @@ QJsonDocument FileFormats::OpenAir::parse(const QString& fileName, QStringList& 
                 //if airSpace is already filled, the existing airSpace must be added to the list and a new airSpace must be initialized
                 if (airSpace.isSet())
                 {
-                    if (!hadError)
-                    {
-                        airSpace.finalize(errorList);
-                        airSpaceVector.addAirSpace(airSpace);
-                    }
-                    airSpace = AirSpace();
-                    hadError = false;
+                    finishAirSpace();
                 }
                 airSpace.ac = line.sliced(3).trimmed();
+                continue;
+            }
+            if (line.startsWith(u"AY "_s))
+            {
+                airSpace.ay = line.sliced(3).trimmed();
+                continue;
+            }
+            if (line.startsWith(u"AA "_s))
+            {
+                /* Activation times. This app has no way to represent them, so
+                 * the airspace is shown at all times. Warn once per file, so
+                 * that the user does not mistake a seasonal airspace for a
+                 * permanent one.
+                 */
+                hasActivationTimes = true;
                 continue;
             }
             if (line.startsWith(u"AN "_s))
@@ -629,13 +794,18 @@ QJsonDocument FileFormats::OpenAir::parse(const QString& fileName, QStringList& 
         catch (QString& ex)
         {
             hadError = true;
-            warningList.append(QObject::tr("Error in line %1: %2; Airspace %3 ignored.", "OpenAir").arg(QString::number(lineNo), ex, airSpace.an));
+            warningList.append(QObject::tr("Error in line %1: %2", "OpenAir").arg(QString::number(lineNo), ex));
         }
     }
     if (airSpace.isSet())
     {
-        airSpace.finalize(errorList);
-        airSpaceVector.addAirSpace(airSpace);
+        finishAirSpace();
+    }
+
+    if (hasActivationTimes)
+    {
+        warningList.append(QObject::tr("This file specifies activation times. Activation times are not evaluated; "
+                                       "the airspaces are shown at all times.", "OpenAir"));
     }
 
     return airSpaceVector.getJson(fileName);

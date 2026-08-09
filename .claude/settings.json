@@ -100,7 +100,22 @@
       "Bash(echo \"desktop exit=$?\")",
       "Bash(cp /home/kebekus/Software/projects/enroute/build/claude/metadata/de.akaflieg_freiburg.enroute.appdata.xml test.xml)",
       "Bash(python3 /home/kebekus/Software/projects/enroute/packaging/flatpak/inject_releases.py /home/kebekus/Software/projects/enroute/CHANGELOG.md test.xml)",
-      "Bash(gio info *)"
+      "Bash(gio info *)",
+      "Bash(xxd)",
+      "Bash(/tmp/claude-1000/-home-kebekus-Software-projects-enroute/c8674a44-2430-4523-b472-c51591a12fa1/scratchpad/oatest/build/oatest '/home/kebekus/Downloads/NEW- Arrete Planeur Vanoise.txt')",
+      "Bash(grep -o '\"[A-Z]*\"$')",
+      "Bash(cmake --build /tmp/claude-1000/-home-kebekus-Software-projects-enroute/c8674a44-2430-4523-b472-c51591a12fa1/scratchpad/oatest/build)",
+      "Bash(/tmp/claude-1000/-home-kebekus-Software-projects-enroute/c8674a44-2430-4523-b472-c51591a12fa1/scratchpad/oatest/build/oatest /tmp/claude-1000/-home-kebekus-Software-projects-enroute/c8674a44-2430-4523-b472-c51591a12fa1/scratchpad/regression.txt)",
+      "Bash(awk '/^\\\\*\\\\* P2/,/^\\\\*\\\\* P3/' \"NEW- Arrete Planeur Vanoise.txt\")",
+      "Bash(awk '{ *)",
+      "Bash(break)",
+      "Bash(sed -n '1,12p;/FEATURES/,$p')",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(/tmp/claude-1000/-home-kebekus-Software-projects-enroute/c8674a44-2430-4523-b472-c51591a12fa1/scratchpad/oatest/build/oatest_before /tmp/claude-1000/-home-kebekus-Software-projects-enroute/c8674a44-2430-4523-b472-c51591a12fa1/scratchpad/arcs_edge.txt)",
+      "Bash(/tmp/claude-1000/-home-kebekus-Software-projects-enroute/c8674a44-2430-4523-b472-c51591a12fa1/scratchpad/oatest/build/oatest /tmp/claude-1000/-home-kebekus-Software-projects-enroute/c8674a44-2430-4523-b472-c51591a12fa1/scratchpad/arcs_edge.txt)",
+      "Bash(echo \"EXIT=$? \\(no output above means none remain\\)\")",
+      "Bash(python3 - /tmp/claude-1000/-home-kebekus-Software-projects-enroute/c8674a44-2430-4523-b472-c51591a12fa1/scratchpad/probe.ts)",
+      "Bash(git ls-tree *)"
     ],
     "additionalDirectories": [
       "/home/kebekus/Software/standards/Airspace/Sample CUB"
