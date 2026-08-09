@@ -70,6 +70,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a7a8d33e313658242b6ac8f37c01fc75e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor.  <br /></td></tr>
 <tr class="memitem:aa51ac87e98c51f9da434a9c4fc0d0e2d" id="r_aa51ac87e98c51f9da434a9c4fc0d0e2d"><td class="memItemLeft">Q_INVOKABLE QStringList&#160;</td><td class="memItemRight"><a class="el" href="#aa51ac87e98c51f9da434a9c4fc0d0e2d">entries</a> (<a class="el" href="#aade57a59b2c1aaccee483f968aae4694">Librarian::Library</a> library, const QString &amp;filter=QString())</td></tr>
 <tr class="memdesc:aa51ac87e98c51f9da434a9c4fc0d0e2d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Lists all entries in the library whose name contains the string 'filter'.  <br /></td></tr>
+<tr class="memitem:a2b33e49300ec5e4e2841ff4dd62843cd" id="r_a2b33e49300ec5e4e2841ff4dd62843cd"><td class="memItemLeft">Q_INVOKABLE bool&#160;</td><td class="memItemRight"><a class="el" href="#a2b33e49300ec5e4e2841ff4dd62843cd">matches</a> (const QString &amp;text, const QString &amp;filter)</td></tr>
+<tr class="memdesc:a2b33e49300ec5e4e2841ff4dd62843cd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Checks if a text matches a filter string, in a fuzzy way.  <br /></td></tr>
 <tr class="memitem:a62c49a3f1b314849a6f2ad8366275fb0" id="r_a62c49a3f1b314849a6f2ad8366275fb0"><td class="memItemLeft">QStringList&#160;</td><td class="memItemRight"><a class="el" href="#a62c49a3f1b314849a6f2ad8366275fb0">permissiveFilter</a> (const QStringList &amp;input, const QString &amp;filter)</td></tr>
 <tr class="memdesc:a62c49a3f1b314849a6f2ad8366275fb0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Filters a QStringList in a fuzzy way.  <br /></td></tr>
 <tr class="memitem:a1c41138e3775e3a2b0c8235f193e9889" id="r_a1c41138e3775e3a2b0c8235f193e9889"><td class="memItemLeft">QString&#160;</td><td class="memItemRight"><a class="el" href="#a1c41138e3775e3a2b0c8235f193e9889">simplifySpecialChars</a> (const QString &amp;string)</td></tr>
@@ -534,6 +536,40 @@ Static Public Member Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a2b33e49300ec5e4e2841ff4dd62843cd" name="a2b33e49300ec5e4e2841ff4dd62843cd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2b33e49300ec5e4e2841ff4dd62843cd">&#9670;&#160;</a></span>matches()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">Q_INVOKABLE bool Librarian::matches </td>
+          <td>(</td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>text</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>filter</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Checks if a text matches a filter string, in a fuzzy way. </p>
+<p>This method splits the filter into words at whitespace. The text matches if it contains every one of these words. The comparison ignores case and special characters, so that "Zürich" matches "u", "Ü", "ù" and "zurich". An empty filter matches every text.</p>
+<p>This is the single filter primitive of this app. Use it from QML to filter list models, as in</p>
+<p>model: Array.from(SomeSingleton.items).filter((i) =&gt; <a class="el" href="#a2b33e49300ec5e4e2841ff4dd62843cd" title="Checks if a text matches a filter string, in a fuzzy way.">Librarian.matches</a>(i.name, filterField.filter))</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">text</td><td>Text that is searched</td></tr>
+    <tr><td class="paramname">filter</td><td>Filter, possibly consisting of several words</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if the text matches the filter </dd></dl>
+
+</div>
+</div>
 <a id="a62c49a3f1b314849a6f2ad8366275fb0" name="a62c49a3f1b314849a6f2ad8366275fb0"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a62c49a3f1b314849a6f2ad8366275fb0">&#9670;&#160;</a></span>permissiveFilter()</h2>
 
@@ -554,7 +590,7 @@ Static Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Filters a QStringList in a fuzzy way. </p>
-<p>This helper method filters a QStringList. It returns a sublist of those entries whose name approximately contain the filter string. For instance, "Zürich" is supposed to contain "u", "Ü" and "ù"</p>
+<p>This helper method filters a QStringList. It returns a sublist of those entries that match the filter, in the sense of the method <a class="el" href="#a2b33e49300ec5e4e2841ff4dd62843cd" title="Checks if a text matches a filter string, in a fuzzy way.">matches()</a>.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">input</td><td>QStringList that is to be filtered</td></tr>
@@ -562,7 +598,8 @@ Static Public Member Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Filteres QStringList </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Filteres QStringList</dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="#a2b33e49300ec5e4e2841ff4dd62843cd" title="Checks if a text matches a filter string, in a fuzzy way.">matches</a> </dd></dl>
 
 </div>
 </div>
