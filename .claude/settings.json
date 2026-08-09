@@ -115,10 +115,17 @@
       "Bash(/tmp/claude-1000/-home-kebekus-Software-projects-enroute/c8674a44-2430-4523-b472-c51591a12fa1/scratchpad/oatest/build/oatest /tmp/claude-1000/-home-kebekus-Software-projects-enroute/c8674a44-2430-4523-b472-c51591a12fa1/scratchpad/arcs_edge.txt)",
       "Bash(echo \"EXIT=$? \\(no output above means none remain\\)\")",
       "Bash(python3 - /tmp/claude-1000/-home-kebekus-Software-projects-enroute/c8674a44-2430-4523-b472-c51591a12fa1/scratchpad/probe.ts)",
-      "Bash(git ls-tree *)"
+      "Bash(git ls-tree *)",
+      "Bash(python3 /tmp/claude-1000/-home-kebekus-Software-projects-enroute/c8674a44-2430-4523-b472-c51591a12fa1/scratchpad/convert.py '/home/kebekus/Downloads/NEW- Arrete Planeur Vanoise.txt' /tmp/claude-1000/-home-kebekus-Software-projects-enroute/c8674a44-2430-4523-b472-c51591a12fa1/scratchpad/vanoise_converted.txt)",
+      "Bash(/tmp/claude-1000/-home-kebekus-Software-projects-enroute/c8674a44-2430-4523-b472-c51591a12fa1/scratchpad/oatest/build/oatest_orig /tmp/claude-1000/-home-kebekus-Software-projects-enroute/c8674a44-2430-4523-b472-c51591a12fa1/scratchpad/vanoise_converted.txt)",
+      "Bash(/tmp/claude-1000/-home-kebekus-Software-projects-enroute/c8674a44-2430-4523-b472-c51591a12fa1/scratchpad/oatest/build/oatest_orig /tmp/claude-1000/-home-kebekus-Software-projects-enroute/c8674a44-2430-4523-b472-c51591a12fa1/scratchpad/vanoise_converted.txt json)",
+      "Bash(grep -c '`' CHANGELOG.md)",
+      "Bash(xxd -p)",
+      "Bash(printf 'AY\\\\n' >> .vscode/ltex.dictionary.en-US.txt && tail -3 .vscode/ltex.dictionary.en-US.txt)"
     ],
     "additionalDirectories": [
-      "/home/kebekus/Software/standards/Airspace/Sample CUB"
+      "/home/kebekus/Software/standards/Airspace/Sample CUB",
+      "/home/kebekus/Software/projects/enroute/.vscode"
     ]
   },
   "hooks": {

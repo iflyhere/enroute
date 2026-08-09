@@ -20,6 +20,11 @@
   instance in a pressurized cabin or when a flight simulator is used. In this
   situation, the side view no longer shows unreliable airspace data. (#570)
 
+- OpenAIR import now understands the AY record (airspace type) and the
+  airspace classes E, F and G. Gliding sectors and similar zones are now drawn
+  with their proper airspace category, instead of appearing as generic special
+  use airspace.
+
 ### Changed
 
 - The safe-area handling that keeps the user interface clear of display
@@ -30,6 +35,11 @@
 
 - GDL90 Traffic: suppress "No GPS reception" warning when phone GNSS is primary
   source #673
+
+- Fixes several issues with OpenAIR import.
+
+- OpenAIR files that specify activation times now warn that these times are not
+  evaluated, so that seasonal airspace is not mistaken for permanent airspace.
 
 ## [3.4.1] - 2026-08-06
 
