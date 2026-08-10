@@ -43,16 +43,28 @@
 GeoMaps::VACLibrary::VACLibrary(QObject *parent)
     : QObject(parent)
 {
-    // Wire up: Save library whenever the content changes
-    connect(this, &GeoMaps::VACLibrary::dataChanged, this, &GeoMaps::VACLibrary::save, Qt::QueuedConnection);
-
     // Restore previously saves VAC library
     if (m_dataFile.open(QIODeviceBase::ReadOnly))
     {
         QDataStream dataStream(&m_dataFile);
-        dataStream >> m_vacs;
+        QVector<GeoMaps::VAC> vacs;
+        dataStream >> vacs;
+        m_vacs = vacs;
     }
     m_dataFile.close();
+
+    // Set up the bindings for the derived properties. They re-evaluate
+    // automatically whenever m_vacs or m_collectionVacs change.
+    m_sortedVacs.setBinding([this]() {
+        auto result = m_vacs.value() + m_collectionVacs.value();
+        std::sort(result.begin(), result.end(), [](const GeoMaps::VAC& first, const GeoMaps::VAC& second) { return first.name < second.name; });
+        return result;
+    });
+    m_isEmpty.setBinding([this]() { return m_vacs.value().isEmpty() && m_collectionVacs.value().isEmpty(); });
+    m_hasManuallyImported.setBinding([this]() { return !m_vacs.value().isEmpty(); });
+
+    // Wire up: Save library whenever the content changes
+    connect(this, &GeoMaps::VACLibrary::vacsChanged, this, &GeoMaps::VACLibrary::save, Qt::QueuedConnection);
 
     // Call the janitor as soon as we have some time
     QTimer::singleShot(0, this, &GeoMaps::VACLibrary::janitor);
@@ -74,20 +86,13 @@ GeoMaps::VACLibrary::VACLibrary(QObject *parent)
 
 GeoMaps::VACLibrary::~VACLibrary()
 {
+    // Break the bindings before destruction proceeds, so that no binding
+    // re-evaluation can touch members in a partially destroyed state.
+    m_sortedVacs.takeBinding();
+    m_isEmpty.takeBinding();
+    m_hasManuallyImported.takeBinding();
+
     save();
-}
-
-
-//
-// Getter Methods
-//
-
-
-QVector<GeoMaps::VAC> GeoMaps::VACLibrary::vacs()
-{
-    auto result = m_vacs + m_collectionVacs;
-    std::sort(result.begin(), result.end(), [](const GeoMaps::VAC& first, const GeoMaps::VAC& second) { return first.name < second.name; });
-    return result;
 }
 
 
@@ -98,28 +103,28 @@ QVector<GeoMaps::VAC> GeoMaps::VACLibrary::vacs()
 
 void GeoMaps::VACLibrary::clear()
 {
-    if (m_vacs.isEmpty())
+    auto vacs = m_vacs.value();
+    if (vacs.isEmpty())
     {
         return;
     }
-    foreach(auto vac, m_vacs)
+    foreach(auto vac, vacs)
     {
         QFile::remove(vac.fileName);
     }
-    m_vacs.clear();
-    emit dataChanged();
+    m_vacs = QVector<GeoMaps::VAC>();
 }
 
 GeoMaps::VAC GeoMaps::VACLibrary::get(const QString& name)
 {
-    foreach(auto vac, m_vacs)
+    foreach(auto vac, m_vacs.value())
     {
         if (vac.name == name)
         {
             return vac;
         }
     }
-    foreach(auto vac, m_collectionVacs)
+    foreach(auto vac, m_collectionVacs.value())
     {
         if (vac.name == name)
         {
@@ -142,9 +147,12 @@ QString GeoMaps::VACLibrary::importTripKit(const QString& fileName)
     QDir const dir;
     dir.mkpath(m_vacDirectory);
 
-    // Unpack the VACs into m_vacDirectory
+    // Unpack the VACs into m_vacDirectory. Work on a local copy and write
+    // the property once at the end: every write would re-sort the list and
+    // notify all observers.
     auto size = tripKit.numCharts();
     int successfulImports = 0;
+    auto vacs = m_vacs.value();
     for(auto idx=0; idx<size; idx++)
     {
         emit importTripKitStatus((double)idx/(double)size);
@@ -155,17 +163,12 @@ QString GeoMaps::VACLibrary::importTripKit(const QString& fileName)
         {
             continue;
         }
-        auto oldVac = get(vac.name);
-        if (oldVac.isValid())
-        {
-            m_vacs.removeAll(oldVac);
-        }
-
-        m_vacs.append(vac);
+        vacs.removeIf([&vac](const GeoMaps::VAC& other) { return other.name == vac.name; });
+        vacs.append(vac);
         successfulImports++;
     }
+    m_vacs = vacs;
     emit importTripKitStatus(1.0);
-    emit dataChanged();
 
     if (successfulImports == 0)
     {
@@ -200,13 +203,29 @@ QString GeoMaps::VACLibrary::importVAC(GeoMaps::VAC vac)
         return tr("Unable to read raster image data from the input file <strong>%1</strong>.").arg(_fileName);
     }
 
+    QString const newFileName = absolutePathForVac(vac);
+
+    // If the image file is already in its proper place in the VAC directory
+    // (e.g. when the janitor re-imports an orphaned chart), then deleting and
+    // re-copying would destroy the file: remove(vac.name) deletes the files
+    // of same-named library entries, which point to exactly this location.
+    // Only update the library entries in that case.
+    if (_fileName == newFileName)
+    {
+        vac.fileName = newFileName;
+        auto vacs = m_vacs.value();
+        vacs.removeIf([&vac](const GeoMaps::VAC& other) { return other.name == vac.name; });
+        vacs.append(vac);
+        m_vacs = vacs;
+        return {};
+    }
+
     // Delete all existing VACs with the new name
     remove(vac.name);
 
     // Copy file to VAC directory
     QDir const dir;
     dir.mkpath(m_vacDirectory);
-    QString const newFileName = absolutePathForVac(vac);
     QFile::remove(newFileName);
     if (_fileName.endsWith(u".webp"_s))
     {
@@ -225,9 +244,9 @@ QString GeoMaps::VACLibrary::importVAC(GeoMaps::VAC vac)
 
     // Set new file name and add to library
     vac.fileName = newFileName;
-    m_vacs.append(vac);
-
-    emit dataChanged();
+    auto vacs = m_vacs.value();
+    vacs.append(vac);
+    m_vacs = vacs;
 
     return {};
 }
@@ -291,8 +310,10 @@ GeoMaps::VAC GeoMaps::VACLibrary::materialize(const GeoMaps::VAC& vac)
 
 void GeoMaps::VACLibrary::remove(const QString& baseName)
 {
+    auto vacs = m_vacs.value();
+
     QVector<GeoMaps::VAC> vacsToDelete;
-    foreach(auto vac, m_vacs)
+    foreach(auto vac, vacs)
     {
         if (vac.name == baseName)
         {
@@ -308,9 +329,9 @@ void GeoMaps::VACLibrary::remove(const QString& baseName)
     foreach (auto vac, vacsToDelete)
     {
         QFile::remove(vac.fileName);
-        m_vacs.removeAll(vac);
+        vacs.removeAll(vac);
     }
-    emit dataChanged();
+    m_vacs = vacs;
 }
 
 QString GeoMaps::VACLibrary::rename(const QString& oldName, const QString& newName)
@@ -333,13 +354,14 @@ QString GeoMaps::VACLibrary::rename(const QString& oldName, const QString& newNa
         return tr("VAC file renaming failed.");
     }
 
-    // Remove old VAC from list, update data and add agaib
-    m_vacs.removeAll(vac);
+    // Remove old VAC from list, update data and add again
+    auto vacs = m_vacs.value();
+    vacs.removeAll(vac);
     vac.fileName = newFileName;
     vac.name = newName;
-    m_vacs.append(vac);
+    vacs.append(vac);
+    m_vacs = vacs;
 
-    emit dataChanged();
     return {};
 }
 
@@ -355,7 +377,7 @@ QVector<GeoMaps::VAC> GeoMaps::VACLibrary::vacsByDistance(const QGeoCoordinate& 
     }
 
     QVector<GeoMaps::VAC> result;
-    const auto constvacs = m_vacs + m_collectionVacs;
+    const auto constvacs = m_vacs.value() + m_collectionVacs.value();
     for(const auto& vac : constvacs) {
         if (!vac.isValid())
         {
@@ -384,7 +406,7 @@ QVector<GeoMaps::VAC> GeoMaps::VACLibrary::vacsByDistance(const QGeoCoordinate& 
 QVector<GeoMaps::VAC> GeoMaps::VACLibrary::vacs4Point(const QGeoCoordinate& position)
 {
     QVector<GeoMaps::VAC> result;
-    const auto constvacs = m_vacs + m_collectionVacs;
+    const auto constvacs = m_vacs.value() + m_collectionVacs.value();
     for(const auto& vac : constvacs) {
         if (!vac.isValid())
         {
@@ -408,10 +430,12 @@ QVector<GeoMaps::VAC> GeoMaps::VACLibrary::vacs4Point(const QGeoCoordinate& posi
 void GeoMaps::VACLibrary::janitor()
 {
     // Go through the list of all VAC. Find all VACs without image file, and a
-    // list of all image file managed by VACs in the list
+    // list of all image file managed by VACs in the list. This all happens on
+    // a local copy, which is written back in a single property assignment.
+    auto vacs = m_vacs.value();
     QVector<GeoMaps::VAC> vacsWithoutImageFile;
     QVector<QFileInfo> imageFilesWithVAC;
-    foreach(auto vac, m_vacs)
+    for (auto& vac : vacs)
     {
         if (QFile::exists(vac.fileName))
         {
@@ -426,9 +450,7 @@ void GeoMaps::VACLibrary::janitor()
                 // devices. After an update, the path of the app container is
                 // changed, and therefore the location of the vac files => we
                 // have to set the path to the current location
-                m_vacs.removeAll(vac);
                 vac.fileName = newFileName;
-                m_vacs.append(vac);
                 imageFilesWithVAC.append(QFileInfo(vac.fileName));
             }
             else
@@ -439,12 +461,11 @@ void GeoMaps::VACLibrary::janitor()
     }
 
     // Delete all VACs without image file
-    bool hasChange = false;
     foreach(auto vac, vacsWithoutImageFile)
     {
-        hasChange = true;
-        m_vacs.removeAll(vac);
+        vacs.removeAll(vac);
     }
+    m_vacs = vacs;
 
     // Find list of all image files without VAC
     QVector<QFileInfo> imageFilesWithoutVAC;
@@ -460,20 +481,12 @@ void GeoMaps::VACLibrary::janitor()
     }
 
     // Go through the list of image files without VAC. Try to import them.
-    // Failing that, delete those files.
+    // Failing that, delete those files. importVAC() updates m_vacs itself.
     foreach(auto fInfo, imageFilesWithoutVAC)
     {
         GeoMaps::VAC const vac(fInfo.filePath(), {});
-        if (importVAC(vac).isEmpty())
-        {
-            hasChange = true;
-        }
+        (void)importVAC(vac);
         QFile::remove(fInfo.filePath());
-    }
-
-    if (hasChange)
-    {
-        emit dataChanged();
     }
 }
 
@@ -481,7 +494,7 @@ void GeoMaps::VACLibrary::updateCollections()
 {
     // Rebuild m_collectionVacs from the collection files that are currently
     // installed
-    m_collectionVacs.clear();
+    QVector<GeoMaps::VAC> collectionVacs;
     QMap<QString, QDateTime> collectionModificationDates;
     const auto files = GlobalObject::dataManager()->vacCollections()->files();
     for (const auto& file : files)
@@ -493,8 +506,9 @@ void GeoMaps::VACLibrary::updateCollections()
             continue;
         }
         collectionModificationDates.insert(QFileInfo(file).completeBaseName(), QFileInfo(file).lastModified());
-        m_collectionVacs.append(collection.charts());
+        collectionVacs.append(collection.charts());
     }
+    m_collectionVacs = collectionVacs;
 
     // Clean the extraction cache: remove cache directories for collections
     // that are no longer installed, and cache files whose names do not match
@@ -521,8 +535,6 @@ void GeoMaps::VACLibrary::updateCollections()
             }
         }
     }
-
-    emit dataChanged();
 }
 
 void GeoMaps::VACLibrary::save()
@@ -530,7 +542,7 @@ void GeoMaps::VACLibrary::save()
     if (m_dataFile.open(QIODeviceBase::WriteOnly))
     {
         QDataStream dataStream(&m_dataFile);
-        dataStream << m_vacs;
+        dataStream << m_vacs.value();
     }
     m_dataFile.close();
 }
