@@ -119,7 +119,7 @@ Page {
         // updated or uninstalled), the chart that is currently displayed might
         // have disappeared, or its raster image might have moved to a new
         // file. Reset or refresh the current chart accordingly.
-        function onDataChanged() {
+        function onVacsChanged() {
             if (Global.currentVAC.name === "")
                 return
             var freshVAC = VACLibrary.get(Global.currentVAC.name)
