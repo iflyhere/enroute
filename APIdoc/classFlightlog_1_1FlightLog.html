@@ -93,7 +93,7 @@ void&#160;</td><td class="memItemRight"><b>showCurrentFlightTraceChanged</b> ()<
 <tr class="memitem:ad7a71a52cb6e2e25cd6487c137eb87a2" id="r_ad7a71a52cb6e2e25cd6487c137eb87a2"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#ad7a71a52cb6e2e25cd6487c137eb87a2">landingDetected</a> (const QString &amp;time)</td></tr>
 <tr class="memdesc:ad7a71a52cb6e2e25cd6487c137eb87a2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Emitted when a landing is detected.  <br /></td></tr>
 <tr class="memitem:a5f3ec3368d657de60412daa08866c697" id="r_a5f3ec3368d657de60412daa08866c697"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a5f3ec3368d657de60412daa08866c697">saveError</a> (const QString &amp;message)</td></tr>
-<tr class="memdesc:a5f3ec3368d657de60412daa08866c697"><td class="mdescLeft">&#160;</td><td class="mdescRight">Emitted when saving the flight log file fails.  <br /></td></tr>
+<tr class="memdesc:a5f3ec3368d657de60412daa08866c697"><td class="mdescLeft">&#160;</td><td class="mdescRight">Emitted when saving the flight log database fails.  <br /></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-methods" class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
@@ -101,9 +101,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a553f021ac75d268ae8599633f309772d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Standard constructor.  <br /></td></tr>
 <tr class="memitem:a93a6933a82586acc7a33f0ea1608d397" id="r_a93a6933a82586acc7a33f0ea1608d397"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a93a6933a82586acc7a33f0ea1608d397">deferredInitialization</a> () override</td></tr>
 <tr class="memdesc:a93a6933a82586acc7a33f0ea1608d397"><td class="mdescLeft">&#160;</td><td class="mdescRight">Non-constructor initialization.  <br /></td></tr>
-<tr class="memitem:a289f24ee86e8930c2116924126aa61ae" id="r_a289f24ee86e8930c2116924126aa61ae"><td class="memItemLeft"><a id="a289f24ee86e8930c2116924126aa61ae" name="a289f24ee86e8930c2116924126aa61ae"></a>
-&#160;</td><td class="memItemRight"><b>~FlightLog</b> () override=default</td></tr>
-<tr class="memdesc:a289f24ee86e8930c2116924126aa61ae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Standard destructor. <br /></td></tr>
+<tr class="memitem:ab573045f616c056179e2677b03ce3724" id="r_ab573045f616c056179e2677b03ce3724"><td class="memItemLeft"><a id="ab573045f616c056179e2677b03ce3724" name="ab573045f616c056179e2677b03ce3724"></a>
+&#160;</td><td class="memItemRight"><b>~FlightLog</b> () override</td></tr>
+<tr class="memdesc:ab573045f616c056179e2677b03ce3724"><td class="mdescLeft">&#160;</td><td class="mdescRight">Standard destructor. <br /></td></tr>
 <tr class="memitem:ac7bfdf17956fb2f5813da91a798d8003" id="r_ac7bfdf17956fb2f5813da91a798d8003"><td class="memItemLeft">Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="#ac7bfdf17956fb2f5813da91a798d8003">addFlight</a> (const <a class="el" href="classFlightlog_1_1Flight.html">Flightlog::Flight</a> &amp;flight)</td></tr>
 <tr class="memdesc:ac7bfdf17956fb2f5813da91a798d8003"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a new flight to the log.  <br /></td></tr>
 <tr class="memitem:ae8a65e62bf349453450a0f418f3a8e50" id="r_ae8a65e62bf349453450a0f418f3a8e50"><td class="memItemLeft">Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="#ae8a65e62bf349453450a0f418f3a8e50">removeFlight</a> (const QString &amp;uuid)</td></tr>
@@ -124,6 +124,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a02dc509ffd20c8a9f88cba5b0eb86eeb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate ForeFlight CSV content for selected flights.  <br /></td></tr>
 <tr class="memitem:a63ef59615a9b7840f249c9768f95ff35" id="r_a63ef59615a9b7840f249c9768f95ff35"><td class="memItemLeft">Q_INVOKABLE QByteArray&#160;</td><td class="memItemRight"><a class="el" href="#a63ef59615a9b7840f249c9768f95ff35">exportToJSON</a> (const QStringList &amp;uuids) const</td></tr>
 <tr class="memdesc:a63ef59615a9b7840f249c9768f95ff35"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate JSON content for selected flights.  <br /></td></tr>
+<tr class="memitem:a5cc8fea7c33b01a3a58b13029b84bff4" id="r_a5cc8fea7c33b01a3a58b13029b84bff4"><td class="memItemLeft">Q_INVOKABLE QString&#160;</td><td class="memItemRight"><a class="el" href="#a5cc8fea7c33b01a3a58b13029b84bff4">importFromJSON</a> (const QString &amp;fileName)</td></tr>
+<tr class="memdesc:a5cc8fea7c33b01a3a58b13029b84bff4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Import flights from a JSON file.  <br /></td></tr>
 <tr class="memitem:aadc8dd375ef86a1ecc595298e6f11c1c" id="r_aadc8dd375ef86a1ecc595298e6f11c1c"><td class="memItemLeft">Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="#aadc8dd375ef86a1ecc595298e6f11c1c">removeTrack</a> (const QString &amp;uuid)</td></tr>
 <tr class="memdesc:aadc8dd375ef86a1ecc595298e6f11c1c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Delete the recorded track for a flight.  <br /></td></tr>
 <tr class="memitem:a660c46267e58da175caed97a28c2a43c" id="r_a660c46267e58da175caed97a28c2a43c"><td class="memItemLeft">Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="#a660c46267e58da175caed97a28c2a43c">showTrack</a> (const QString &amp;uuid)</td></tr>
@@ -216,7 +218,7 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 <p>This class manages a persistent list of flight log entries and provides CRUD operations for flights. Automatic takeoff/landing detection is delegated to a <a class="el" href="classFlightlog_1_1FlightDetector.html" title="Abstract base class for automatic flight detection strategies.">FlightDetector</a> subclass, which can be swapped at runtime to support different types of flying (e.g. powered aircraft, paragliders).</p>
 <p>The detection state is forwarded from the active <a class="el" href="classFlightlog_1_1FlightDetector.html" title="Abstract base class for automatic flight detection strategies.">FlightDetector</a> and exposed to QML via the detectionState property. </p>
 
-<p class="definition">Definition at line <a class="el" href="FlightLog_8h_source.html#l00052">52</a> of file <a class="el" href="FlightLog_8h_source.html">FlightLog.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="FlightLog_8h_source.html#l00055">55</a> of file <a class="el" href="FlightLog_8h_source.html">FlightLog.h</a>.</p>
 </div><a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a553f021ac75d268ae8599633f309772d" name="a553f021ac75d268ae8599633f309772d"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a553f021ac75d268ae8599633f309772d">&#9670;&#160;</a></span>FlightLog()</h2>
@@ -530,7 +532,7 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 </div><div class="memdoc">
 
 <p>Generate JSON content for selected flights. </p>
-<p>Returns the JSON bytes ready for sharing. Uses the same internal format as the persisted flight log file. If <code class="param">uuids</code> is empty, all flights are included.</p>
+<p>Returns the JSON bytes ready for sharing, in the format produced by <a class="el" href="classFlightlog_1_1FlightLogExportJSON.html" title="JSON export format for the flight log.">FlightLogExportJSON</a>. If <code class="param">uuids</code> is empty, all flights are included.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">uuids</td><td>UUIDs of the flights to include; empty means all </td></tr>
@@ -538,6 +540,41 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>JSON content, or empty if no matching flights </dd></dl>
+
+</div>
+</div>
+<a id="a5cc8fea7c33b01a3a58b13029b84bff4" name="a5cc8fea7c33b01a3a58b13029b84bff4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5cc8fea7c33b01a3a58b13029b84bff4">&#9670;&#160;</a></span>importFromJSON()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">Q_INVOKABLE QString Flightlog::FlightLog::importFromJSON </td>
+          <td>(</td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>fileName</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Import flights from a JSON file. </p>
+<p>Reads a JSON file in the format produced by <a class="el" href="#a63ef59615a9b7840f249c9768f95ff35" title="Generate JSON content for selected flights.">exportToJSON()</a>, and adds every flight whose UUID isn't already present in the log. A flight whose UUID matches an existing entry is skipped. Coordinates are filled in from the ICAO code for any imported flight that doesn't already carry one.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">fileName</td><td>Path of the file to import (a leading "file://" prefix is stripped) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Empty string on success, a translated error message otherwise </dd></dl>
 
 </div>
 </div>
@@ -742,8 +779,8 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Emitted when saving the flight log file fails. </p>
-<p>The previously saved flight log on disk remains intact, but the latest change could not be persisted.</p>
+<p>Emitted when saving the flight log database fails. </p>
+<p>The previously saved flight log data remains intact, but the latest change could not be persisted.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">message</td><td>Human-readable error description </td></tr>
@@ -832,7 +869,7 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 </div><div class="memdoc">
 
 <p>Update an existing flight in the log. </p>
-<p>Coordinates are re-resolved from the ICAO codes. If resolution fails, old coordinates are preserved.</p>
+<p>A coordinate is only re-derived from its ICAO code when that code actually changes. This means edits to unrelated fields never replace a coordinate that came from a real GPS fix (automatic flight detection or the "End Flight" button) with an ICAO-based approximation.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">uuid</td><td>UUID of the flight to update (with or without braces) </td></tr>
@@ -867,7 +904,7 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 <p>Coordinates of the track currently displayed on the map. </p>
 <p>Returns the geo path of the selected saved track, or the live recording track if in flight and no saved track is selected. Empty when no track is displayed. </p>
 
-<p class="definition">Definition at line <a class="el" href="FlightLog_8h_source.html#l00108">108</a> of file <a class="el" href="FlightLog_8h_source.html">FlightLog.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="FlightLog_8h_source.html#l00111">111</a> of file <a class="el" href="FlightLog_8h_source.html">FlightLog.h</a>.</p>
 
 </div>
 </div>
@@ -894,7 +931,7 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 <p>UUID of the flight whose track is displayed, or empty string if none. </p>
 <p>Computed from the displayed track file. Returns an empty string when showing the live track or no track. </p>
 
-<p class="definition">Definition at line <a class="el" href="FlightLog_8h_source.html#l00116">116</a> of file <a class="el" href="FlightLog_8h_source.html">FlightLog.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="FlightLog_8h_source.html#l00119">119</a> of file <a class="el" href="FlightLog_8h_source.html">FlightLog.h</a>.</p>
 
 </div>
 </div>
@@ -921,7 +958,7 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 <p>Whether the live trace of the current flight is shown on map. </p>
 <p>When true, the current in-memory live track is exposed through displayedTrackPath while no saved track is selected. Default is true. </p>
 
-<p class="definition">Definition at line <a class="el" href="FlightLog_8h_source.html#l00133">133</a> of file <a class="el" href="FlightLog_8h_source.html">FlightLog.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="FlightLog_8h_source.html#l00136">136</a> of file <a class="el" href="FlightLog_8h_source.html">FlightLog.h</a>.</p>
 
 </div>
 </div>
@@ -948,7 +985,7 @@ int&#160;</td><td class="memItemRight"><b>count</b></td></tr>
 <p>Whether GPS track recording is enabled. </p>
 <p>When true, the recorder captures track points during flight and saves them as IGC files on landing. Default is true. </p>
 
-<p class="definition">Definition at line <a class="el" href="FlightLog_8h_source.html#l00124">124</a> of file <a class="el" href="FlightLog_8h_source.html">FlightLog.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="FlightLog_8h_source.html#l00127">127</a> of file <a class="el" href="FlightLog_8h_source.html">FlightLog.h</a>.</p>
 
 </div>
 </div>

@@ -90,10 +90,10 @@ Public Member Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-static-methods" class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
-<tr class="memitem:a755b8cfb353f120395d7003cf9e85b77" id="r_a755b8cfb353f120395d7003cf9e85b77"><td class="memItemLeft">static auto&#160;</td><td class="memItemRight"><a class="el" href="#a755b8cfb353f120395d7003cf9e85b77">toIGC</a> (const <a class="el" href="classFlightlog_1_1Flight.html">Flight</a> &amp;flight, const QList&lt; <a class="el" href="structFlightlog_1_1TrackPoint.html">TrackPoint</a> &gt; &amp;track) -&gt; QByteArray</td></tr>
-<tr class="memdesc:a755b8cfb353f120395d7003cf9e85b77"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate IGC file content from flight metadata and track points.  <br /></td></tr>
-<tr class="memitem:a5b9d832ba0aebc00111504cca62246af" id="r_a5b9d832ba0aebc00111504cca62246af"><td class="memItemLeft">static auto&#160;</td><td class="memItemRight"><a class="el" href="#a5b9d832ba0aebc00111504cca62246af">trackFromIGC</a> (const QByteArray &amp;igcData, const QDate &amp;date={}) -&gt; QList&lt; <a class="el" href="structFlightlog_1_1TrackPoint.html">TrackPoint</a> &gt;</td></tr>
-<tr class="memdesc:a5b9d832ba0aebc00111504cca62246af"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse track points from IGC file content.  <br /></td></tr>
+<tr class="memitem:a8bd61baf9630a6b79b06381b02ac65fd" id="r_a8bd61baf9630a6b79b06381b02ac65fd"><td class="memItemLeft">static auto&#160;</td><td class="memItemRight"><a class="el" href="#a8bd61baf9630a6b79b06381b02ac65fd">toIGC</a> (const <a class="el" href="classFlightlog_1_1Flight.html">Flight</a> &amp;flight, const FlightTrack &amp;track) -&gt; QByteArray</td></tr>
+<tr class="memdesc:a8bd61baf9630a6b79b06381b02ac65fd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate IGC file content from flight metadata and track points.  <br /></td></tr>
+<tr class="memitem:acfaa3ebff88cb940f2abb8c75cc7a704" id="r_acfaa3ebff88cb940f2abb8c75cc7a704"><td class="memItemLeft">static auto&#160;</td><td class="memItemRight"><a class="el" href="#acfaa3ebff88cb940f2abb8c75cc7a704">trackFromIGC</a> (const QByteArray &amp;igcData, const QDate &amp;date={}) -&gt; FlightTrack</td></tr>
+<tr class="memdesc:acfaa3ebff88cb940f2abb8c75cc7a704"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse track points from IGC file content.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>GPS track recorder and IGC file manager. </p>
@@ -321,8 +321,8 @@ Static Public Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a755b8cfb353f120395d7003cf9e85b77" name="a755b8cfb353f120395d7003cf9e85b77"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a755b8cfb353f120395d7003cf9e85b77">&#9670;&#160;</a></span>toIGC()</h2>
+<a id="a8bd61baf9630a6b79b06381b02ac65fd" name="a8bd61baf9630a6b79b06381b02ac65fd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8bd61baf9630a6b79b06381b02ac65fd">&#9670;&#160;</a></span>toIGC()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -338,7 +338,7 @@ Static Public Member Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const QList&lt; <a class="el" href="structFlightlog_1_1TrackPoint.html">TrackPoint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>track</em></span>&#160;) -&gt;  QByteArray</td>
+          <td class="paramtype">const FlightTrack &amp;</td>          <td class="paramname"><span class="paramname"><em>track</em></span>&#160;) -&gt;  QByteArray</td>
         </tr>
       </table>
   </td>
@@ -361,8 +361,8 @@ Static Public Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a5b9d832ba0aebc00111504cca62246af" name="a5b9d832ba0aebc00111504cca62246af"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5b9d832ba0aebc00111504cca62246af">&#9670;&#160;</a></span>trackFromIGC()</h2>
+<a id="acfaa3ebff88cb940f2abb8c75cc7a704" name="acfaa3ebff88cb940f2abb8c75cc7a704"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acfaa3ebff88cb940f2abb8c75cc7a704">&#9670;&#160;</a></span>trackFromIGC()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -378,7 +378,7 @@ Static Public Member Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const QDate &amp;</td>          <td class="paramname"><span class="paramname"><em>date</em></span><span class="paramdefsep"> = </span><span class="paramdefval">{}</span>&#160;) -&gt;  QList&lt; <a class="el" href="structFlightlog_1_1TrackPoint.html">TrackPoint</a> &gt;</td>
+          <td class="paramtype">const QDate &amp;</td>          <td class="paramname"><span class="paramname"><em>date</em></span><span class="paramdefsep"> = </span><span class="paramdefval">{}</span>&#160;) -&gt;  FlightTrack</td>
         </tr>
       </table>
   </td>

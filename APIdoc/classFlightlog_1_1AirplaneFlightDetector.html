@@ -113,12 +113,13 @@ void&#160;</td><td class="memItemRight"><b>detectionStateChanged</b> ()</td></tr
 <p>This detector implements a state machine suitable for powered aircraft (airplanes, motor gliders, etc.). It uses ground speed, altitude AGL, and proximity to ICAO airfields to detect takeoff and landing.</p>
 <p>Detection criteria:</p><ul>
 <li><b>Takeoff</b>: Ground speed exceeds the aircraft's configured minimum speed (default 50 km/h) within 5 km of an airfield, confirmed by altitude gain of at least 200 ft above airfield elevation within 60 seconds.</li>
-<li><b>Landing</b>: Altitude below 100 ft above airfield elevation within 5 km of an airfield, confirmed by speed dropping below the aircraft's configured minimum speed (default 50 km/h).</li>
+<li><b>Landing (near a charted airfield)</b>: Altitude below 100 ft above airfield elevation within 5 km of an airfield, confirmed by speed dropping below the aircraft's configured minimum speed.</li>
+<li><b>Landing (anywhere, e.g. an outlanding)</b>: Ground speed below the aircraft's configured minimum speed, sustained for 60 seconds, while below 100 ft above the terrain directly underneath (from elevation data, not tied to any airfield). This is what lets an outlanding away from any charted airfield still be detected automatically and promptly. The altitude gate matters: ground speed alone can read near zero while still fully airborne — e.g. a glider circling in a strong headwind — so low speed is only trusted close to the ground.</li>
 <li><b>Go-around</b>: While in LandingPhase, altitude gain &gt; 200 ft above airfield elevation ends the current flight leg and starts a new one from the touch-and-go airport.</li>
 <li><b>Abort</b>: Speed drops below half the takeoff threshold or 60 seconds elapse in TakeoffPhase without altitude confirmation. </li>
 </ul>
 
-<p class="definition">Definition at line <a class="el" href="AirplaneFlightDetector_8h_source.html#l00048">48</a> of file <a class="el" href="AirplaneFlightDetector_8h_source.html">AirplaneFlightDetector.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="AirplaneFlightDetector_8h_source.html#l00056">56</a> of file <a class="el" href="AirplaneFlightDetector_8h_source.html">AirplaneFlightDetector.h</a>.</p>
 </div><a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a4a3898468bd6126c44d12f90f9e4cf84" name="a4a3898468bd6126c44d12f90f9e4cf84"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a4a3898468bd6126c44d12f90f9e4cf84">&#9670;&#160;</a></span>AirplaneFlightDetector()</h2>
@@ -182,7 +183,7 @@ void&#160;</td><td class="memItemRight"><b>detectionStateChanged</b> ()</td></tr
 
 <p>Implements <a class="el" href="classFlightlog_1_1FlightDetector.html#a0f2e2fbc97cdee930a9750bc8273b31f">Flightlog::FlightDetector</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="AirplaneFlightDetector_8h_source.html#l00062">62</a> of file <a class="el" href="AirplaneFlightDetector_8h_source.html">AirplaneFlightDetector.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="AirplaneFlightDetector_8h_source.html#l00070">70</a> of file <a class="el" href="AirplaneFlightDetector_8h_source.html">AirplaneFlightDetector.h</a>.</p>
 
 </div>
 </div>

@@ -109,6 +109,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a8401007679238c20a2af238de12b1a6b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Getter method for property with the same name.  <br /></td></tr>
 <tr class="memitem:ad3edcc87d04847b13ee547fd0fb16db4" id="r_ad3edcc87d04847b13ee547fd0fb16db4"><td class="memItemLeft">Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="#ad3edcc87d04847b13ee547fd0fb16db4">startUpdates</a> ()</td></tr>
 <tr class="memdesc:ad3edcc87d04847b13ee547fd0fb16db4"><td class="mdescLeft">&#160;</td><td class="mdescRight">startUpdates  <br /></td></tr>
+<tr class="memitem:a4a5dd6f9943134159ee639ee8c9b091b" id="r_a4a5dd6f9943134159ee639ee8c9b091b"><td class="memItemLeft">Q_INVOKABLE void&#160;</td><td class="memItemRight"><a class="el" href="#a4a5dd6f9943134159ee639ee8c9b091b">setBackgroundUpdates</a> (const QString &amp;caller, bool enable)</td></tr>
+<tr class="memdesc:a4a5dd6f9943134159ee639ee8c9b091b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Request or release background location updates (iOS only).  <br /></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-static-methods" class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
@@ -152,7 +154,7 @@ Properties</h2></td></tr>
 <p>Data from the standard operating system data source (typically: satnav or wifi) is only provided after <a class="el" href="#ad3edcc87d04847b13ee547fd0fb16db4" title="startUpdates">startUpdates()</a> has been called.</p>
 <p>The methods in this class are reentrant, but not thread safe. </p>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00049">49</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00050">50</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 </div><a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a0bbbee546e3454b183f431020e0d0a65" name="a0bbbee546e3454b183f431020e0d0a65"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a0bbbee546e3454b183f431020e0d0a65">&#9670;&#160;</a></span>PositionProvider()</h2>
@@ -214,7 +216,7 @@ Properties</h2></td></tr>
 <p>Getter function for the property with the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property approximateLastValidCoordinate </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00186">186</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00187">187</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -244,7 +246,7 @@ Properties</h2></td></tr>
 <p>Getter function for the property with the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property approximateLastValidCoordinate </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00192">192</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00193">193</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -274,7 +276,7 @@ Properties</h2></td></tr>
 <p>Getter function for the property with the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property icon </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00204">204</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00205">205</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -304,7 +306,7 @@ Properties</h2></td></tr>
 <p>Getter function for the property with the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property lastValidCoordinate </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00216">216</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00217">217</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -334,7 +336,7 @@ Properties</h2></td></tr>
 <p>Getter function for the property with the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property lastValidTrack </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00228">228</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00229">229</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -364,7 +366,7 @@ Properties</h2></td></tr>
 <p>Getter function for the property with the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property mapCenter </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00240">240</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00241">241</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -394,7 +396,7 @@ Properties</h2></td></tr>
 <p>Getter method for property with the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property positionInfo </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00258">258</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00259">259</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -424,7 +426,7 @@ Properties</h2></td></tr>
 <p>Getter method for property with the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property pressureAltitude </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00270">270</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00271">271</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -454,7 +456,7 @@ Properties</h2></td></tr>
 <p>Getter method for property with the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property pressureAltitudeImplausible </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00282">282</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00283">283</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -484,7 +486,7 @@ Properties</h2></td></tr>
 <p>Getter method for property with the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property receivingPositionInfo </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00294">294</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00295">295</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -514,7 +516,7 @@ Properties</h2></td></tr>
 <p>Getter method for property with the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property statusString </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00306">306</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00307">307</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -544,7 +546,7 @@ Properties</h2></td></tr>
 <p>Getter function for the property with the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property icon </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00198">198</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00199">199</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -630,7 +632,7 @@ Properties</h2></td></tr>
 <p>Getter function for the property with the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property mapCenter </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00234">234</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00235">235</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -660,7 +662,7 @@ Properties</h2></td></tr>
 <p>Getter method for property with the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property positionInfo </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00252">252</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00253">253</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -690,7 +692,7 @@ Properties</h2></td></tr>
 <p>Getter method for property with the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property pressureAltitude </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00264">264</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00265">265</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -720,7 +722,7 @@ Properties</h2></td></tr>
 <p>Getter method for property with the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property pressureAltitudeImplausible </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00276">276</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00277">277</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -750,7 +752,38 @@ Properties</h2></td></tr>
 <p>Getter method for property with the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property receivingPositionInfo </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00288">288</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00289">289</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+
+</div>
+</div>
+<a id="a4a5dd6f9943134159ee639ee8c9b091b" name="a4a5dd6f9943134159ee639ee8c9b091b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4a5dd6f9943134159ee639ee8c9b091b">&#9670;&#160;</a></span>setBackgroundUpdates()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">Q_INVOKABLE void Positioning::PositionProvider::setBackgroundUpdates </td>
+          <td>(</td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>caller</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>enable</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Request or release background location updates (iOS only). </p>
+<p>Multiple components can independently request background location. Background GPS activates when at least one caller is registered, and deactivates when all callers have released it. On non-iOS platforms this is a no-op.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">caller</td><td>Unique identifier of the requesting component, e.g. "flightlog" </td></tr>
+    <tr><td class="paramname">enable</td><td>true = request background updates, false = release them </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
@@ -785,7 +818,7 @@ Properties</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00246">246</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00247">247</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -815,7 +848,7 @@ Properties</h2></td></tr>
 <p>startUpdates </p>
 <p>Requests permissions if necessary and starts to provide data from the standard operating system data source (typically SatNav or WiFi) if permissions were granted. </p>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00332">332</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00333">333</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -845,7 +878,7 @@ Properties</h2></td></tr>
 <p>Getter method for property with the same name. </p>
 <dl class="section return"><dt>Returns</dt><dd>Property statusString </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00300">300</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00301">301</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -873,7 +906,7 @@ Properties</h2></td></tr>
 <p>Threshold for the pressure altitude plausibility check. </p>
 <p>If pressure altitude and geometric altitude differ by more than this value, then the pair is considered physically implausible; see the documentation of the property pressureAltitudeImplausible. </p>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00319">319</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00320">320</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -901,7 +934,7 @@ Properties</h2></td></tr>
 <p>Approximate last valid coordinate. </p>
 <p>This property equals lastValidCoordinate, except that it is updated only every ten kilometers. </p>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00086">86</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00087">87</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -928,7 +961,7 @@ Properties</h2></td></tr>
 <p>Ownship icon. </p>
 <p>This property holds the URL of the icon that depicts the own position on the moving map and in the lateral view. The icon shape depends on the quality of the current position info (position and true track available or not), and its colors are adapted to night mode. </p>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00095">95</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00096">96</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -955,7 +988,7 @@ Properties</h2></td></tr>
 <p>Last valid coordinate reading. </p>
 <p>This property holds the last valid coordinate known. At the first start, this property is set to the location Freiburg Airport, EDTF. The value is stored in a QSetting at destruction, and restored in the construction. </p>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00104">104</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00105">105</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -982,7 +1015,7 @@ Properties</h2></td></tr>
 <p>Last valid true track. </p>
 <p>This property holds the last valid true track known. At the first start, this property is set to 0°. The value is stored in a QSetting at destruction, and restored in the construction. </p>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00121">121</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00122">122</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -1009,7 +1042,7 @@ Properties</h2></td></tr>
 <p>Map center coordinate. </p>
 <p>This property holds the current center coordinate of the flight map. It should be set from QML whenever the map center changes. This allows C++ code to use the map center for distance calculations when GPS position is unavailable. </p>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00113">113</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00114">114</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -1036,7 +1069,7 @@ Properties</h2></td></tr>
 <p>Position information. </p>
 <p>This property holds information about the device position. To ensure that the data is up-to-date, the position information will be set to an invalid positionInfo when no data has arrived for more than the time specified in <a class="el" href="classPositioning_1_1PositionInfo.html#a39cdf5ebe3689e532be2e2ffeb40dbb2" title="Liftetime of geographic positioning information.">PositionInfo::lifetime</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00130">130</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00131">131</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -1063,7 +1096,7 @@ Properties</h2></td></tr>
 <p>Pressure altitude. </p>
 <p>This property holds information about the pressure altitude. If the traffic data provider provides pressure altitude, then this is reported here. If the traffic data provider does not report pressure altitude AND the current aircraft is configured to use cabin pressure for pressure altitude, then cabin pressure is reported here. </p>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00140">140</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00141">141</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -1091,7 +1124,7 @@ Properties</h2></td></tr>
 <p>This property is true if pressure altitude and geometric altitude have been differing by unrealistic amounts for a while. This typically happens when the pressure sensor does not measure static pressure, because the device rides in a pressurized cabin, or because the app receives position data from a flight simulator while the device sensor measures the air pressure at the user's desk. If this property is true, then barometric altitude data should not be trusted.</p>
 <p>Realistic atmospheric conditions (extremely low QNH together with extreme temperature deviation from ISA) account for differences of no more than about 4,000 ft. To warn, this class requires a difference of more than 5,000 ft, persisting over 30 seconds. The warning clears as soon as the difference drops below 3,000 ft, or as soon as one of the two altitudes becomes unavailable. </p>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00159">159</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00160">160</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -1118,7 +1151,7 @@ Properties</h2></td></tr>
 <p>Indicator that position information is being received. </p>
 <p>This is a shortcut for <a class="el" href="#aa56cd25039e76dd3137b1a9d64a0fce2" title="Position information.">positionInfo()</a>.isValid. This property exists because it does not change so often, and can thus be more efficient to use. </p>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00167">167</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00168">168</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
@@ -1145,7 +1178,7 @@ Properties</h2></td></tr>
 <p>Source status. </p>
 <p>This property holds a translated, human-readable string that describes the status of the positionInfo source. This could typically be a string of the form "OK" or "Insufficient permission to access position info" </p>
 
-<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00175">175</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="PositionProvider_8h_source.html#l00176">176</a> of file <a class="el" href="PositionProvider_8h_source.html">PositionProvider.h</a>.</p>
 
 </div>
 </div>
