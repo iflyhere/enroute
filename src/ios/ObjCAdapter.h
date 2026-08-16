@@ -15,4 +15,6 @@ class ObjCAdapter {
         static void saveToGallery(QString&);
         static void requestNotificationPermission();
         static void postNotification(const QString& title, const QString& body);
+        static void enableBackgroundLocation();
+        static void disableBackgroundLocation();
 };

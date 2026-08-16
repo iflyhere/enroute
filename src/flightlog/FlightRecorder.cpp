@@ -224,7 +224,7 @@ void Flightlog::FlightRecorder::removeTrack(Flight& flight)
 }
 
 
-auto Flightlog::FlightRecorder::toIGC(const Flight& flight, const QList<TrackPoint>& track) -> QByteArray
+auto Flightlog::FlightRecorder::toIGC(const Flight& flight, const FlightTrack& track) -> QByteArray
 {
     if (track.isEmpty()) {
         return {};
@@ -249,7 +249,7 @@ auto Flightlog::FlightRecorder::toIGC(const Flight& flight, const QList<TrackPoi
         igc.append(QStringLiteral("HFPLTPILOTINCHARGE:%1\r\n").arg(flight.pilotName()).toUtf8());
     }
     if (!flight.aircraftCallsign().isEmpty()) {
-        igc.append(QStringLiteral("HFCIDCOMPETITIONID:%1\r\n").arg(flight.aircraftCallsign()).toUtf8());
+        igc.append(QStringLiteral("HFGIDGLIDERID:%1\r\n").arg(flight.aircraftCallsign()).toUtf8());
     }
     igc.append("HFFTYFRTYPE:Enroute Flight Navigation\r\n");
 
@@ -299,9 +299,9 @@ auto Flightlog::FlightRecorder::toIGC(const Flight& flight, const QList<TrackPoi
 }
 
 
-auto Flightlog::FlightRecorder::trackFromIGC(const QByteArray& igcData, const QDate& date) -> QList<TrackPoint>
+auto Flightlog::FlightRecorder::trackFromIGC(const QByteArray& igcData, const QDate& date) -> FlightTrack
 {
-    QList<TrackPoint> track;
+    FlightTrack track;
 
     // Parse H-record date if no date provided
     QDate flightDate = date;

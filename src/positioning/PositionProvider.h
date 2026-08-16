@@ -23,6 +23,7 @@
 #include <QBindable>
 #include <QElapsedTimer>
 #include <QQmlEngine>
+#include <QSet>
 
 #include "GlobalObject.h"
 #include "positioning/PositionInfoSource_Satellite.h"
@@ -331,6 +332,18 @@ public:
      */
     Q_INVOKABLE void startUpdates() { satelliteSource.startUpdates(); }
 
+    /*! \brief Request or release background location updates (iOS only)
+     *
+     *  Multiple components can independently request background location.
+     *  Background GPS activates when at least one caller is registered,
+     *  and deactivates when all callers have released it.
+     *  On non-iOS platforms this is a no-op.
+     *
+     *  @param caller  Unique identifier of the requesting component, e.g. "flightlog"
+     *  @param enable  true = request background updates, false = release them
+     */
+    Q_INVOKABLE void setBackgroundUpdates(const QString& caller, bool enable);
+
 signals:
     // Notifier signal
     void approximateLastValidCoordinateChanged();
@@ -357,6 +370,11 @@ private slots:
 
 private:
     Q_DISABLE_COPY_MOVE(PositionProvider)
+
+#ifdef Q_OS_IOS
+    QSet<QString> m_backgroundUpdateCallers;
+    void updateBackgroundLocation();
+#endif
 
     // Computation method for property with the same name
     QString computeStatusString();
@@ -405,7 +423,7 @@ private:
     // is active, it clears only when the difference drops below this value.
     static constexpr Units::Distance pressureAltitudePlausibleThreshold = Units::Distance::fromFT(3000.0);
     // The difference must persist for at least this long before the warning is raised.
-    static constexpr qint64 pressureAltitudeImplausibleDwellTime_ms = 30*1000;
+    static constexpr qint64 pressureAltitudeImplausibleDwellTime_ms = 30LL*1000;
     // Measures for how long pressure altitude and geometric altitude have been
     // differing by more than pressureAltitudeImplausibleThreshold.
     QElapsedTimer m_pressureAltitudeDivergenceTimer;

@@ -20,10 +20,11 @@
 
 #pragma once
 
+#include <memory>
+
 #include <QGeoPath>
 #include <QObjectBindableProperty>
 #include <QQmlEngine>
-#include <QStandardPaths>
 #include <QTimer>
 #include <QUuid>
 #include <QVariant>
@@ -31,12 +32,14 @@
 #include "GlobalObject.h"
 #include "flightlog/Flight.h"
 #include "flightlog/FlightDetector.h"
-#include "flightlog/FlightRecorder.h"
 #include "geomaps/Waypoint.h"
 
 using namespace Qt::Literals::StringLiterals;
 
 namespace Flightlog {
+
+class FlightLogStorage;
+class FlightRecorder;
 
 /*! \brief Flight log manager with pluggable automatic flight detection
  *
@@ -74,7 +77,7 @@ public:
     explicit FlightLog() = delete;
 
     /*! \brief Standard destructor */
-    ~FlightLog() override = default;
+    ~FlightLog() override;
 
     // factory function for QML singleton
     static FlightLog* create(QQmlEngine* /*unused*/, QJSEngine* /*unused*/)
@@ -175,8 +178,11 @@ public:
 
     /*! \brief Update an existing flight in the log
      *
-     *  Coordinates are re-resolved from the ICAO codes. If resolution
-     *  fails, old coordinates are preserved.
+     *  A coordinate is only re-derived from its ICAO code when that code
+     *  actually changes. This means edits to unrelated fields never replace
+     *  a coordinate that came from a real GPS fix (automatic flight
+     *  detection or the "End Flight" button) with an ICAO-based
+     *  approximation.
      *
      *  @param uuid UUID of the flight to update (with or without braces)
      *  @param flight The updated flight data
@@ -266,14 +272,26 @@ public:
 
     /*! \brief Generate JSON content for selected flights
      *
-     *  Returns the JSON bytes ready for sharing. Uses the same internal
-     *  format as the persisted flight log file. If @p uuids is empty,
-     *  all flights are included.
+     *  Returns the JSON bytes ready for sharing, in the format produced by
+     *  FlightLogExportJSON. If @p uuids is empty, all flights are included.
      *
      *  @param uuids UUIDs of the flights to include; empty means all
      *  @returns JSON content, or empty if no matching flights
      */
     [[nodiscard]] Q_INVOKABLE QByteArray exportToJSON(const QStringList& uuids) const;
+
+    /*! \brief Import flights from a JSON file
+     *
+     *  Reads a JSON file in the format produced by exportToJSON(), and adds
+     *  every flight whose UUID isn't already present in the log. A flight
+     *  whose UUID matches an existing entry is skipped. Coordinates are
+     *  filled in from the ICAO code for any imported flight that doesn't
+     *  already carry one.
+     *
+     *  @param fileName Path of the file to import (a leading "file://" prefix is stripped)
+     *  @returns Empty string on success, a translated error message otherwise
+     */
+    [[nodiscard]] Q_INVOKABLE QString importFromJSON(const QString& fileName);
 
     /*! \brief Delete the recorded track for a flight
      *
@@ -324,9 +342,9 @@ signals:
      */
     void landingDetected(const QString& time);
 
-    /*! \brief Emitted when saving the flight log file fails
+    /*! \brief Emitted when saving the flight log database fails
      *
-     *  The previously saved flight log on disk remains intact, but the
+     *  The previously saved flight log data remains intact, but the
      *  latest change could not be persisted.
      *
      *  @param message Human-readable error description
@@ -367,24 +385,15 @@ private:
     // Install signal connections for the given detector
     void connectDetector(FlightDetector* detector);
 
-    // Persist flights to JSON file
-    void save();
-
-    // Load flights from JSON file
+    // Load flights via m_storage
     void load();
 
-    // Rename a corrupt flight log file aside and notify the user via saveError.
-    // Uses a timestamp suffix so multiple bad files don't overwrite each other.
-    void quarantineFlightLogFile(const QString& reason);
-
-    // Resolve ICAO codes to coordinates using the GeoMapProvider
+    // Fill in a coordinate from its ICAO code via the GeoMapProvider, but
+    // only if the coordinate isn't already set (e.g. from a real GPS fix)
     void resolveCoordinates(Flight& flight);
 
     // Sort flights by startTime descending
     void sortFlights(QList<Flight>& flights);
-
-    // Build a QJsonDocument from a list of flights (shared by save() and exportToJSON())
-    static auto flightsToJsonDocument(const QList<Flight>& flights) -> QJsonDocument;
 
     // Collect the flights matching the given UUID strings; returns all flights if the list is empty
     [[nodiscard]] auto flightsForUuids(const QStringList& uuids) const -> QList<Flight>;
@@ -407,7 +416,10 @@ private:
     FlightDetector* m_detector {nullptr};
 
     // The flight recorder (owned by this object)
-    FlightRecorder m_recorder {this};
+    std::unique_ptr<FlightRecorder> m_recorder;
+
+    // The persistent storage backend (owned by this object)
+    std::unique_ptr<FlightLogStorage> m_storage;
 
 #ifdef Q_OS_ANDROID
     // Tracks whether the Android foreground service is running
@@ -418,9 +430,6 @@ private:
     // position arrives or auto-detection is disabled.
     QTimer m_noGPSTimer;
 #endif
-
-    // Persistence
-    const QString m_fileName {QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + u"/flightlog.json"_s};
 };
 
 } // namespace Flightlog

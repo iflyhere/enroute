@@ -20,6 +20,7 @@
 
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Dialogs
 import QtQuick.Layouts
 
 import akaflieg_freiburg.enroute
@@ -234,6 +235,47 @@ Page {
                         if (data.length === 0) { shareErrorDialog.text = qsTr("No data to export."); shareErrorDialog.open(); return }
                         FileExchange.saveContent(data, "text/*", "json", qsTr("FlightLog"))
                         page.exitSelectionMode()
+                    }
+                }
+
+                MenuItem {
+                    text: qsTr("Import Flightlog JSON…")
+
+                    onTriggered: {
+                        PlatformAdaptor.vibrateBrief()
+                        highlighted = false
+                        importFlightLogDialog.open()
+                    }
+
+                    FileDialog {
+                        id: importFlightLogDialog
+
+                        acceptLabel: qsTr("Import")
+                        rejectLabel: qsTr("Cancel")
+
+                        fileMode: FileDialog.OpenFile
+
+                        // Setting a non-trivial name filter on Android means we cannot select any
+                        // files at all.
+                        nameFilters: Qt.platform.os === "android" ? undefined : [qsTr("Flightlog JSON File (*.json)")]
+
+                        onAccepted: {
+                            PlatformAdaptor.vibrateBrief()
+                            var countBefore = FlightLog.count
+                            var errorString = FlightLog.importFromJSON(importFlightLogDialog.selectedFile)
+                            if (errorString !== "") {
+                                shareErrorDialog.text = errorString
+                                shareErrorDialog.open()
+                                return
+                            }
+                            var imported = FlightLog.count - countBefore
+                            toast.doToast(imported > 0
+                                          ? qsTr("%1 flight(s) imported").arg(imported)
+                                          : qsTr("No new flights to import — already in the log"))
+                        }
+                        onRejected: {
+                            PlatformAdaptor.vibrateBrief()
+                        }
                     }
                 }
 

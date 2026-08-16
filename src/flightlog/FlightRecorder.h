@@ -25,7 +25,7 @@
 
 #include "flightlog/Flight.h"
 #include "flightlog/FlightDetector.h"
-#include "flightlog/TrackPoint.h"
+#include "flightlog/FlightTrack.h"
 #include "positioning/PositionInfo.h"
 #include "units/Distance.h"
 
@@ -147,7 +147,7 @@ public:
      *  @param track The track points to write as B-records
      *  @returns IGC file content, or empty if no track
      */
-    static auto toIGC(const Flight& flight, const QList<TrackPoint>& track) -> QByteArray;
+    static auto toIGC(const Flight& flight, const FlightTrack& track) -> QByteArray;
 
     /*! \brief Parse track points from IGC file content
      *
@@ -158,7 +158,7 @@ public:
      *  @param date The flight date (optional, parsed from H-record if empty)
      *  @returns List of parsed track points
      */
-    static auto trackFromIGC(const QByteArray& igcData, const QDate& date = {}) -> QList<TrackPoint>;
+    static auto trackFromIGC(const QByteArray& igcData, const QDate& date = {}) -> FlightTrack;
 
 signals:
     /*! \brief Emitted when a new track point has been recorded
@@ -187,7 +187,7 @@ private:
     FlightDetector::DetectionState m_previousState {FlightDetector::Idle};
 
     // Accumulated track points
-    QList<TrackPoint> m_track;
+    FlightTrack m_track;
 
     // Cached geo path kept in sync with m_track for O(1) reads
     QGeoPath m_geoPath;

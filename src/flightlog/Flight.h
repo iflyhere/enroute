@@ -22,7 +22,6 @@
 
 #include <QDateTime>
 #include <QGeoCoordinate>
-#include <QJsonObject>
 #include <QQmlEngine>
 #include <QUuid>
 
@@ -84,6 +83,17 @@ class Flight
 public:
     /*! \brief Default constructor — generates a unique identity */
     Flight() : m_id(QUuid::createUuid()) {}
+
+    /*! \brief Construct with a specific identity
+     *
+     *  Used when restoring a flight whose identity must be preserved, e.g.
+     *  when reading a row back from a storage backend. Unlike the default
+     *  constructor, this does not generate a fresh identity — except as a
+     *  fallback if @p uuid is null.
+     *
+     *  @param uuid The identity to use
+     */
+    explicit Flight(const QUuid& uuid) : m_id(uuid.isNull() ? QUuid::createUuid() : uuid) {}
 
     //
     // Getters
@@ -253,9 +263,23 @@ public:
 
     /*! \brief Set the track file name
      *
-     *  @param fileName The track file name (relative to tracks directory)
+     *  Rejects non-empty values containing a path separator ('/' or '\'),
+     *  guarding against path traversal when this name is later combined
+     *  with the tracks directory to build a file path (e.g. in
+     *  FlightRecorder). Such a value is silently ignored, leaving the
+     *  track file unchanged. An empty value is always accepted, since
+     *  that's how callers clear a previously-set track file.
+     *
+     *  @param fileName The track file name (relative to tracks directory),
+     *  or empty to clear it
      */
-    void setTrackFile(const QString& fileName) { m_trackFile = fileName; }
+    void setTrackFile(const QString& fileName)
+    {
+        if (!fileName.isEmpty() && (fileName.contains(u'/') || fileName.contains(u'\\'))) {
+            return;
+        }
+        m_trackFile = fileName;
+    }
 
     //
     // Calculated properties
@@ -285,23 +309,6 @@ public:
      *  @returns The duration in seconds, or -1 if times are invalid
      */
     [[nodiscard]] Q_INVOKABLE qint64 flightTimeSeconds() const;
-
-    //
-    // Serialization
-    //
-
-    /*! \brief Serialize to JSON
-     *
-     *  @returns A JSON object representing this flight
-     */
-    [[nodiscard]] auto toJSON() const -> QJsonObject;
-
-    /*! \brief Deserialize from JSON
-     *
-     *  @param json The JSON object to read from
-     *  @returns A Flight constructed from the JSON data
-     */
-    static auto fromJSON(const QJsonObject& json) -> Flight;
 
     /*! \brief Comparison operator
      *

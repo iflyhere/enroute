@@ -68,103 +68,8 @@ auto Flightlog::Flight::flightTime() const -> QString
 }
 
 
-auto Flightlog::Flight::toJSON() const -> QJsonObject
-{
-    QJsonObject json;
-    json[u"departureICAO"_s] = m_departureICAO;
-    json[u"arrivalICAO"_s] = m_arrivalICAO;
-
-    if (m_offBlockTime.isValid()) {
-        json[u"offBlockTime"_s] = m_offBlockTime.toString(Qt::ISODate);
-    }
-    if (m_startTime.isValid()) {
-        json[u"startTime"_s] = m_startTime.toString(Qt::ISODate);
-    }
-    if (m_landingTime.isValid()) {
-        json[u"landingTime"_s] = m_landingTime.toString(Qt::ISODate);
-    }
-    if (m_onBlockTime.isValid()) {
-        json[u"onBlockTime"_s] = m_onBlockTime.toString(Qt::ISODate);
-    }
-    json[u"pilotName"_s] = m_pilotName;
-    json[u"aircraftCallsign"_s] = m_aircraftCallsign;
-    json[u"comments"_s] = m_comments;
-    if (m_landingCount > 0) {
-        json[u"landingCount"_s] = m_landingCount;
-    }
-
-    if (m_departureCoordinate.isValid()) {
-        json[u"departureLat"_s] = m_departureCoordinate.latitude();
-        json[u"departureLon"_s] = m_departureCoordinate.longitude();
-    }
-    if (m_arrivalCoordinate.isValid()) {
-        json[u"arrivalLat"_s] = m_arrivalCoordinate.latitude();
-        json[u"arrivalLon"_s] = m_arrivalCoordinate.longitude();
-    }
-
-    if (!m_trackFile.isEmpty()) {
-        json[u"trackFile"_s] = m_trackFile;
-    }
-
-    json[u"uuid"_s] = m_id.toString(QUuid::WithoutBraces);
-
-    return json;
-}
-
-
-auto Flightlog::Flight::fromJSON(const QJsonObject& json) -> Flight
-{
-    Flight f;
-    f.m_departureICAO = json.value(u"departureICAO"_s).toString();
-    f.m_arrivalICAO = json.value(u"arrivalICAO"_s).toString();
-
-    if (json.contains(u"offBlockTime"_s)) {
-        f.m_offBlockTime = QDateTime::fromString(json.value(u"offBlockTime"_s).toString(), Qt::ISODate);
-    }
-    f.m_startTime = QDateTime::fromString(json.value(u"startTime"_s).toString(), Qt::ISODate);
-    f.m_landingTime = QDateTime::fromString(json.value(u"landingTime"_s).toString(), Qt::ISODate);
-    if (json.contains(u"onBlockTime"_s)) {
-        f.m_onBlockTime = QDateTime::fromString(json.value(u"onBlockTime"_s).toString(), Qt::ISODate);
-    }
-    f.m_pilotName = json.value(u"pilotName"_s).toString();
-    f.m_aircraftCallsign = json.value(u"aircraftCallsign"_s).toString();
-    f.m_comments = json.value(u"comments"_s).toString();
-    f.m_landingCount = json.value(u"landingCount"_s).toInt(0);
-
-    if (json.contains(u"departureLat"_s) && json.contains(u"departureLon"_s)) {
-        f.m_departureCoordinate = QGeoCoordinate(
-            json.value(u"departureLat"_s).toDouble(),
-            json.value(u"departureLon"_s).toDouble());
-    }
-    if (json.contains(u"arrivalLat"_s) && json.contains(u"arrivalLon"_s)) {
-        f.m_arrivalCoordinate = QGeoCoordinate(
-            json.value(u"arrivalLat"_s).toDouble(),
-            json.value(u"arrivalLon"_s).toDouble());
-    }
-
-    auto trackFile = json.value(u"trackFile"_s).toString();
-    if (!trackFile.isEmpty() && !trackFile.contains(u'/') && !trackFile.contains(u'\\')) {
-        f.m_trackFile = trackFile;
-    }
-
-    // Restore UUID; generate a fresh one for entries created before this field was added
-    auto uuidStr = json.value(u"uuid"_s).toString();
-    f.m_id = uuidStr.isEmpty() ? QUuid::createUuid() : QUuid::fromString(uuidStr);
-    if (f.m_id.isNull()) {
-        f.m_id = QUuid::createUuid();
-    }
-
-    return f;
-}
-
-
 auto Flightlog::Flight::operator==(const Flightlog::Flight& other) const -> bool
 {
-    // Equality covers all logbook metadata and the attached track file.
-    // Departure/arrival coordinates are deliberately excluded: they are
-    // resolved asynchronously from ICAO codes and do not represent
-    // user-meaningful changes for list display or QML_VALUE_TYPE
-    // change-detection purposes.
     return m_departureICAO == other.m_departureICAO
         && m_arrivalICAO == other.m_arrivalICAO
         && m_offBlockTime == other.m_offBlockTime
@@ -175,7 +80,9 @@ auto Flightlog::Flight::operator==(const Flightlog::Flight& other) const -> bool
         && m_aircraftCallsign == other.m_aircraftCallsign
         && m_comments == other.m_comments
         && m_landingCount == other.m_landingCount
-        && m_trackFile == other.m_trackFile;
+        && m_trackFile == other.m_trackFile
+        && m_departureCoordinate == other.m_departureCoordinate
+        && m_arrivalCoordinate == other.m_arrivalCoordinate;
 }
 
 

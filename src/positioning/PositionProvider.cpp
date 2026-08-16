@@ -23,6 +23,10 @@
 #include <QHash>
 #include <QSettings>
 
+#ifdef Q_OS_IOS
+#include "ios/ObjCAdapter.h"
+#endif
+
 #include "GlobalObject.h"
 #include "GlobalSettings.h"
 #include "Sensors.h"
@@ -333,3 +337,30 @@ void Positioning::PositionProvider::updatePressureAltitudeImplausible()
     }
     // Divergence between the two thresholds: keep the current state.
 }
+
+
+void Positioning::PositionProvider::setBackgroundUpdates(const QString& caller, bool enable)
+{
+#ifdef Q_OS_IOS
+    if (enable) {
+        m_backgroundUpdateCallers.insert(caller);
+    } else {
+        m_backgroundUpdateCallers.remove(caller);
+    }
+    updateBackgroundLocation();
+#else
+    Q_UNUSED(caller)
+    Q_UNUSED(enable)
+#endif
+}
+
+#ifdef Q_OS_IOS
+void Positioning::PositionProvider::updateBackgroundLocation()
+{
+    if (m_backgroundUpdateCallers.isEmpty()) {
+        ObjCAdapter::disableBackgroundLocation();
+    } else {
+        ObjCAdapter::enableBackgroundLocation();
+    }
+}
+#endif

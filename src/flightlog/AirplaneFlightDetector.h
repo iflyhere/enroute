@@ -36,9 +36,17 @@ namespace Flightlog {
  *  - **Takeoff**: Ground speed exceeds the aircraft's configured minimum speed
  *    (default 50 km/h) within 5 km of an airfield, confirmed by altitude gain
  *    of at least 200 ft above airfield elevation within 60 seconds.
- *  - **Landing**: Altitude below 100 ft above airfield elevation within
- *    5 km of an airfield, confirmed by speed dropping below the aircraft's
- *    configured minimum speed (default 50 km/h).
+ *  - **Landing (near a charted airfield)**: Altitude below 100 ft above
+ *    airfield elevation within 5 km of an airfield, confirmed by speed
+ *    dropping below the aircraft's configured minimum speed.
+ *  - **Landing (anywhere, e.g. an outlanding)**: Ground speed below the
+ *    aircraft's configured minimum speed, sustained for 60 seconds, while
+ *    below 100 ft above the terrain directly underneath (from elevation
+ *    data, not tied to any airfield). This is what lets an outlanding away
+ *    from any charted airfield still be detected automatically and
+ *    promptly. The altitude gate matters: ground speed alone can read near
+ *    zero while still fully airborne — e.g. a glider circling in a strong
+ *    headwind — so low speed is only trusted close to the ground.
  *  - **Go-around**: While in LandingPhase, altitude gain > 200 ft above
  *    airfield elevation ends the current flight leg and starts a new one
  *    from the touch-and-go airport.
@@ -82,16 +90,21 @@ private:
     QDateTime m_landingPhaseEntryTime;
     int m_landingCount {0};
 
+    // When sustained low ground speed near the ground (terrain AGL) was
+    // first observed during InFlight, for outlanding detection away from
+    // any airfield. Invalid whenever that condition isn't currently met.
+    QDateTime m_lowSpeedEntryTime;
+
     // Detection thresholds
     static constexpr double defaultTakeoffSpeedKMH = 50.0;     ///< Fallback takeoff speed when aircraft has no minimum speed configured
     static constexpr double airfieldProximityM = 5000.0;        ///< Maximum distance to an airfield for detection
     static constexpr double altitudeGainFT = 200.0;             ///< Minimum altitude above airfield elevation to confirm takeoff
-    static constexpr double landingAltitudeAGLFT = 100.0;       ///< Maximum altitude above airfield elevation to detect landing
+    static constexpr double landingAltitudeAGLFT = 100.0;       ///< Maximum altitude above airfield elevation (or terrain, for the airfield-independent outlanding check) to detect landing
     static constexpr double maxTakeoffAltitudeAGLFT = 500.0;    ///< Maximum altitude above airfield to consider a takeoff
     static constexpr double takeoffAbortSpeedFactor = 0.5;      ///< Speed drop factor to abort takeoff detection
-    static constexpr double maxFlightDurationH = 18.0;          ///< Auto-end flight after this many hours InFlight (off-field/unmapped landing safety valve)
+    static constexpr double maxFlightDurationH = 18.0;          ///< Last-resort auto-end after this many hours InFlight, for when even the outlanding check can't confirm a landing (e.g. no terrain data for the region)
     static constexpr qint64 takeoffConfirmTimeoutS = 60;        ///< Abort takeoff detection if no altitude gain after this many seconds
-    static constexpr qint64 landingConfirmTimeoutS = 60;        ///< Confirm landing if speed hasn't recovered after this many seconds
+    static constexpr qint64 landingConfirmTimeoutS = 60;        ///< Confirm landing (near an airfield, or the airfield-independent outlanding check) if speed stays low for this many seconds
 
     // Helpers
     [[nodiscard]] auto aircraftMinimumSpeed() const -> Units::Speed;

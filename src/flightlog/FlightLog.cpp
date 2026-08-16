@@ -19,13 +19,9 @@
  ***************************************************************************/
 
 #include <QDateTime>
-#include <QDebug>
 #include <QFile>
 #include <QGeoPath>
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QSaveFile>
+#include <QSet>
 
 #ifdef Q_OS_ANDROID
 #include <QJniObject>
@@ -42,6 +38,10 @@
 #include "geomaps/Waypoint.h"
 #include "flightlog/AirplaneFlightDetector.h"
 #include "flightlog/FlightLog.h"
+#include "flightlog/FlightLogExportForeFlight.h"
+#include "flightlog/FlightLogExportJSON.h"
+#include "flightlog/FlightLogStorage.h"
+#include "flightlog/FlightRecorder.h"
 #include "positioning/PositionProvider.h"
 
 using namespace Qt::Literals::StringLiterals;
@@ -85,8 +85,13 @@ void cancelAndroidNotification(jint id)
 // Constructors and destructors
 //
 
-Flightlog::FlightLog::FlightLog(QObject *parent) : GlobalObject(parent)
+Flightlog::FlightLog::FlightLog(QObject *parent)
+    : GlobalObject(parent)
+    , m_recorder(std::make_unique<FlightRecorder>(this))
+    , m_storage(std::make_unique<FlightLogStorage>(this))
 {
+    connect(m_storage.get(), &FlightLogStorage::saveError, this, &FlightLog::saveError);
+
     load();
 
     // Create the default detector (airplane mode)
@@ -94,12 +99,15 @@ Flightlog::FlightLog::FlightLog(QObject *parent) : GlobalObject(parent)
     connectDetector(m_detector);
 
     // Forward live track updates to the map when no saved track is selected
-    connect(&m_recorder, &FlightRecorder::trackGeoPathChanged, this, [this]() {
+    connect(m_recorder.get(), &FlightRecorder::trackGeoPathChanged, this, [this]() {
         if (m_displayedTrackFile.isEmpty()) {
             emit displayedTrackPathChanged();
         }
     });
 }
+
+
+Flightlog::FlightLog::~FlightLog() = default;
 
 
 void Flightlog::FlightLog::deferredInitialization()
@@ -189,7 +197,7 @@ void Flightlog::FlightLog::addFlight(const Flightlog::Flight& flight)
     flights.prepend(f);
     sortFlights(flights);
     m_flights.setValue(std::move(flights));
-    save();
+    m_storage->upsert(f);
 }
 
 void Flightlog::FlightLog::setTrackRecording(bool enabled)
@@ -257,19 +265,20 @@ void Flightlog::FlightLog::removeFlight(const QString& uuid)
         if (m_detector != nullptr && m_detector->detectionState() != FlightDetector::Idle) {
             m_detector->resetDetection();
         }
+        m_recorder->clearTrack();
     }
 
-    m_recorder.removeTrack(flight);
+    m_recorder->removeTrack(flight);
     flights.erase(it);
     m_flights.setValue(std::move(flights));
-    save();
+    m_storage->remove(id);
 }
 
 
 void Flightlog::FlightLog::removeFlights(const QStringList& uuids)
 {
     auto flights = m_flights.value();
-    bool changed = false;
+    QList<QUuid> removedIds;
     for (const QString& uuid : uuids) {
         const auto id = QUuid::fromString(uuid);
         if (id.isNull()) {
@@ -289,14 +298,15 @@ void Flightlog::FlightLog::removeFlights(const QStringList& uuids)
             if (m_detector != nullptr && m_detector->detectionState() != FlightDetector::Idle) {
                 m_detector->resetDetection();
             }
+            m_recorder->clearTrack();
         }
-        m_recorder.removeTrack(*it);
+        m_recorder->removeTrack(*it);
         flights.erase(it);
-        changed = true;
+        removedIds.append(id);
     }
-    if (changed) {
+    if (!removedIds.isEmpty()) {
         m_flights.setValue(std::move(flights));
-        save();
+        m_storage->removeMany(removedIds);
     }
 }
 
@@ -311,12 +321,15 @@ void Flightlog::FlightLog::clearFlights()
     if (m_detector != nullptr && m_detector->detectionState() != FlightDetector::Idle) {
         m_detector->resetDetection();
     }
-    m_currentFlightUuid = {};
+    if (!m_currentFlightUuid.isNull()) {
+        m_currentFlightUuid = {};
+        m_recorder->clearTrack();
+    }
     for (auto& flight : flights) {
-        m_recorder.removeTrack(flight);
+        m_recorder->removeTrack(flight);
     }
     m_flights.setValue({});
-    save();
+    m_storage->removeAll();
 }
 
 
@@ -333,8 +346,23 @@ void Flightlog::FlightLog::updateFlight(const QString& uuid, const Flightlog::Fl
     }
 
     // Start from the existing entry so that read-only fields (trackFile,
-    // landingCount, coordinates) are preserved by default.
+    // coordinates) are preserved by default.
     auto f = *it;
+    const auto& old = *it;
+
+    // Only clear a coordinate when its ICAO code actually changes, so
+    // resolveCoordinates() below re-derives it from the new code. If the
+    // code is unchanged, the coordinate is left exactly as it was — this is
+    // what protects a real GPS-derived coordinate (from automatic detection
+    // or the "End Flight" button) from being replaced by an ICAO-based
+    // approximation just because some other field was edited.
+    if (flight.departureICAO() != old.departureICAO()) {
+        f.setDepartureCoordinate({});
+    }
+    if (flight.arrivalICAO() != old.arrivalICAO()) {
+        f.setArrivalCoordinate({});
+    }
+
     f.setDepartureICAO(flight.departureICAO());
     f.setArrivalICAO(flight.arrivalICAO());
     f.setOffBlockTime(flight.offBlockTime());
@@ -344,24 +372,14 @@ void Flightlog::FlightLog::updateFlight(const QString& uuid, const Flightlog::Fl
     f.setPilotName(flight.pilotName());
     f.setAircraftCallsign(flight.aircraftCallsign());
     f.setComments(flight.comments());
+    f.setLandingCount(flight.landingCount());
 
-    // Re-resolve coordinates; fall back to existing ones if resolution fails
-    // but the ICAO code is unchanged.
-    const auto& old = *it;
     resolveCoordinates(f);
-    if (!f.departureCoordinate().isValid() && old.departureCoordinate().isValid()
-        && f.departureICAO() == old.departureICAO()) {
-        f.setDepartureCoordinate(old.departureCoordinate());
-    }
-    if (!f.arrivalCoordinate().isValid() && old.arrivalCoordinate().isValid()
-        && f.arrivalICAO() == old.arrivalICAO()) {
-        f.setArrivalCoordinate(old.arrivalCoordinate());
-    }
 
     *it = f;
     sortFlights(flights);
     m_flights.setValue(std::move(flights));
-    save();
+    m_storage->upsert(f);
 }
 
 
@@ -454,7 +472,7 @@ auto Flightlog::FlightLog::exportToIGC(const QString& uuid) const -> QByteArray
     if (it == flights.end()) {
         return {};
     }
-    return m_recorder.exportToIGC(*it);
+    return m_recorder->exportToIGC(*it);
 }
 
 
@@ -478,177 +496,62 @@ auto Flightlog::FlightLog::flightsForUuids(const QStringList& uuids) const -> QL
 
 auto Flightlog::FlightLog::exportToForeFlight(const QStringList& uuids) const -> QByteArray
 {
-    const auto toExport = flightsForUuids(uuids);
-    if (toExport.isEmpty()) {
-        return {};
-    }
-
-    // Wrap a CSV field in double-quotes if it contains commas, quotes, or line breaks
-    auto csvField = [](const QString& s) -> QString {
-        if (s.contains(u',') || s.contains(u'"') || s.contains(u'\n') || s.contains(u'\r')) {
-            return u'"' + QString(s).replace(u'"', u"\"\""_s) + u'"';
-        }
-        return s;
-    };
-
-    // Format a QDateTime as HH:MM UTC; empty string if invalid
-    auto timeHHMM = [](const QDateTime& dt) -> QString {
-        return dt.isValid() ? dt.toUTC().toString(u"HH:mm"_s) : QString();
-    };
-
-    // Produce the exact two-table structure of the official ForeFlight
-    // Logbook Import template: magic row, blank, Aircraft Table, blank, Flights Table.
-    QString csv;
-
-    // Row 1: magic identifier; row 2: blank
-    csv += u"ForeFlight Logbook Import\r\n"_s;
-    csv += u"\r\n"_s;
-
-    // ── Aircraft Table ────────────────────────────────────────────────────
-    csv += u"Aircraft Table\r\n"_s;
-    csv += u"Text,Text,Text,YYYY,Text,Text,Text,Text,Text,Boolean,Boolean,Boolean,Boolean\r\n"_s;
-    csv += u"AircraftID,EquipmentType,TypeCode,Year,Make,Model,GearType,EngineType,Category/Class,Complex,High Performance,Pressurized,TAA\r\n"_s;
-
-    {
-        QStringList seenAircraft;
-        for (const auto& f : std::as_const(toExport))
-        {
-            const QString id = f.aircraftCallsign();
-            const bool alreadySeen = std::ranges::any_of(seenAircraft, [&](const QString& s) {
-                return s.compare(id, Qt::CaseInsensitive) == 0;
-            });
-            if (!id.isEmpty() && !alreadySeen)
-            {
-                seenAircraft.append(id);
-                csv += csvField(id) + u",aircraft,,,,,,,,,,,\r\n"_s;
-            }
-        }
-    }
-
-    csv += u"\r\n"_s;
-
-    // ── Flights Table ─────────────────────────────────────────────────────
-    csv += u"Flights Table\r\n"_s;
-
-    // Type row (matches ForeFlight template column order exactly)
-    csv += u"Date,Text,Text,Text,Text,"
-           u"HH:MM,HH:MM,HH:MM,HH:MM,HH:MM,HH:MM,"
-           u"Decimal or HH:MM,Decimal or HH:MM,Decimal or HH:MM,"
-           u"Decimal or HH:MM,Decimal or HH:MM,Decimal or HH:MM,"
-           u"Decimal or HH:MM,Decimal or HH:MM,Decimal or HH:MM,"
-           u"Decimal or HH:MM,Decimal or HH:MM,Number,Decimal,"
-           u"Number,Number,Number,Number,Number,"
-           u"Decimal or HH:MM,Decimal or HH:MM,Decimal or HH:MM,Decimal or HH:MM,"
-           u"Decimal,Decimal,Decimal,Decimal,Number,"
-           u"Packed Detail,Packed Detail,Packed Detail,Packed Detail,Packed Detail,Packed Detail,"
-           u"Decimal or HH:MM,Decimal or HH:MM,Decimal or HH:MM,Text,Text,"
-           u"Packed Detail,Packed Detail,Packed Detail,Packed Detail,Packed Detail,Packed Detail,"
-           u"Text,Boolean,Boolean,Boolean,Boolean,Boolean\r\n"_s;
-
-    // Column names row
-    csv += u"Date,AircraftID,From,To,Route,"
-           u"TimeOut,TimeOff,TimeOn,TimeIn,OnDuty,OffDuty,"
-           u"TotalTime,PIC,SIC,Night,Solo,CrossCountry,PICUS,MultiPilot,IFR,"
-           u"Examiner,NVG,NVGOps,Distance,"
-           u"DayTakeoffs,DayLandingsFullStop,NightTakeoffs,NightLandingsFullStop,AllLandings,"
-           u"ActualInstrument,SimulatedInstrument,GroundTraining,GroundTrainingGiven,"
-           u"HobbsStart,HobbsEnd,TachStart,TachEnd,Holds,"
-           u"Approach1,Approach2,Approach3,Approach4,Approach5,Approach6,"
-           u"DualGiven,DualReceived,SimulatedFlight,InstructorName,InstructorComments,"
-           u"Person1,Person2,Person3,Person4,Person5,Person6,"
-           u"PilotComments,Flight Review,IPC,Checkride,FAA 61.58,NVG Proficiency\r\n"_s;
-
-    for (const auto& flight : std::as_const(toExport)) {
-        const QString date = flight.startTime().isValid()
-            ? flight.startTime().toUTC().date().toString(u"yyyy-MM-dd"_s)
-            : QString();
-
-        // TotalTime: wheel-off to wheel-on, in decimal hours (1 decimal place)
-        const double flightSecs = flight.startTime().isValid() && flight.landingTime().isValid()
-            ? static_cast<double>(flight.startTime().secsTo(flight.landingTime())) : 0.0;
-        const QString totalTime = flightSecs > 0.0
-            ? QString::number(flightSecs / 3600.0, 'f', 1) : QString();
-
-        // AllLandings covers all landing types; we don't split day/night/touch-and-go
-        const QString allLandings = flight.landingCount() > 0
-            ? QString::number(flight.landingCount()) : QString();
-
-        csv += csvField(date)                              + u","_s; // Date
-        csv += csvField(flight.aircraftCallsign())         + u","_s; // AircraftID
-        csv += csvField(flight.departureICAO())            + u","_s; // From
-        csv += csvField(flight.arrivalICAO())              + u","_s; // To
-        csv +=                                               u","_s; // Route
-        csv += csvField(timeHHMM(flight.offBlockTime()))   + u","_s; // TimeOut
-        csv += csvField(timeHHMM(flight.startTime()))      + u","_s; // TimeOff
-        csv += csvField(timeHHMM(flight.landingTime()))    + u","_s; // TimeOn
-        csv += csvField(timeHHMM(flight.onBlockTime()))    + u","_s; // TimeIn
-        csv +=                                               u","_s; // OnDuty
-        csv +=                                               u","_s; // OffDuty
-        csv += csvField(totalTime)                         + u","_s; // TotalTime
-        csv +=                                               u","_s; // PIC
-        csv +=                                               u","_s; // SIC
-        csv +=                                               u","_s; // Night
-        csv +=                                               u","_s; // Solo
-        csv +=                                               u","_s; // CrossCountry
-        csv +=                                               u","_s; // PICUS
-        csv +=                                               u","_s; // MultiPilot
-        csv +=                                               u","_s; // IFR
-        csv +=                                               u","_s; // Examiner
-        csv +=                                               u","_s; // NVG
-        csv +=                                               u","_s; // NVGOps
-        csv +=                                               u","_s; // Distance
-        csv +=                                               u","_s; // DayTakeoffs
-        csv +=                                               u","_s; // DayLandingsFullStop
-        csv +=                                               u","_s; // NightTakeoffs
-        csv +=                                               u","_s; // NightLandingsFullStop
-        csv += csvField(allLandings)                       + u","_s; // AllLandings
-        csv +=                                               u","_s; // ActualInstrument
-        csv +=                                               u","_s; // SimulatedInstrument
-        csv +=                                               u","_s; // GroundTraining
-        csv +=                                               u","_s; // GroundTrainingGiven
-        csv +=                                               u","_s; // HobbsStart
-        csv +=                                               u","_s; // HobbsEnd
-        csv +=                                               u","_s; // TachStart
-        csv +=                                               u","_s; // TachEnd
-        csv +=                                               u","_s; // Holds
-        csv +=                                               u","_s; // Approach1
-        csv +=                                               u","_s; // Approach2
-        csv +=                                               u","_s; // Approach3
-        csv +=                                               u","_s; // Approach4
-        csv +=                                               u","_s; // Approach5
-        csv +=                                               u","_s; // Approach6
-        csv +=                                               u","_s; // DualGiven
-        csv +=                                               u","_s; // DualReceived
-        csv +=                                               u","_s; // SimulatedFlight
-        csv +=                                               u","_s; // InstructorName
-        csv +=                                               u","_s; // InstructorComments
-        csv += csvField(flight.pilotName())                + u","_s; // Person1
-        csv +=                                               u","_s; // Person2
-        csv +=                                               u","_s; // Person3
-        csv +=                                               u","_s; // Person4
-        csv +=                                               u","_s; // Person5
-        csv +=                                               u","_s; // Person6
-        csv += csvField(flight.comments())                 + u","_s; // PilotComments
-        csv +=                                               u","_s; // Flight Review
-        csv +=                                               u","_s; // IPC
-        csv +=                                               u","_s; // Checkride
-        csv +=                                               u","_s; // FAA 61.58
-        csv +=                                             u"\r\n"_s; // NVG Proficiency (last)
-    }
-
-    return csv.toUtf8();
+    return FlightLogExportForeFlight::toCSV(flightsForUuids(uuids));
 }
 
 
 auto Flightlog::FlightLog::exportToJSON(const QStringList& uuids) const -> QByteArray
 {
-    const auto toExport = flightsForUuids(uuids);
-    if (toExport.isEmpty()) {
+    return FlightLogExportJSON::toJSON(flightsForUuids(uuids));
+}
+
+
+auto Flightlog::FlightLog::importFromJSON(const QString& fileName) -> QString
+{
+    QString myFileName = fileName;
+    if (myFileName.startsWith(u"file://"_s)) {
+        myFileName = myFileName.mid(7);
+    }
+
+    QFile file(myFileName);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return tr("Cannot open file: %1").arg(file.errorString());
+    }
+    const auto raw = file.readAll();
+    file.close();
+
+    const auto imported = FlightLogExportJSON::fromJSON(raw);
+    if (imported.isEmpty()) {
+        return tr("The file does not contain a valid flight log.");
+    }
+
+    auto flights = m_flights.value();
+    QSet<QUuid> existingUuids;
+    existingUuids.reserve(flights.size());
+    for (const auto& f : std::as_const(flights)) {
+        existingUuids.insert(f.uuid());
+    }
+
+    QList<Flight> newFlights;
+    for (const auto& importedFlight : imported) {
+        if (existingUuids.contains(importedFlight.uuid())) {
+            continue;
+        }
+        auto flight = importedFlight;
+        resolveCoordinates(flight);
+        flights.append(flight);
+        existingUuids.insert(flight.uuid());
+        newFlights.append(flight);
+    }
+
+    if (newFlights.isEmpty()) {
         return {};
     }
 
-    const QJsonDocument doc = flightsToJsonDocument(toExport);
-    return doc.toJson();
+    sortFlights(flights);
+    m_flights.setValue(std::move(flights));
+    m_storage->upsertMany(newFlights);
+    return {};
 }
 
 
@@ -673,9 +576,10 @@ void Flightlog::FlightLog::removeTrack(const QString& uuid)
         hideTrack();
     }
 
-    m_recorder.removeTrack(*it);
+    m_recorder->removeTrack(*it);
+    auto updatedFlight = *it;
     m_flights.setValue(std::move(flights));
-    save();
+    m_storage->upsert(updatedFlight);
 }
 
 
@@ -692,7 +596,7 @@ auto Flightlog::FlightLog::displayedTrackPath() const -> QGeoPath
     }
 
     // Live recording track (empty if not recording)
-    return m_recorder.trackGeoPath();
+    return m_recorder->trackGeoPath();
 }
 
 
@@ -711,7 +615,7 @@ void Flightlog::FlightLog::showTrack(const QString& uuid)
     }
 
     // Load into a local first — only commit state if successful
-    auto path = m_recorder.loadTrackPath(*it);
+    auto path = m_recorder->loadTrackPath(*it);
     if (path.isEmpty()) {
         return;
     }
@@ -740,14 +644,19 @@ void Flightlog::FlightLog::resolveCoordinates(Flight& flight)
         return;
     }
 
-    if (!flight.departureICAO().isEmpty()) {
+    // Only fill in a coordinate that isn't already set. A coordinate can
+    // already be present here because it came from a real GPS fix (automatic
+    // flight detection, or the "End Flight" button) rather than an ICAO
+    // lookup — that is strictly more trustworthy than an airport's charted
+    // position and must not be overwritten.
+    if (!flight.departureCoordinate().isValid() && !flight.departureICAO().isEmpty()) {
         auto wp = geoMapProvider->findByID(flight.departureICAO());
         if (wp.coordinate().isValid()) {
             flight.setDepartureCoordinate(wp.coordinate());
         }
     }
 
-    if (!flight.arrivalICAO().isEmpty()) {
+    if (!flight.arrivalCoordinate().isValid() && !flight.arrivalICAO().isEmpty()) {
         auto wp = geoMapProvider->findByID(flight.arrivalICAO());
         if (wp.coordinate().isValid()) {
             flight.setArrivalCoordinate(wp.coordinate());
@@ -769,106 +678,11 @@ void Flightlog::FlightLog::sortFlights(QList<Flight>& flights)
 // Persistence
 //
 
-void Flightlog::FlightLog::save()
-{
-    const QJsonDocument doc = flightsToJsonDocument(m_flights);
-
-    // Use QSaveFile so a failed or partial write cannot corrupt the existing
-    // file: it writes to a temporary file and commit() atomically renames.
-    QSaveFile file(m_fileName);
-    if (!file.open(QIODevice::WriteOnly)) {
-        qWarning() << "FlightLog::save: cannot open" << m_fileName
-                   << "for writing:" << file.errorString();
-        emit saveError(file.errorString());
-        return;
-    }
-
-    const QByteArray json = doc.toJson();
-    if (file.write(json) != json.size()) {
-        qWarning() << "FlightLog::save: write failed for" << m_fileName
-                   << ":" << file.errorString();
-        file.cancelWriting();
-        emit saveError(file.errorString());
-        return;
-    }
-
-    if (!file.commit()) {
-        qWarning() << "FlightLog::save: commit failed for" << m_fileName
-                   << ":" << file.errorString();
-        emit saveError(file.errorString());
-    }
-}
-
-
 void Flightlog::FlightLog::load()
 {
-    QFile file(m_fileName);
-    if (!file.open(QIODevice::ReadOnly)) {
-        return;
-    }
-
-    const QByteArray raw = file.readAll();
-    file.close();
-
-    QJsonParseError parseError;
-    const auto doc = QJsonDocument::fromJson(raw, &parseError);
-    if (!doc.isObject()) {
-        quarantineFlightLogFile(parseError.errorString());
-        return;
-    }
-
-    const auto root = doc.object();
-    if (root.value(u"content"_s).toString() != u"flightLog"_s) {
-        quarantineFlightLogFile(u"unexpected content tag"_s);
-        return;
-    }
-
-    // version field is available for future migration logic
-    // const auto version = root.value(u"version"_s).toInt();
-
-    QList<Flight> newFlights;
-    const auto array = root.value(u"flights"_s).toArray();
-    for (const auto& val : array) {
-        if (val.isObject()) {
-            newFlights.append(Flight::fromJSON(val.toObject()));
-        }
-    }
+    auto newFlights = m_storage->loadAll();
     sortFlights(newFlights);
     m_flights.setValue(std::move(newFlights));
-}
-
-
-void Flightlog::FlightLog::quarantineFlightLogFile(const QString& reason)
-{
-    const QString ts = QDateTime::currentDateTimeUtc().toString(u"yyyyMMddTHHmmssZ"_s);
-    const QString backup = m_fileName + u"."_s + ts + u".corrupt"_s;
-    QFile::rename(m_fileName, backup);
-    qWarning() << "FlightLog::load:" << reason
-               << "- damaged file renamed to" << backup;
-    // Emit via a queued connection: load() is called from the constructor,
-    // before QML signal connections are established.
-    QMetaObject::invokeMethod(this, [this, reason]() {
-        emit saveError(tr("The flight log file could not be read and has been reset (%1). "
-                          "Your previous flight log data is no longer available.")
-                       .arg(reason));
-    }, Qt::QueuedConnection);
-}
-
-
-auto Flightlog::FlightLog::flightsToJsonDocument(const QList<Flight>& flights) -> QJsonDocument
-{
-    QJsonArray array;
-    for (const auto& flight : flights) {
-        array.append(flight.toJSON());
-    }
-
-    QJsonObject root;
-    root[u"content"_s] = u"flightLog"_s;
-    root[u"version"_s] = 1;
-    root[u"exportDate"_s] = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
-    root[u"flights"_s] = array;
-
-    return QJsonDocument(root);
 }
 
 
@@ -980,17 +794,18 @@ void Flightlog::FlightLog::onLandingDetected(const QString& arrivalICAO,
         // clear it — even when recording was off — so no stale points
         // linger in RAM or remain visible on the map.
         if (trackRecording()) {
-            if (m_recorder.saveTrack(flight)) {
+            if (m_recorder->saveTrack(flight)) {
                 // Cache the geo path for map display, then free recorder RAM
-                m_displayedTrackPath = m_recorder.trackGeoPath();
+                m_displayedTrackPath = m_recorder->trackGeoPath();
                 m_displayedTrackFile = m_displayedTrackPath.path().isEmpty() ? QString{} : flight.trackFile();
             } else {
                 emit saveError(tr("Failed to save GPS track for flight from %1.").arg(flight.departureICAO()));
             }
         }
-        m_recorder.clearTrack();
+        m_recorder->clearTrack();
+        auto updatedFlight = flight;
         m_flights.setValue(std::move(flights));
-        save();
+        m_storage->upsert(updatedFlight);
         emit displayedTrackPathChanged();
     }
 
@@ -1045,7 +860,7 @@ void Flightlog::FlightLog::onPositionUpdated()
     // connection is direct or queued.
     if (trackRecording()) {
         auto pressAlt = GlobalObject::positionProvider()->pressureAltitude();
-        m_recorder.processPositionUpdate(m_detector->detectionState(), info, pressAlt);
+        m_recorder->processPositionUpdate(m_detector->detectionState(), info, pressAlt);
     }
 
     m_detector->processPositionUpdate(info);
@@ -1061,6 +876,9 @@ void Flightlog::FlightLog::onAutoFlightDetectionChanged()
     if (GlobalObject::globalSettings()->autoFlightDetection()) {
         ObjCAdapter::requestNotificationPermission();
     }
+    GlobalObject::positionProvider()->setBackgroundUpdates(
+        u"flightlog"_s,
+        GlobalObject::globalSettings()->autoFlightDetection());
 #endif
 
     // Ensure the satellite GPS source is running whenever auto-detection is
@@ -1072,12 +890,21 @@ void Flightlog::FlightLog::onAutoFlightDetectionChanged()
     if (GlobalObject::globalSettings()->autoFlightDetection()) {
         GlobalObject::positionProvider()->startUpdates();
     } else {
-        // Detection was just disabled. If a flight was being recorded, discard
-        // the in-memory GPS track so it doesn't appear frozen on the map or
-        // bleed into the next flight. The flight entry itself (with its start
-        // time) is kept in the log — the pilot can edit it manually.
+        // Detection was just disabled. Reset the detector's own state machine
+        // so it doesn't stay stuck in InFlight/LandingPhase — otherwise a
+        // later endFlight() call would still pass the detector's guard and
+        // emit landingDetected for a flight m_currentFlightUuid (cleared
+        // below) can no longer identify.
+        if (m_detector != nullptr && m_detector->detectionState() != FlightDetector::Idle) {
+            m_detector->resetDetection();
+        }
+
+        // If a flight was being recorded, discard the in-memory GPS track so
+        // it doesn't appear frozen on the map or bleed into the next flight.
+        // The flight entry itself (with its start time) is kept in the log —
+        // the pilot can edit it manually.
         if (!m_currentFlightUuid.isNull()) {
-            m_recorder.clearTrack();
+            m_recorder->clearTrack();
             m_currentFlightUuid = {};
             if (m_displayedTrackFile.isEmpty()) {
                 // Was showing the live trace — tell the map it's gone
