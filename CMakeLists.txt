@@ -9,6 +9,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(ExternalProject)
 option(QTDEPLOY "Generate and run Qt deployment scripts" OFF)
 
+# Qt for iOS ships one fat static library per module, with an arm64 slice for the device
+# and an x86_64 slice for the simulator; there is no arm64 simulator slice, so a simulator
+# build has to target x86_64 (which the simulator runs under Rosetta on Apple Silicon).
+# Left alone, Qt's toolchain file pins CMAKE_OSX_ARCHITECTURES to arm64 and the link then
+# fails with "building for 'iOS-simulator', but linking in object file built for 'iOS'".
+# This has to happen before project(), which is where the toolchain file is read.
+if(CMAKE_OSX_SYSROOT MATCHES "iphonesimulator" AND NOT CMAKE_OSX_ARCHITECTURES)
+    set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "Build architectures for iOS" FORCE)
+endif()
+
 
 #
 # Project data
