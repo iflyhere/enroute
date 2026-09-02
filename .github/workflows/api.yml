@@ -6,11 +6,14 @@ on:
     paths-ignore:
       - ".gitignore"
       - "README.md"
+      # The Wear OS app is a standalone Gradle project, built by wearos.yml
+      - "wearos/**"
       # ignore CI for other platforms
       - ".github/workflows/android.yml"
       - ".github/workflows/ios.yml"
       - ".github/workflows/linux.yml"
       - ".github/workflows/macos.yml"
+      - ".github/workflows/wearos.yml"
 
 jobs:
   build:
