@@ -52,11 +52,16 @@ dependencies here are one-way compatible into GPLv3.
 cd wearos && ./gradlew :app:assembleDebug
 ```
 
-On Windows, point Gradle at the SDK once:
+Point Gradle at the SDK once by creating `wearos/local.properties`:
 
-```powershell
-"sdk.dir=$env:LOCALAPPDATA\Android\Sdk" | Out-File -Encoding ascii wearos\local.properties
 ```
+sdk.dir=C:/Users/<you>/AppData/Local/Android/Sdk
+```
+
+Use **forward slashes**, even on Windows. `local.properties` is a Java properties file, in which
+a backslash is an escape character, so a path written with backslashes is silently mangled and the
+build fails with the thoroughly unhelpful "filename, directory name, or volume label syntax is
+incorrect". The file is git-ignored, so it stays a local setting.
 
 ## Installing
 
