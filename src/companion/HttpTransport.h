@@ -23,6 +23,8 @@
 #include <QDateTime>
 #include <QHash>
 #include <QPointer>
+#include <QTimer>
+#include <QUdpSocket>
 
 namespace Companion
 {
@@ -109,6 +111,12 @@ namespace Companion
         // Implemented pure virtual method from QAbstractHttpServer
         void missingHandler(const QHttpServerRequest& request, QHttpServerResponder& responder) override;
 
+        // Advertises where this server is listening, so that a client does not have
+        // to be told an address by hand. Deliberately carries no pairing code: a
+        // client learns the address from the datagram and is paired with the code
+        // the pilot read off the screen once.
+        void broadcast();
+
         // Checks the pairing code and the brute-force lockout. Returns false and
         // records a failure if the request may not be answered.
         bool authorized(const QHttpServerRequest& request);
@@ -121,6 +129,9 @@ namespace Companion
         // current window. Without this, a six-digit code falls to brute force over
         // Wi-Fi in a matter of minutes.
         QHash<QString, QPair<int, QDateTime>> m_authFailures;
+
+        QUdpSocket m_beaconSocket;
+        QTimer m_beaconTimer;
 
         QString m_errorString;
 

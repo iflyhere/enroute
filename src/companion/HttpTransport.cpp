@@ -17,11 +17,14 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <chrono>
+
 #include <QGuiApplication>
 #include <QHostAddress>
 #include <QHttpHeaders>
 #include <QHttpServerRequest>
 #include <QHttpServerResponder>
+#include <QNetworkDatagram>
 #include <QTcpServer>
 #include <QUrlQuery>
 
@@ -38,6 +41,9 @@ namespace
 {
     constexpr int maxAuthFailures = 10;
     constexpr int authLockoutSeconds = 60;
+
+    // Same cadence as the ForeFlight beacon that Traffic::TrafficDataProvider sends.
+    constexpr auto beaconPeriod = std::chrono::seconds(5);
 
     // A small page that polls the navigation frame, so that the link can be checked
     // from a desktop browser. That matters more than it looks: the C++ side cannot
@@ -59,6 +65,9 @@ namespace
 Companion::HttpTransport::HttpTransport(Companion::CompanionServer* server, QObject* parent)
     : QAbstractHttpServer(parent), m_server(server)
 {
+    m_beaconTimer.setInterval(beaconPeriod);
+    connect(&m_beaconTimer, &QTimer::timeout, this, &Companion::HttpTransport::broadcast);
+
 #if defined(Q_OS_IOS)
     connect(qGuiApp, &QGuiApplication::applicationStateChanged, this,
             [this](Qt::ApplicationState state)
@@ -116,6 +125,9 @@ void Companion::HttpTransport::start()
     }
 
     setErrorString();
+
+    m_beaconTimer.start();
+    broadcast();
 }
 
 
@@ -131,6 +143,24 @@ void Companion::HttpTransport::stop()
         }
     }
     m_authFailures.clear();
+    m_beaconTimer.stop();
+}
+
+
+void Companion::HttpTransport::broadcast()
+{
+    if (m_server.isNull() || serverPorts().isEmpty())
+    {
+        return;
+    }
+
+    const auto payload = u"{\"App\":\"Enroute Flight Navigation\",\"companion\":{\"port\":%1,\"v\":%2,\"sid\":%3}}"_s
+                             .arg(Companion::defaultPort)
+                             .arg(Companion::protocolVersion)
+                             .arg(m_server->revisions().session);
+
+    m_beaconSocket.writeDatagram(
+        QNetworkDatagram(payload.toUtf8(), QHostAddress::Broadcast, Companion::defaultPort));
 }
 
 
