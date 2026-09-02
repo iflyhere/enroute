@@ -371,7 +371,7 @@ if(ANDROID)
     add_android_openssl_libraries(${PROJECT_NAME})
     qmaplibre_location_setup_plugins(${PROJECT_NAME})
     set_target_properties(${PROJECT_NAME} PROPERTIES
-        QT_ANDROID_PACKAGE_NAME "de.akaflieg_freiburg.enroute.dev"
+        QT_ANDROID_PACKAGE_NAME "de.akaflieg_freiburg.enroute"
         QT_ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/android"
         QT_ANDROID_TARGET_SDK_VERSION 36
         QT_ANDROID_MIN_SDK_VERSION 28
