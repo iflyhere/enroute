@@ -92,11 +92,18 @@ fun CodeEntryScreen(
             fontSize = 13.sp,
         )
 
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(2.dp))
 
         PickerGroup(
             selectedPickerState = states[selectedDigit],
-            modifier = Modifier.testTag(TAG_CODE_PICKERS),
+            // Bounded height, or the option column of the active picker grows to fill
+            // the screen and pushes the confirm button out of sight.
+            modifier = Modifier
+                .height(PICKER_HEIGHT)
+                .testTag(TAG_CODE_PICKERS),
+            // Not autoCenter: that centres the *selected* picker, so with six columns
+            // the row slides sideways as the crown moves between digits and the last
+            // one falls off the display. A static row keeps all six visible.
             autoCenter = false,
         ) {
             states.forEachIndexed { index, state ->
@@ -122,7 +129,7 @@ fun CodeEntryScreen(
             }
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(4.dp))
 
         Button(
             onClick = {
@@ -134,6 +141,8 @@ fun CodeEntryScreen(
         }
     }
 }
+
+private val PICKER_HEIGHT = 108.dp
 
 const val TAG_CODE_PICKERS = "code.pickers"
 const val TAG_CODE_CONFIRM = "code.confirm"
