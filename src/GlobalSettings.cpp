@@ -210,6 +210,32 @@ void GlobalSettings::setPrivacyHash(Units::ByteSize newHash)
 }
 
 
+void GlobalSettings::setCompanionNetworkEnabled(bool newCompanionNetworkEnabled)
+{
+    if (newCompanionNetworkEnabled == companionNetworkEnabled())
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/networkEnabled"), newCompanionNetworkEnabled);
+    m_companionNetworkEnabled = newCompanionNetworkEnabled;
+    emit companionNetworkEnabledChanged();
+}
+
+
+void GlobalSettings::setCompanionPairingCode(const QString& newCompanionPairingCode)
+{
+    if (newCompanionPairingCode == m_companionPairingCode)
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/pairingCode"), newCompanionPairingCode);
+    m_companionPairingCode = newCompanionPairingCode;
+    emit companionPairingCodeChanged();
+}
+
+
 void GlobalSettings::setNightMode(bool newNightMode)
 {
     if (newNightMode == nightMode())

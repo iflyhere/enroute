@@ -27,6 +27,7 @@
 #include "GlobalSettings.h"
 #include "Librarian.h"
 #include "Sensors.h"
+#include "companion/CompanionServer.h"
 #include "dataManagement/DataManager.h"
 #include "dataManagement/SSLErrorHandler.h"
 #include "geomaps/GeoMapProvider.h"
@@ -57,6 +58,7 @@ QPointer<Traffic::FlarmnetDB> g_flarmnetDB {};
 QPointer<GeoMaps::GeoMapProvider> g_geoMapProvider {};
 QPointer<Librarian> g_librarian {};
 QPointer<Platform::PlatformAdaptor> g_platformAdaptor {};
+QPointer<Companion::CompanionServer> g_companionServer {};
 QPointer<Flightlog::FlightLog> g_flightLog {};
 QPointer<Navigation::Navigator> g_navigator {};
 QPointer<NOTAM::NOTAMProvider> g_notamProvider {};
@@ -120,6 +122,7 @@ void GlobalObject::clear()
     delete g_fileExchange;
     delete g_librarian;
     delete g_platformAdaptor;
+    delete g_companionServer;
     delete g_flightLog;
     delete g_navigator;
     delete g_passwordDB;
@@ -162,6 +165,11 @@ auto GlobalObject::flarmnetDB() -> Traffic::FlarmnetDB*
 auto GlobalObject::flightLog() -> Flightlog::FlightLog*
 {
     return allocateInternal<Flightlog::FlightLog>(g_flightLog);
+}
+
+auto GlobalObject::companionServer() -> Companion::CompanionServer*
+{
+    return allocateInternal<Companion::CompanionServer>(g_companionServer);
 }
 
 auto GlobalObject::geoMapProvider() -> GeoMaps::GeoMapProvider*
