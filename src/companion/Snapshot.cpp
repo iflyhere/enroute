@@ -17,6 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <cmath>
+
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QJsonArray>
@@ -200,7 +202,9 @@ namespace
             return richText;
         }
         static const QRegularExpression tag(u"<[^>]*>"_s);
-        return richText.replace(tag, u" "_s).simplified();
+        // QString::replace mutates, so this needs its own copy.
+        auto result = richText;
+        return result.replace(tag, u" "_s).simplified();
     }
 
     /*! \brief The translated message that belongs to a route status
