@@ -23,14 +23,15 @@ import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.wear.compose.material3.Text
-import de.akaflieg_freiburg.enroute.wear.ui.theme.CockpitColors
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import de.akaflieg_freiburg.enroute.wear.transport.http.HttpNavTransport
+import de.akaflieg_freiburg.enroute.wear.ui.data.DataScreen
+import de.akaflieg_freiburg.enroute.wear.ui.data.DataViewModel
 import de.akaflieg_freiburg.enroute.wear.ui.theme.EnrouteWearTheme
 
 class MainActivity : ComponentActivity() {
@@ -50,14 +51,26 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun EnrouteWearApp() {
-    EnrouteWearTheme {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(CockpitColors.Background),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(text = "Enroute")
+    val factory = remember {
+        DataViewModel.Factory {
+            HttpNavTransport(
+                host = Config.DEFAULT_HOST,
+                port = Config.DEFAULT_PORT,
+                pairingCode = Config.DEFAULT_PAIRING_CODE,
+            )
         }
+    }
+    val viewModel: DataViewModel = viewModel(factory = factory)
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // The session runs for as long as this screen is composed. Keeping it alive with the
+    // display off needs a foreground service, which is separate, later work.
+    DisposableEffect(viewModel) {
+        viewModel.start()
+        onDispose { viewModel.stop() }
+    }
+
+    EnrouteWearTheme {
+        DataScreen(state = state)
     }
 }
