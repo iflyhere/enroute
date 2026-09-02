@@ -536,9 +536,10 @@ private:
 
     // Property-backed night mode setting, so that C++ bindings can depend on
     // it. Initialized from m_settings, which is declared above on purpose.
+    QProperty<bool> m_nightMode {m_settings.value(QStringLiteral("Map/nightMode"), false).toBool()};
+
     QProperty<bool> m_companionNetworkEnabled {m_settings.value(QStringLiteral("companion/networkEnabled"), false).toBool()};
     QString m_companionPairingCode {m_settings.value(QStringLiteral("companion/pairingCode")).toString()};
-    QProperty<bool> m_nightMode {m_settings.value(QStringLiteral("Map/nightMode"), false).toBool()};
 
     QProperty<bool> m_positioningByTrafficDataReceiver;
 };
