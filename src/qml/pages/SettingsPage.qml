@@ -328,6 +328,16 @@ Page {
                     stackView.push("ConnectionManager.qml", {"appWindow": view})
                 }
             }
+            ToolButton {
+                icon.source: "/icons/material/ic_info_outline.svg"
+                onClicked: {
+                    PlatformAdaptor.vibrateBrief()
+                    helpDialog.title = qsTr("Data Connections")
+                    helpDialog.text = "<p>" + qsTr("Configure data connections to peripheral devices.") + "</p>"
+                            + "<p>" + qsTr("Use this item to register traffic data receivers that connect via Bluetooth.") + "</p>"
+                    helpDialog.open()
+                }
+            }
 
             WordWrappingItemDelegate {
                 id: companionDevices
@@ -349,16 +359,6 @@ Page {
                     helpDialog.title = qsTr("Companion Devices")
                     helpDialog.text = "<p>" + qsTr("Enroute Flight Navigation can publish your flight route and your current position, so that a companion device such as a smartwatch can display them. This is switched off by default.") + "</p>"
                             + "<p>" + qsTr("A companion device must know a pairing code, which is shown on this page. Anybody on the same Wi-Fi network who knows that code can read your route and your position, so do not switch this on while connected to a public network.") + "</p>"
-                    helpDialog.open()
-                }
-            }
-            ToolButton {
-                icon.source: "/icons/material/ic_info_outline.svg"
-                onClicked: {
-                    PlatformAdaptor.vibrateBrief()
-                    helpDialog.title = qsTr("Data Connections")
-                    helpDialog.text = "<p>" + qsTr("Configure data connections to peripheral devices.") + "</p>"
-                            + "<p>" + qsTr("Use this item to register traffic data receivers that connect via Bluetooth.") + "</p>"
                     helpDialog.open()
                 }
             }
