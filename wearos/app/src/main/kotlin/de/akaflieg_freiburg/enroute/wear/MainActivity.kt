@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import de.akaflieg_freiburg.enroute.wear.data.SettingsStore
 import de.akaflieg_freiburg.enroute.wear.transport.http.HttpNavTransport
 import de.akaflieg_freiburg.enroute.wear.ui.data.DataScreen
 import de.akaflieg_freiburg.enroute.wear.ui.data.DataViewModel
@@ -45,18 +46,23 @@ class MainActivity : ComponentActivity() {
         // app does to be usable in flight.
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        setContent { EnrouteWearApp() }
+        val settings = SettingsStore(this)
+        settings.applyOverrides(intent)
+
+        setContent { EnrouteWearApp(settings) }
     }
 }
 
 @Composable
-private fun EnrouteWearApp() {
+private fun EnrouteWearApp(settings: SettingsStore) {
     val factory = remember {
         DataViewModel.Factory {
+            // Read on every reconnect, so a changed address takes effect without a
+            // restart of the app.
             HttpNavTransport(
-                host = Config.DEFAULT_HOST,
-                port = Config.DEFAULT_PORT,
-                pairingCode = Config.DEFAULT_PAIRING_CODE,
+                host = settings.host,
+                port = settings.port,
+                pairingCode = settings.pairingCode,
             )
         }
     }
