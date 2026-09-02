@@ -19,6 +19,8 @@
 
 package de.akaflieg_freiburg.enroute.wear
 
+import android.content.Context
+import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -29,9 +31,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import de.akaflieg_freiburg.enroute.wear.data.Discovery
 import de.akaflieg_freiburg.enroute.wear.data.SettingsStore
 import de.akaflieg_freiburg.enroute.wear.transport.http.HttpNavTransport
-import de.akaflieg_freiburg.enroute.wear.ui.data.DataScreen
+import de.akaflieg_freiburg.enroute.wear.ui.EnrouteWearUi
 import de.akaflieg_freiburg.enroute.wear.ui.data.DataViewModel
 import de.akaflieg_freiburg.enroute.wear.ui.theme.EnrouteWearTheme
 
@@ -49,12 +52,16 @@ class MainActivity : ComponentActivity() {
         val settings = SettingsStore(this)
         settings.applyOverrides(intent)
 
-        setContent { EnrouteWearApp(settings) }
+        val discovery = Discovery(
+            getSystemService(Context.WIFI_SERVICE) as? WifiManager,
+        )
+
+        setContent { EnrouteWearApp(settings, discovery) }
     }
 }
 
 @Composable
-private fun EnrouteWearApp(settings: SettingsStore) {
+private fun EnrouteWearApp(settings: SettingsStore, discovery: Discovery) {
     val factory = remember {
         DataViewModel.Factory {
             // Read on every reconnect, so a changed address takes effect without a
@@ -77,6 +84,11 @@ private fun EnrouteWearApp(settings: SettingsStore) {
     }
 
     EnrouteWearTheme {
-        DataScreen(state = state)
+        EnrouteWearUi(
+            state = state,
+            settings = settings,
+            discovery = discovery,
+            onSettingsChanged = { viewModel.restart() },
+        )
     }
 }
