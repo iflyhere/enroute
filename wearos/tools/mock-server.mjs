@@ -1,0 +1,558 @@
+#!/usr/bin/env node
+/***************************************************************************
+ *   Copyright (C) 2026 by Soeren Gutbrod                                  *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 3 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+// Mock phone for the companion protocol described in doc/companion-protocol.md.
+//
+// Stands in for Enroute Flight Navigation so that a companion app can be built and
+// tested without a Qt toolchain. Flies a canned route and serves the same documents
+// the app serves, with the same rounding and the same field-omission rules.
+//
+// Node standard library only -- no package.json, nothing to install, nothing to audit.
+//
+//   node wearos/tools/mock-server.mjs --gs 90 --units nm
+//
+// Reach it from a watch or the emulator with adb reverse, which works on both:
+//
+//   adb -s <serial> reverse tcp:8973 tcp:8973
+//
+// then point the client at 127.0.0.1:8973.
+
+import http from 'node:http';
+import dgram from 'node:dgram';
+import process from 'node:process';
+
+const PROTOCOL_VERSION = 1;
+const APP_VERSION = '3.4.1-mock';
+
+// ---------------------------------------------------------------- command line
+
+function parseArgs(argv) {
+    const out = {
+        port: 8973, gs: 90, units: 'nm', vunits: 'ft',
+        code: '418302', beacon: true, period: 1000,
+    };
+    for (let i = 0; i < argv.length; i++) {
+        const key = argv[i].replace(/^--/, '');
+        if (key === 'no-beacon') { out.beacon = false; continue; }
+        if (key === 'help' || key === 'h') { out.help = true; continue; }
+        const value = argv[++i];
+        switch (key) {
+        case 'port':   out.port = Number(value); break;
+        case 'gs':     out.gs = Number(value); break;
+        case 'units':  out.units = value; break;
+        case 'vunits': out.vunits = value; break;
+        case 'code':   out.code = value; break;
+        case 'period': out.period = Number(value); break;
+        default: console.error(`unknown option --${key}`); process.exit(2);
+        }
+    }
+    return out;
+}
+
+const opts = parseArgs(process.argv.slice(2));
+
+if (opts.help) {
+    console.log(`Mock Enroute companion server
+
+  --port <n>      listen port                        (default 8973)
+  --gs <kn>       simulated ground speed in knots    (default 90)
+  --units <u>     nm | km | mil                      (default nm)
+  --vunits <u>    ft | m                             (default ft)
+  --code <nnnnnn> pairing code                       (default 418302)
+  --period <ms>   nav frame period                   (default 1000)
+  --no-beacon     do not broadcast UDP discovery
+
+Fault injection, for exercising a client's unhappy paths:
+
+  GET /enroute/v1/debug/status?s=offRoute   force a status value; 'bogus' for an
+                                            unknown one, to prove the fallback
+  GET /enroute/v1/debug/stall?s=30          stop publishing for 30 s (stale render)
+  GET /enroute/v1/debug/nan                 emit a frame with every optional key absent
+  GET /enroute/v1/debug/route?n=100         regenerate as a 100-waypoint route
+  GET /enroute/v1/debug/reset               back to normal
+`);
+    process.exit(0);
+}
+
+// ------------------------------------------------------------------ geo helpers
+
+const R_EARTH = 6371008.8;
+const D2R = Math.PI / 180;
+const R2D = 180 / Math.PI;
+
+function distanceTo(a, b) {
+    const phi1 = a.lat * D2R, phi2 = b.lat * D2R;
+    const dPhi = phi2 - phi1;
+    const dLam = (b.lon - a.lon) * D2R;
+    const s = Math.sin(dPhi / 2) ** 2
+        + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLam / 2) ** 2;
+    return 2 * R_EARTH * Math.asin(Math.min(1, Math.sqrt(s)));
+}
+
+function azimuthTo(a, b) {
+    const phi1 = a.lat * D2R, phi2 = b.lat * D2R;
+    const dLam = (b.lon - a.lon) * D2R;
+    const y = Math.sin(dLam) * Math.cos(phi2);
+    const x = Math.cos(phi1) * Math.sin(phi2)
+        - Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLam);
+    return (Math.atan2(y, x) * R2D + 360) % 360;
+}
+
+function interpolate(a, b, fraction) {
+    return { lat: a.lat + (b.lat - a.lat) * fraction, lon: a.lon + (b.lon - a.lon) * fraction };
+}
+
+// --------------------------------------------------------------- the formatters
+//
+// These mirror Navigation::Aircraft and Units::Timespan exactly. Any divergence here
+// is a bug in the mock, not a licence to differ: the whole point of shipping formatted
+// strings over the wire is that the phone and the client never disagree.
+//
+//   Aircraft::horizontalDistanceToString  -- 0 decimals above 10 units, else 1
+//   Aircraft::horizontalSpeedToString     -- rounded to a whole knot
+//   Aircraft::verticalDistanceToString    -- rounded to a whole foot
+//   Units::Timespan::toHoursAndMinutes    -- rounds to the nearest minute, "h:mm"
+//
+// Qt's %L1 applies locale digit grouping, hence toLocaleString for the integer cases.
+
+const M_PER_NM = 1852.0;
+const M_PER_MIL = 1609.344;
+const M_PER_FT = 0.3048;
+const MPS_PER_KN = 0.514444;
+
+function group(n) { return n.toLocaleString('en-US'); }
+
+function fmtHDist(metres, unit) {
+    if (metres === null || !Number.isFinite(metres)) { return '-'; }
+    const [value, suffix] = unit === 'km' ? [metres / 1000.0, 'km']
+        : unit === 'mil' ? [metres / M_PER_MIL, 'mil']
+            : [metres / M_PER_NM, 'nm'];
+    // Note: the app compares the *distance*, not the rounded value, against 10 units.
+    return value > 10.0 ? `${group(Math.round(value))} ${suffix}`
+        : `${value.toFixed(1)} ${suffix}`;
+}
+
+function fmtSpeed(mps, unit) {
+    if (mps === null || !Number.isFinite(mps)) { return '-'; }
+    if (unit === 'km') { return `${group(Math.round(mps * 3.6))} km/h`; }
+    if (unit === 'mil') { return `${group(Math.round(mps * 3600 / M_PER_MIL))} mph`; }
+    return `${group(Math.round(mps / MPS_PER_KN))} kn`;
+}
+
+function fmtVDist(metres, unit) {
+    if (metres === null || !Number.isFinite(metres)) { return '-'; }
+    return unit === 'm' ? `${group(Math.round(metres))} m`
+        : `${group(Math.round(metres / M_PER_FT))} ft`;
+}
+
+function fmtHoursMinutes(seconds) {
+    if (seconds === null || !Number.isFinite(seconds)) { return '-:--'; }
+    const sign = seconds < 0 ? '-' : '';
+    const minutes = Math.round(Math.abs(seconds) / 60.0);
+    return `${sign}${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`;
+}
+
+function fmtUtcHm(epochSeconds) {
+    if (epochSeconds === null || !Number.isFinite(epochSeconds)) { return '-:--'; }
+    const d = new Date(epochSeconds * 1000);
+    return `${d.getUTCHours()}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+}
+
+// Translated status messages, as QCoreApplication::translate("RemainingRouteBar", ...)
+// would produce them. English only here; the real app reuses the app's own catalogue.
+function statusText(status, offRouteThresholdM, unit) {
+    switch (status) {
+    case 'positionUnknown':  return 'Position unknown.';
+    case 'offRoute':         return `More than ${fmtHDist(offRouteThresholdM, unit)} off route.`;
+    case 'nearDestination':  return 'Near destination.';
+    default:                 return '';
+    }
+}
+
+// -------------------------------------------------------------------- the route
+
+const SHORT_ROUTE = [
+    { n: 'EDTF', en: 'EDTF (FREIBURG)',  lat: 48.02265, lon: 7.83258, e: 244, t: 'AD',  cat: 'AD-GLD' },
+    { n: 'KIRCHZARTEN',                  lat: 47.96667, lon: 7.95000,         t: 'WP',  cat: 'WP' },
+    { n: 'EDSB', en: 'EDSB (KARLSRUHE)', lat: 48.77939, lon: 8.08049, e: 122, t: 'AD',  cat: 'AD' },
+    { n: 'EDTL', en: 'EDTL (LAHR)',      lat: 48.36917, lon: 7.82778, e: 156, t: 'AD',  cat: 'AD' },
+];
+
+// A synthetic long route, for load-testing a client's route rendering.
+function longRoute(count) {
+    const wp = [];
+    for (let i = 0; i < count; i++) {
+        const angle = (i / count) * 4 * Math.PI;
+        wp.push({
+            n: i === 0 ? 'EDTF' : `WP${String(i).padStart(2, '0')}`,
+            lat: 48.02 + 0.9 * (i / count) + 0.06 * Math.sin(angle),
+            lon: 7.83 + 0.5 * Math.cos(angle),
+            t: i % 7 === 0 ? 'AD' : (i % 5 === 0 ? 'NAV' : 'WP'),
+            cat: i % 7 === 0 ? 'AD-GRASS' : (i % 5 === 0 ? 'VOR-DME' : 'WP'),
+        });
+    }
+    return wp;
+}
+
+// --------------------------------------------------------------- session state
+
+const state = {
+    sid: Math.floor(Math.random() * 0xffffffff),
+    routeRev: 1,
+    navRev: 0,
+    waypoints: SHORT_ROUTE,
+    forcedStatus: null,
+    stallUntil: 0,
+    allAbsent: false,
+    startedAt: Date.now(),
+};
+
+const OFF_ROUTE_THRESHOLD_M = 5 * M_PER_NM;   // Leg::nearThreshold
+
+function legs() {
+    const out = [];
+    for (let i = 0; i + 1 < state.waypoints.length; i++) {
+        const a = state.waypoints[i];
+        const b = state.waypoints[i + 1];
+        const d = distanceTo(a, b);
+        const leg = { d: Math.round(d) };
+        if (d >= 100.0) { leg.tc = Number(azimuthTo(a, b).toFixed(1)); }
+        out.push(leg);
+    }
+    return out;
+}
+
+// Where the aircraft is: progress along the route at the configured ground speed.
+function flightState() {
+    const groundSpeedMps = opts.gs * MPS_PER_KN;
+    const elapsedS = (Date.now() - state.startedAt) / 1000.0;
+    let flown = elapsedS * groundSpeedMps;
+
+    const allLegs = legs();
+    const total = allLegs.reduce((sum, l) => sum + l.d, 0);
+    if (total === 0) { return null; }
+    flown %= total;   // loop the flight, so a bench session never ends
+
+    let index = 0;
+    let remainingOnLeg = 0;
+    for (; index < allLegs.length; index++) {
+        if (flown < allLegs[index].d) { remainingOnLeg = allLegs[index].d - flown; break; }
+        flown -= allLegs[index].d;
+    }
+    if (index >= allLegs.length) { index = allLegs.length - 1; remainingOnLeg = 0; }
+
+    const from = state.waypoints[index];
+    const to = state.waypoints[index + 1];
+    const position = interpolate(from, to, allLegs[index].d ? flown / allLegs[index].d : 0);
+    const distToFinal = remainingOnLeg
+        + allLegs.slice(index + 1).reduce((sum, l) => sum + l.d, 0);
+
+    return {
+        legIndex: index, position, groundSpeedMps,
+        track: azimuthTo(from, to),
+        nextWp: to, nextDist: remainingOnLeg,
+        finalWp: state.waypoints[state.waypoints.length - 1], finalDist: distToFinal,
+        altitudeM: 1143 + 60 * Math.sin(elapsedS / 90),
+        verticalSpeedMps: 0.66 * Math.cos(elapsedS / 90),
+    };
+}
+
+// ----------------------------------------------------------------- the documents
+
+function unitsBlock() { return { hDist: opts.units, vDist: opts.vunits }; }
+
+function helloDocument() {
+    return {
+        v: PROTOCOL_VERSION, app: APP_VERSION, sid: state.sid,
+        routeRev: state.routeRev, navRev: state.navRev,
+        navPeriodMs: opts.period, units: unitsBlock(),
+    };
+}
+
+function routeDocument() {
+    const first = state.waypoints[0];
+    const last = state.waypoints[state.waypoints.length - 1];
+    const totalM = legs().reduce((sum, l) => sum + l.d, 0);
+    const eteS = totalM / (opts.gs * MPS_PER_KN);
+
+    return {
+        v: PROTOCOL_VERSION, sid: state.sid, routeRev: state.routeRev,
+        name: `${first.en ?? first.n} - ${last.en ?? last.n}`,
+        // Plain text. The real FlightRoute::summary() may contain rich text and the
+        // phone strips it before sending -- see doc/companion-protocol.md.
+        summary: `Total: ${fmtHDist(totalM, opts.units)} • ETE ${fmtHoursMinutes(eteS)} h`,
+        units: unitsBlock(),
+        wp: state.waypoints.map((w) => {
+            const out = { n: w.n };
+            if (w.en && w.en !== w.n) { out.en = w.en; }
+            out.c = [Number(w.lon.toFixed(5)), Number(w.lat.toFixed(5))];
+            if (w.e !== undefined) { out.e = w.e; }
+            out.t = w.t;
+            out.cat = w.cat;
+            return out;
+        }),
+        legs: legs(),
+    };
+}
+
+function navDocument(withFmt) {
+    const now = Math.floor(Date.now() / 1000);
+    const doc = {
+        v: PROTOCOL_VERSION, sid: state.sid,
+        navRev: state.navRev, routeRev: state.routeRev, t: now,
+    };
+
+    // The "everything absent" case: a valid frame in which no optional key is present.
+    // A client that crashes here has not honoured the omission rule.
+    if (state.allAbsent) {
+        doc.status = 'positionUnknown';
+        doc.flightStatus = 'unknown';
+        doc.note = '';
+        if (withFmt) {
+            doc.fmt = {
+                nextName: '-', nextDist: '-', nextETE: '-:--', nextETA: '-:--', nextTC: '-',
+                alt: '-', gs: '-',
+                statusText: statusText('positionUnknown', OFF_ROUTE_THRESHOLD_M, opts.units),
+            };
+        }
+        return doc;
+    }
+
+    const flight = flightState();
+    const status = state.forcedStatus ?? (flight ? 'onRoute' : 'noRoute');
+    doc.status = status;
+    doc.flightStatus = opts.gs > 10 ? 'flight' : 'ground';
+    doc.note = '';
+
+    if (flight) {
+        doc.leg = flight.legIndex;
+        doc.own = {
+            c: [Number(flight.position.lon.toFixed(5)), Number(flight.position.lat.toFixed(5))],
+            alt: Math.round(flight.altitudeM),
+            agl: Math.round(flight.altitudeM - 250),
+            gs: Number(flight.groundSpeedMps.toFixed(1)),
+            tt: Number(flight.track.toFixed(1)),
+            vs: Number(flight.verticalSpeedMps.toFixed(1)),
+        };
+    }
+
+    // next and final appear only while onRoute: RemainingRouteInfo guarantees its
+    // nextWP* fields only in that state, so a client must not render them otherwise.
+    if (status === 'onRoute' && flight) {
+        const nextEte = flight.nextDist / flight.groundSpeedMps;
+        const finalEte = flight.finalDist / flight.groundSpeedMps;
+
+        doc.next = {
+            n: flight.nextWp.n,
+            dist: Math.round(flight.nextDist),
+            ete: Math.round(nextEte),
+            eta: now + Math.round(nextEte),
+            tc: Number(azimuthTo(flight.position, flight.nextWp).toFixed(1)),
+        };
+        if (flight.finalWp.n !== flight.nextWp.n) {
+            doc.final = {
+                n: flight.finalWp.n,
+                dist: Math.round(flight.finalDist),
+                ete: Math.round(finalEte),
+                eta: now + Math.round(finalEte),
+            };
+        }
+
+        if (withFmt) {
+            doc.fmt = {
+                nextName: doc.next.n,
+                nextDist: fmtHDist(flight.nextDist, opts.units),
+                nextETE: fmtHoursMinutes(nextEte),
+                nextETA: fmtUtcHm(doc.next.eta),
+                nextTC: `${Math.round(doc.next.tc)}°`,
+                alt: fmtVDist(flight.altitudeM, opts.vunits),
+                gs: fmtSpeed(flight.groundSpeedMps, opts.units),
+                statusText: '',
+            };
+            if (doc.final) {
+                doc.fmt.finalName = doc.final.n;
+                doc.fmt.finalDist = fmtHDist(flight.finalDist, opts.units);
+                doc.fmt.finalETE = fmtHoursMinutes(finalEte);
+                doc.fmt.finalETA = fmtUtcHm(doc.final.eta);
+            }
+        }
+    } else if (withFmt) {
+        doc.fmt = {
+            alt: flight ? fmtVDist(flight.altitudeM, opts.vunits) : '-',
+            gs: flight ? fmtSpeed(flight.groundSpeedMps, opts.units) : '-',
+            statusText: statusText(status, OFF_ROUTE_THRESHOLD_M, opts.units),
+        };
+    }
+
+    return doc;
+}
+
+// Publish on a timer, so navRev advances the way the real app's throttle does.
+setInterval(() => {
+    if (Date.now() < state.stallUntil) { return; }
+    state.navRev++;
+}, opts.period);
+
+// ------------------------------------------------------------------- the server
+
+function authorized(req, url) {
+    const header = req.headers.authorization ?? '';
+    const bearer = header.startsWith('Bearer ') ? header.slice(7) : null;
+    const supplied = bearer ?? url.searchParams.get('k');
+    if (supplied === null) { return false; }
+    // Constant-time-ish: the real app uses a constant-time compare, and a mock that
+    // short-circuits would let a client's tests pass against a weaker check.
+    const a = Buffer.from(String(supplied));
+    const b = Buffer.from(opts.code);
+    if (a.length !== b.length) { return false; }
+    let diff = 0;
+    for (let i = 0; i < a.length; i++) { diff |= a[i] ^ b[i]; }
+    return diff === 0;
+}
+
+function sendJson(res, body, etag) {
+    const payload = JSON.stringify(body);
+    const headers = {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+    };
+    if (etag) { headers.ETag = etag; }
+    res.writeHead(200, headers);
+    res.end(payload);
+}
+
+const DEBUG_PAGE = `<!doctype html><meta charset="utf-8"><title>Enroute companion (mock)</title>
+<style>body{font:13px ui-monospace,monospace;background:#111;color:#eee;margin:1rem}
+pre{white-space:pre-wrap}h1{font-size:14px;color:#8cf}</style>
+<h1>Enroute companion &mdash; mock phone</h1><pre id="o">loading&hellip;</pre><script>
+const k=new URLSearchParams(location.search).get('k')||'';
+async function tick(){try{
+const r=await fetch('/enroute/v1/nav?k='+encodeURIComponent(k));
+document.getElementById('o').textContent=r.ok?JSON.stringify(await r.json(),null,2):r.status+' '+r.statusText;
+}catch(e){document.getElementById('o').textContent=e}}
+tick();setInterval(tick,1000);</script>`;
+
+const server = http.createServer((req, res) => {
+    const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
+
+    if (req.method !== 'GET') {
+        res.writeHead(405, { Allow: 'GET' }).end();
+        return;
+    }
+    if (!authorized(req, url)) {
+        res.writeHead(401, { 'WWW-Authenticate': 'Bearer' }).end();
+        return;
+    }
+
+    const path = url.pathname;
+
+    if (path === '/') {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(DEBUG_PAGE);
+        return;
+    }
+
+    if (path === '/enroute/v1/hello') { sendJson(res, helloDocument()); return; }
+
+    if (path === '/enroute/v1/route') {
+        const etag = `W/"${state.routeRev}"`;
+        if (req.headers['if-none-match'] === etag) { res.writeHead(304).end(); return; }
+        sendJson(res, routeDocument(), etag);
+        return;
+    }
+
+    if (path === '/enroute/v1/nav') {
+        const etag = `W/"${state.navRev}"`;
+        if (req.headers['if-none-match'] === etag) { res.writeHead(304).end(); return; }
+        sendJson(res, navDocument(url.searchParams.get('fmt') !== '0'), etag);
+        return;
+    }
+
+    // Fault injection
+    if (path === '/enroute/v1/debug/status') {
+        const s = url.searchParams.get('s');
+        state.forcedStatus = (s === null || s === 'onRoute') ? null : s;
+        state.allAbsent = false;
+        sendJson(res, { ok: true, forcedStatus: state.forcedStatus });
+        return;
+    }
+    if (path === '/enroute/v1/debug/stall') {
+        const seconds = Number(url.searchParams.get('s') ?? 30);
+        state.stallUntil = Date.now() + seconds * 1000;
+        sendJson(res, { ok: true, stallSeconds: seconds });
+        return;
+    }
+    if (path === '/enroute/v1/debug/nan') {
+        state.allAbsent = true;
+        sendJson(res, { ok: true, allAbsent: true });
+        return;
+    }
+    if (path === '/enroute/v1/debug/route') {
+        const n = Math.max(2, Math.min(100, Number(url.searchParams.get('n') ?? 100)));
+        state.waypoints = n <= SHORT_ROUTE.length ? SHORT_ROUTE : longRoute(n);
+        state.routeRev++;
+        state.startedAt = Date.now();
+        sendJson(res, { ok: true, waypoints: state.waypoints.length, routeRev: state.routeRev });
+        return;
+    }
+    if (path === '/enroute/v1/debug/reset') {
+        state.forcedStatus = null;
+        state.stallUntil = 0;
+        state.allAbsent = false;
+        state.waypoints = SHORT_ROUTE;
+        state.routeRev++;
+        state.startedAt = Date.now();
+        sendJson(res, { ok: true, routeRev: state.routeRev });
+        return;
+    }
+
+    res.writeHead(404).end();
+});
+
+server.listen(opts.port, () => {
+    console.log(`mock phone on http://0.0.0.0:${opts.port}  pairing code ${opts.code}`);
+    console.log(`  browser: http://127.0.0.1:${opts.port}/?k=${opts.code}`);
+    console.log(`  route:   ${state.waypoints.map((w) => w.n).join(' -> ')}  @ ${opts.gs} kn`);
+});
+
+// --------------------------------------------------------------- UDP discovery
+
+if (opts.beacon) {
+    const socket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
+    socket.bind(() => {
+        socket.setBroadcast(true);
+        setInterval(() => {
+            const datagram = Buffer.from(JSON.stringify({
+                App: 'Enroute Flight Navigation',
+                companion: { port: opts.port, v: PROTOCOL_VERSION, sid: state.sid },
+            }));
+            socket.send(datagram, opts.port, '255.255.255.255', (err) => {
+                if (err) { console.error(`beacon: ${err.message}`); }
+            });
+        }, 5000);
+        console.log(`  beacon:  255.255.255.255:${opts.port} every 5 s`);
+    });
+}
+
+for (const signal of ['SIGINT', 'SIGTERM']) {
+    process.on(signal, () => { server.close(); process.exit(0); });
+}
