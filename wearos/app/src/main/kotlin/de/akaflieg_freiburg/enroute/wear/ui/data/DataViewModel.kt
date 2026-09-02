@@ -76,6 +76,12 @@ class DataViewModel(
 
     fun stop() = repository.stop()
 
+    /** Drops the session so that a changed address or code takes effect at once. */
+    fun restart() {
+        repository.stop()
+        repository.start()
+    }
+
     /**
      * Hand-written wiring instead of a dependency-injection framework. At this size that
      * is a handful of lines with no annotation processor in the build graph, and a
