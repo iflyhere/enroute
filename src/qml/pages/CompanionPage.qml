@@ -79,14 +79,21 @@ Page {
                 Layout.fillWidth: true
                 text: qsTr("Publish over Wi-Fi")
                 icon.source: "/icons/material/ic_wifi.svg"
-                checked: GlobalSettings.companionNetworkEnabled
 
-                onCheckedChanged: {
-                    if (checked === GlobalSettings.companionNetworkEnabled) {
-                        return
-                    }
+                // Assigned rather than bound, and driven by onToggled rather than
+                // onCheckedChanged, which is the idiom the rest of this app uses. A
+                // binding on checked would be broken the moment the control is
+                // toggled or the state is corrected after the dialog is cancelled,
+                // and the switch would stop following the setting from then on.
+                // onCheckedChanged would also fire for those corrections, not just
+                // for what the pilot did.
+                Component.onCompleted: {
+                    networkSwitch.checked = GlobalSettings.companionNetworkEnabled
+                }
+
+                onToggled: {
                     PlatformAdaptor.vibrateBrief()
-                    if (checked) {
+                    if (networkSwitch.checked) {
                         // Ask before anything starts listening. This makes the
                         // aircraft position readable to other devices on the
                         // network, which the pilot must actively agree to.
@@ -185,6 +192,7 @@ Page {
         onAccepted: {
             PlatformAdaptor.vibrateBrief()
             GlobalSettings.companionNetworkEnabled = true
+            networkSwitch.checked = true
         }
 
         onRejected: {
