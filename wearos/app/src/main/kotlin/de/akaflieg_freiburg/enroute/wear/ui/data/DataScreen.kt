@@ -290,7 +290,7 @@ private class Banner(val text: String, val color: Color)
 private fun statusBanner(status: RouteStatus, statusText: String, note: String): Banner? =
     when (status) {
         RouteStatus.OnRoute -> note.takeIf { it.isNotEmpty() }?.let {
-            Banner(it, CockpitColors.Caution)
+            Banner(firstSentence(it), CockpitColors.Caution)
         }
 
         RouteStatus.NoRoute -> Banner(
@@ -320,6 +320,18 @@ private fun statusBanner(status: RouteStatus, statusText: String, note: String):
             CockpitColors.Caution,
         )
     }
+
+/**
+ * The first sentence of a multi-sentence note.
+ *
+ * The phone's note can run to three sentences, which a two-line banner on a 226 dp
+ * disc truncates mid-word. The first sentence is the part a pilot can act on; the
+ * rest elaborates and belongs on the phone.
+ */
+internal fun firstSentence(text: String): String {
+    val end = text.indexOf('.')
+    return if (end < 0) text else text.substring(0, end + 1)
+}
 
 internal fun formatCourse(degrees: Double?): String =
     if (degrees == null) Measured.PLACEHOLDER else "${Math.round(degrees)}°"
