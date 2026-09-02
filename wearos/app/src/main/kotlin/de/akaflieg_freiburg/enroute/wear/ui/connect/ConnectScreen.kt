@@ -49,6 +49,7 @@ import de.akaflieg_freiburg.enroute.wear.ui.theme.CockpitColors
 @Composable
 fun ConnectScreen(
     phones: List<DiscoveredPhone>,
+    discoveryError: String?,
     currentHost: String,
     currentPort: Int,
     onSelectPhone: (DiscoveredPhone) -> Unit,
@@ -69,10 +70,18 @@ fun ConnectScreen(
 
         if (phones.isEmpty()) {
             item {
+                // Say why nothing is appearing. "Searching" forever is the least
+                // useful thing a screen can do, and the usual cause is that the
+                // watch has dropped Wi-Fi, which the pilot can act on.
                 Text(
-                    text = "Searching…",
-                    color = CockpitColors.Muted,
-                    fontSize = 14.sp,
+                    text = discoveryError
+                        ?: "Searching. The phone must be on the same Wi-Fi network",
+                    color = if (discoveryError == null) {
+                        CockpitColors.Muted
+                    } else {
+                        CockpitColors.Caution
+                    },
+                    fontSize = 13.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
