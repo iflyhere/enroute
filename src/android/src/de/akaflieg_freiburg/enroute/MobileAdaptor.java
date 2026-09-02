@@ -68,7 +68,7 @@ public class MobileAdaptor extends de.akaflieg_freiburg.enroute.ShareActivity {
   private OnBackInvokedCallback m_backInvokedCallback;
 
   // reference Authority as defined in AndroidManifest.xml
-  private static String AUTHORITY = "de.akaflieg_freiburg.enroute";
+  private static String AUTHORITY = "de.akaflieg_freiburg.enroute.dev";
   private static String TAG = "IntentLauncher";
 
   private static final int PICK_FILE_REQUEST = 1;
