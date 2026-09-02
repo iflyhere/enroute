@@ -289,7 +289,6 @@ QJsonObject Companion::Snapshot::hello(const Companion::Revisions& revisions)
     document.insert("app"_L1, QLatin1StringView(ENROUTE_VERSION_STRING));
     document.insert("sid"_L1, static_cast<qint64>(revisions.session));
     document.insert("routeRev"_L1, static_cast<qint64>(revisions.route));
-    document.insert("navRev"_L1, static_cast<qint64>(revisions.nav));
     document.insert("navPeriodMs"_L1, 1000);
     document.insert("units"_L1, unitsObject(aircraft));
     return document;
