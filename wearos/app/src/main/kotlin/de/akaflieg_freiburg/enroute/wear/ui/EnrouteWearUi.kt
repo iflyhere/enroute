@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import de.akaflieg_freiburg.enroute.wear.Config
 import de.akaflieg_freiburg.enroute.wear.data.Discovery
 import de.akaflieg_freiburg.enroute.wear.data.DiscoveredPhone
+import de.akaflieg_freiburg.enroute.wear.data.DiscoveryEvent
 import de.akaflieg_freiburg.enroute.wear.data.SettingsStore
 import de.akaflieg_freiburg.enroute.wear.ui.connect.CodeEntryScreen
 import de.akaflieg_freiburg.enroute.wear.ui.connect.ConnectScreen
@@ -68,6 +69,7 @@ fun EnrouteWearUi(
         )
     }
     val phones = remember { mutableStateListOf<DiscoveredPhone>() }
+    var discoveryError by remember { mutableStateOf<String?>(null) }
 
     // Listen for beacons only while the connection screen is up: the radio should not
     // stay awake for discovery once a phone has been chosen.
@@ -76,9 +78,15 @@ fun EnrouteWearUi(
             return@LaunchedEffect
         }
         phones.clear()
-        discovery.phones().collect { phone ->
-            if (phones.none { it.host == phone.host && it.port == phone.port }) {
-                phones.add(phone)
+        discoveryError = null
+        discovery.events().collect { event ->
+            when (event) {
+                is DiscoveryEvent.Found ->
+                    if (phones.none { it.host == event.phone.host && it.port == event.phone.port }) {
+                        phones.add(event.phone)
+                    }
+
+                is DiscoveryEvent.Failed -> discoveryError = event.reason
             }
         }
     }
@@ -97,6 +105,7 @@ fun EnrouteWearUi(
 
         Screen.Connect -> ConnectScreen(
             phones = phones,
+            discoveryError = discoveryError,
             currentHost = settings.host,
             currentPort = settings.port,
             onSelectPhone = { phone ->
