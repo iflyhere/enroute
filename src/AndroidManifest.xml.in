@@ -32,7 +32,7 @@
   <application
     android:name="org.qtproject.qt.android.bindings.QtApplication"
     android:hardwareAccelerated="true"
-    android:label="Enroute Flight Navigation"
+    android:label="Enroute dev"
     android:requestLegacyExternalStorage="true"
     android:allowNativeHeapPointerTagging="false"
     android:allowBackup="false"
@@ -43,7 +43,7 @@
       android:configChanges="orientation|uiMode|screenLayout|screenSize|smallestScreenSize|layoutDirection|locale|fontScale|keyboard|keyboardHidden|navigation|mcc|mnc|density"
       android:exported="true"
       android:name="de.akaflieg_freiburg.enroute.MobileAdaptor"
-      android:label="Enroute Flight Navigation"
+      android:label="Enroute dev"
       android:screenOrientation="unspecified"
       android:launchMode="singleInstance"
       android:showWhenLocked="true"
@@ -254,7 +254,7 @@
     <!-- NOTE: android:authorities must match AUTHORITY in de/akaflieg_freiburg/enroute/IntentLauncher.java -->
     <provider
       android:name="androidx.core.content.FileProvider"
-      android:authorities="de.akaflieg_freiburg.enroute"
+      android:authorities="de.akaflieg_freiburg.enroute.dev"
       android:exported="false"
       android:grantUriPermissions="true">
       <meta-data
