@@ -46,6 +46,11 @@ namespace Flightlog
 class FlightLog;
 } // namespace Flightlog
 
+namespace Companion
+{
+class CompanionServer;
+} // namespace Companion
+
 namespace Navigation
 {
 class Clock;
@@ -197,6 +202,12 @@ public:
      * @returns Pointer to appplication-wide static instance.
      */
     Q_INVOKABLE static Flightlog::FlightLog* flightLog();
+
+    /*! \brief Pointer to appplication-wide static CompanionServer instance
+     *
+     * @returns Pointer to appplication-wide static instance.
+     */
+    Q_INVOKABLE static Companion::CompanionServer* companionServer();
 
     /*! \brief Pointer to appplication-wide static GeoMaps::GeoMapProvider
      * instance
