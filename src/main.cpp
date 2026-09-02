@@ -49,6 +49,7 @@
 
 #include "DemoRunner.h"
 #include "GlobalObject.h"
+#include "GlobalSettings.h"
 #include "Librarian.h"
 #include "config.h"
 #include "geomaps/Airspace.h"
@@ -200,6 +201,16 @@ auto main(int argc, char *argv[]) -> int
 
     // Create mobile platform adaptor and ask to disable to screen saver.
     GlobalObject::platformAdaptor()->disableScreenSaver();
+
+    // Start the companion link, if the user has enabled it. Constructed here rather
+    // than lazily from QML, because the link has to come up whether or not the user
+    // ever opens the settings page. Opening that page does construct the object even
+    // while the feature is off, which is harmless: a disabled server installs no
+    // observers, runs no timers and opens no socket.
+    if (GlobalObject::globalSettings()->companionNetworkEnabled())
+    {
+        GlobalObject::companionServer();
+    }
     if (positionalArguments.length() == 1)
     {
         GlobalObject::fileExchange()->processFileOpenRequest(positionalArguments[0], {});

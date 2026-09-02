@@ -663,6 +663,7 @@ qt_add_qml_module(${PROJECT_NAME}
     qml/pages/Positioning.qml
     qml/pages/PressureAltitude.qml
     qml/pages/PrivacyPage.qml
+    qml/pages/CompanionPage.qml
     qml/pages/SettingsPage.qml
     qml/pages/TrafficReceiver.qml
     qml/pages/WaypointLibraryPage.qml
