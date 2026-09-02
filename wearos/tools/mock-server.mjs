@@ -39,7 +39,7 @@ import dgram from 'node:dgram';
 import process from 'node:process';
 
 const PROTOCOL_VERSION = 1;
-const APP_VERSION = '3.4.1-mock';
+const APP_VERSION = '4.0.0-mock';
 
 // ---------------------------------------------------------------- command line
 
@@ -281,7 +281,7 @@ function unitsBlock() { return { hDist: opts.units, vDist: opts.vunits }; }
 function helloDocument() {
     return {
         v: PROTOCOL_VERSION, app: APP_VERSION, sid: state.sid,
-        routeRev: state.routeRev, navRev: state.navRev,
+        routeRev: state.routeRev,
         navPeriodMs: opts.period, units: unitsBlock(),
     };
 }
@@ -471,7 +471,10 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    if (path === '/enroute/v1/hello') { sendJson(res, helloDocument()); return; }
+    if (path === '/enroute/v1/hello') {
+        sendJson(res, helloDocument(), `W/"${state.routeRev}"`);
+        return;
+    }
 
     if (path === '/enroute/v1/route') {
         const etag = `W/"${state.routeRev}"`;

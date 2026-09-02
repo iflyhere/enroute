@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QGuiApplication>
+#include <QHostAddress>
 #include <QHttpHeaders>
 #include <QHttpServerRequest>
 #include <QHttpServerResponder>
@@ -144,12 +145,27 @@ bool Companion::HttpTransport::authorized(const QHttpServerRequest& request)
         return false;
     }
 
-    const auto peer = request.remoteAddress().toString();
+    // The server listens on the IPv6 wildcard, so a request from an IPv4 client
+    // arrives as an IPv4-mapped address. Normalise it before classifying.
+    auto peerAddress = request.remoteAddress();
+    bool mappedFromIPv4 = false;
+    const auto asIPv4 = peerAddress.toIPv4Address(&mappedFromIPv4);
+    if (mappedFromIPv4)
+    {
+        peerAddress = QHostAddress(asIPv4);
+    }
+    const auto peer = peerAddress.toString();
 
-    // Refuse anything that is not on a local network, so that the endpoint stays
-    // unreachable from the internet even if the device happens to hold a globally
-    // routable address.
-    if (request.remoteAddress().isGlobal())
+    // Only answer a client on a local network, so that the endpoint stays
+    // unreachable from the internet even if the device holds a routable address.
+    //
+    // Note that this cannot be written as a test for isGlobal(): Qt classifies only
+    // loopback, multicast, broadcast, link-local and 0.0.0.0/8 specially, and reports
+    // the private-use ranges of RFC 1918 as global. That is precisely why
+    // isPrivateUse() exists as a separate test.
+    const auto isLocal = peerAddress.isLoopback() || peerAddress.isLinkLocal()
+                         || peerAddress.isPrivateUse() || peerAddress.isUniqueLocalUnicast();
+    if (!isLocal)
     {
         return false;
     }
@@ -258,7 +274,7 @@ bool Companion::HttpTransport::handleRequest(const QHttpServerRequest& request,
 
     if (endpoint == u"/hello"_s)
     {
-        respond(m_server->helloDocument(), revisions.nav);
+        respond(m_server->helloDocument(), revisions.route);
         return true;
     }
     if (endpoint == u"/route"_s)

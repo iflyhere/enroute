@@ -48,7 +48,7 @@ Three counters carry all cache coherency:
 |---|---|---|
 | `sid` | `quint32` | Session id. Random, regenerated at every app start. Tells a client that the phone restarted and its cached counters are meaningless — without the client having to persist anything. |
 | `routeRev` | `quint32` | Incremented whenever the route document changes. Also changes when the pilot's unit preferences change, because those alter `units` and every `*Text` field. |
-| `navRev` | `quint32` | Incremented on every published navigation frame. Doubles as the HTTP `ETag`. |
+| `navRev` | `quint32` | Incremented on every published navigation frame. Doubles as the `ETag` of the navigation frame. Appears only in that frame, not in the capability document. |
 
 Every navigation frame repeats `routeRev`. That one field is the whole caching protocol: a client
 caches the route document keyed on `(sid, routeRev)` and refetches when either changes.
@@ -64,10 +64,9 @@ GET /enroute/v1/hello
 ```json
 {
   "v": 1,
-  "app": "3.4.1",
+  "app": "4.0.0",
   "sid": 2748393211,
   "routeRev": 7,
-  "navRev": 1043,
   "navPeriodMs": 1000,
   "units": { "hDist": "nm", "vDist": "ft" }
 }
