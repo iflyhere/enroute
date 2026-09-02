@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.net.DatagramPacket
+import java.net.InetSocketAddress
 import java.net.DatagramSocket
 import java.net.SocketTimeoutException
 
@@ -40,6 +41,17 @@ data class DiscoveredPhone(
     val protocolVersion: Int,
     val sessionId: Long,
 )
+
+/**
+ * What discovery has to say.
+ *
+ * A failure is an event rather than a silent log line, so that the connection screen
+ * can say why nothing is appearing instead of showing "searching" forever.
+ */
+sealed interface DiscoveryEvent {
+    data class Found(val phone: DiscoveredPhone) : DiscoveryEvent
+    data class Failed(val reason: String) : DiscoveryEvent
+}
 
 @Serializable
 internal data class BeaconDto(
@@ -63,7 +75,7 @@ internal data class CompanionDto(
  */
 class Discovery(private val wifiManager: WifiManager?) {
 
-    fun phones(): Flow<DiscoveredPhone> = callbackFlow {
+    fun events(): Flow<DiscoveryEvent> = callbackFlow {
         // Without a multicast lock the Wi-Fi chip filters these frames before the
         // socket ever sees them, and nothing arrives while everything looks fine.
         val lock = wifiManager?.createMulticastLock(LOCK_TAG)?.apply {
@@ -72,14 +84,21 @@ class Discovery(private val wifiManager: WifiManager?) {
         }
 
         val socket = try {
-            DatagramSocket(Config.DEFAULT_PORT).apply {
+            // Unbound first, so that reuse can be set before the bind. Passing the
+            // port to the constructor binds immediately and the flag would then have
+            // no effect, which makes a second bind fail if the previous socket has
+            // not been reaped yet -- for instance when this screen is left and
+            // re-entered quickly.
+            DatagramSocket(null).apply {
                 reuseAddress = true
                 broadcast = true
                 soTimeout = SOCKET_TIMEOUT_MS
+                bind(InetSocketAddress(Config.DEFAULT_PORT))
             }
         } catch (failure: Exception) {
             Log.w(TAG, "cannot listen for beacons: " + failure.message)
             lock?.release()
+            trySend(DiscoveryEvent.Failed(failure.message ?: "cannot listen"))
             close()
             return@callbackFlow
         }
@@ -99,7 +118,7 @@ class Discovery(private val wifiManager: WifiManager?) {
                 // datagram must not be able to point a client somewhere else.
                 val host = packet.address.hostAddress ?: continue
                 val phone = parseBeacon(text, host) ?: continue
-                trySend(phone)
+                trySend(DiscoveryEvent.Found(phone))
             }
         } finally {
             socket.close()
