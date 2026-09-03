@@ -28,7 +28,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -85,7 +84,7 @@ private fun EnrouteWearApp(settings: SettingsStore, discovery: Discovery) {
         }
     }
     val viewModel: DataViewModel = viewModel(factory = factory)
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val uiState = viewModel.uiState.collectAsStateWithLifecycle()
 
     // The session runs for as long as this screen is composed. Keeping it alive with the
     // display off needs a foreground service, which is separate, later work.
@@ -96,7 +95,7 @@ private fun EnrouteWearApp(settings: SettingsStore, discovery: Discovery) {
 
     EnrouteWearTheme {
         EnrouteWearUi(
-            state = state,
+            uiState = uiState,
             settings = settings,
             discovery = discovery,
             onSettingsChanged = { viewModel.restart() },
