@@ -22,6 +22,7 @@
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QJsonArray>
+#include <QMetaProperty>
 #include <QRegularExpression>
 
 #include "GlobalObject.h"
@@ -30,6 +31,7 @@
 #include "config.h"
 #include "navigation/Leg.h"
 #include "navigation/Navigator.h"
+#include "notam/NOTAMProvider.h"
 #include "positioning/PositionProvider.h"
 
 using namespace Qt::Literals::StringLiterals;
@@ -277,6 +279,82 @@ namespace
         return object;
     }
 
+
+    /*! \brief Section heading that the app itself puts above a NOTAM
+     *
+     *  NOTAM declares this one with MEMBER rather than READ, so there is no getter
+     *  and the member is private. Reading it through the gadget meta-object is
+     *  public API and needs no change to NOTAM.h, which keeps this feature out of
+     *  a file it has no other reason to touch.
+     *
+     *  The value is filled in by NOTAMList::restricted(), which is where the app
+     *  computes it too, so a client sees exactly the grouping the phone shows.
+     */
+    QString sectionTitleOf(const NOTAM::NOTAM& notam)
+    {
+        static const auto index = NOTAM::NOTAM::staticMetaObject.indexOfProperty("sectionTitle");
+        if (index < 0)
+        {
+            return {};
+        }
+        return NOTAM::NOTAM::staticMetaObject.property(index).readOnGadget(&notam).toString();
+    }
+
+    /*! \brief Instant as ISO 8601 in UTC, or nothing if it is not known
+     *
+     *  A NOTAM that is permanent carries an invalid effectiveEnd, and one whose
+     *  start could not be parsed carries an invalid effectiveStart. Both are
+     *  omitted rather than encoded, following the rule for the rest of the
+     *  protocol.
+     */
+    void insertIfValid(QJsonObject& object, QLatin1StringView key, const QDateTime& instant)
+    {
+        if (instant.isValid())
+        {
+            object.insert(key, instant.toUTC().toString(Qt::ISODate));
+        }
+    }
+
+    QJsonObject toJSON(const NOTAM::NOTAM& notam)
+    {
+        QJsonObject object;
+        object.insert("n"_L1, notam.number());
+        object.insert("txt"_L1, notam.text());
+        object.insert("cat"_L1, notam.category());
+        object.insert("read"_L1, GlobalObject::notamProvider()->isRead(notam.number()));
+
+        const auto section = sectionTitleOf(notam);
+        if (!section.isEmpty())
+        {
+            object.insert("sect"_L1, section);
+        }
+        if (!notam.icaoLocation().isEmpty())
+        {
+            object.insert("icao"_L1, notam.icaoLocation());
+        }
+        if (!notam.traffic().isEmpty())
+        {
+            object.insert("traffic"_L1, notam.traffic());
+        }
+
+        insertIfValid(object, "from"_L1, notam.effectiveStart());
+        insertIfValid(object, "to"_L1, notam.effectiveEnd());
+
+        // The affected area, so that a client can draw it. Centre and radius
+        // rather than the app's own GeoJSON, which encodes the circle as a
+        // polygon of many points.
+        const auto region = notam.region();
+        if (region.isValid())
+        {
+            QJsonObject area;
+            area.insert("c"_L1, toJSON(region.center()));
+            area.insert("r"_L1, qRound(region.radius()));
+            object.insert("area"_L1, area);
+        }
+
+        return object;
+    }
+
 } // namespace
 
 
@@ -436,6 +514,118 @@ QJsonObject Companion::Snapshot::nav(const Companion::Revisions& revisions,
             }
         }
         document.insert("fmt"_L1, formatted);
+    }
+
+    return document;
+}
+
+QJsonObject Companion::Snapshot::notams(const Companion::Revisions& revisions)
+{
+    auto* const provider = GlobalObject::notamProvider();
+    const auto waypoints = GlobalObject::navigator()->flightRoute()->waypoints();
+
+    QJsonObject document;
+    document.insert("v"_L1, Companion::protocolVersion);
+    document.insert("sid"_L1, static_cast<qint64>(revisions.session));
+
+    // The app's own warning that its NOTAM data is not current. Already
+    // translated into every language the app ships, because NOTAMProvider marks
+    // it with tr(), and empty when there is nothing to warn about.
+    const auto warning = provider->status();
+    if (!warning.isEmpty())
+    {
+        document.insert("warning"_L1, warning);
+    }
+
+    // What the filter below does and, more importantly, what it does not do. A
+    // client must be able to tell the pilot that this is not an airspace
+    // clearance, and it can only do that if the limits travel with the data.
+    QJsonObject filter;
+    filter.insert("radius"_L1, qRound(NOTAM::NOTAMList::restrictionRadius.toM()));
+    filter.insert("horizontalOnly"_L1, true);
+    filter.insert("flightLevelApplied"_L1, false);
+    document.insert("filter"_L1, filter);
+
+    QJsonArray groups;
+    int total = 0;
+    int dropped = 0;
+    QDateTime oldestRetrieval;
+
+    for (qsizetype index = 0; index < waypoints.size(); ++index)
+    {
+        const auto& waypoint = waypoints.at(index);
+
+        // Reading the provider is not what causes NOTAMs to be downloaded: it
+        // fetches the whole flight route by itself, at start, on every route
+        // change, on every coarse position change and once an hour. So this loop
+        // sees data the app already holds and adds no network traffic. Should a
+        // waypoint be uncovered anyway, notams() starts a request and returns an
+        // empty list, exactly as it does for the app's own NOTAM page.
+        const auto list = provider->notams(waypoint);
+        const auto entriesForWaypoint = list.notams();
+
+        QJsonObject group;
+        group.insert("wp"_L1, static_cast<qint64>(index));
+        group.insert("n"_L1, waypoint.shortName());
+
+        // The distinction a client must not lose: a list that was retrieved and
+        // is empty means there are no NOTAMs here, while a list that was never
+        // retrieved means nothing is known yet. Showing the second as the first
+        // would be an assurance the app never gave.
+        group.insert("data"_L1, list.isValid());
+        if (list.isValid())
+        {
+            group.insert("retrieved"_L1, list.retrieved().toUTC().toString(Qt::ISODate));
+            if (!oldestRetrieval.isValid() || list.retrieved() < oldestRetrieval)
+            {
+                oldestRetrieval = list.retrieved();
+            }
+        }
+
+        QJsonArray entries;
+        for (const auto& notam : entriesForWaypoint)
+        {
+            if (total >= Companion::maximumNotams)
+            {
+                break;
+            }
+            entries.append(toJSON(notam));
+            ++total;
+        }
+        if (!entries.isEmpty())
+        {
+            group.insert("notams"_L1, entries);
+        }
+
+        // Said per group and not only once for the document, because otherwise a
+        // group that the cap emptied would be indistinguishable from a waypoint
+        // that genuinely has no NOTAMs -- which is the one confusion this
+        // document must not create. A client may read an absent notams member as
+        // "none here" only when cut is absent as well.
+        const auto cut = entriesForWaypoint.size() - entries.size();
+        if (cut > 0)
+        {
+            group.insert("cut"_L1, static_cast<qint64>(cut));
+            dropped += static_cast<int>(cut);
+        }
+
+        groups.append(group);
+    }
+
+    document.insert("groups"_L1, groups);
+    document.insert("n"_L1, total);
+
+    if (dropped > 0)
+    {
+        document.insert("dropped"_L1, dropped);
+    }
+
+    // The oldest retrieval among the groups, not the newest: a document is only
+    // as current as its stalest part, and a client showing an age should show the
+    // pessimistic one.
+    if (oldestRetrieval.isValid())
+    {
+        document.insert("retrieved"_L1, oldestRetrieval.toUTC().toString(Qt::ISODate));
     }
 
     return document;

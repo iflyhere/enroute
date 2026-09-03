@@ -42,13 +42,14 @@ only.
 
 ## Revisions
 
-Three counters carry all cache coherency:
+Four counters carry all cache coherency:
 
 | Field | Type | Meaning |
 |---|---|---|
 | `sid` | `quint32` | Session id. Random, regenerated at every app start. Tells a client that the phone restarted and its cached counters are meaningless — without the client having to persist anything. |
 | `routeRev` | `quint32` | Incremented whenever the route document changes. Also changes when the pilot's unit preferences change, because those alter `units` and every `*Text` field. |
 | `navRev` | `quint32` | Incremented on every published navigation frame. Doubles as the `ETag` of the navigation frame. Appears only in that frame, not in the capability document. |
+| `notamRev` | `quint32` | Incremented whenever the NOTAM document's content changes. Derived by comparing successive encodings rather than counted from an event, so it moves only when a client would actually see something different. Appears only in the NOTAM document. |
 
 Every navigation frame repeats `routeRev`. That one field is the whole caching protocol: a client
 caches the route document keyed on `(sid, routeRev)` and refetches when either changes.
@@ -178,6 +179,82 @@ seconds on the ground, and suppressed entirely when nothing changed. A keep-aliv
 every ten seconds regardless, so that a Bluetooth client — which cannot poll — can distinguish a
 live link from a dead one.
 
+### NOTAM document
+
+What the app itself would show for the waypoints of the current route. **No relevance logic is
+added on the way out**: the document is the app's own `NOTAMProvider::notams()` restricted to each
+waypoint, in the app's own order, and nothing else.
+
+```
+{
+  "v": 1,
+  "sid": 2748219411,
+  "notamRev": 4,
+  "warning": "NOTAMs not current around waypoint, requesting update",
+  "filter": { "radius": 37040, "horizontalOnly": true, "flightLevelApplied": false },
+  "groups": [
+    { "wp": 0, "n": "EDNY", "data": true, "retrieved": "2026-09-03T06:12:44Z",
+      "notams": [
+        { "n": "A1234/26",
+          "icao": "EDNY",
+          "txt": "RWY 06/24 CLSD DUE TO WIP",
+          "cat": "NOTAM",
+          "sect": "Current",
+          "traffic": "IV",
+          "read": false,
+          "from": "2026-09-01T06:00:00Z",
+          "to":   "2026-09-30T16:00:00Z",
+          "area": { "c": [9.51139, 47.67139], "r": 9260 } }
+      ] },
+    { "wp": 1, "n": "EDTL", "data": true, "retrieved": "2026-09-03T06:12:51Z" },
+    { "wp": 2, "n": "EDTG", "data": false }
+  ],
+  "n": 1,
+  "retrieved": "2026-09-03T06:12:44Z"
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `warning` | The app's own, already translated warning that its NOTAM data is not current. **Omitted when there is nothing to warn about**, so its mere presence is the signal. |
+| `filter.radius` | Radius in metres around each waypoint within which a NOTAM is listed. Currently 20 NM. |
+| `filter.horizontalOnly` | Always `true` in v1. The filter is a horizontal circle; a NOTAM's vertical band plays no part in it. |
+| `filter.flightLevelApplied` | Always `false` in v1. A NOTAM's flight-level band is parsed by the app but is **not** used to decide whether the NOTAM is listed. |
+| `groups[].wp` | Index into the route document's `wp` array. The join key; `n` is for display when the cached route is older than this document. |
+| `groups[].data` | `true` if NOTAM data for this waypoint was actually retrieved. |
+| `groups[].retrieved` | When it was retrieved, ISO 8601 UTC. Present exactly when `data` is `true`. |
+| `groups[].notams` | The NOTAMs, in the app's own order: unread first, then by effective time. **Omitted when empty.** |
+| `groups[].cut` | Number of NOTAMs this group could not carry because the document hit its cap. Omitted when none were dropped. |
+| `n` | Number of NOTAMs actually in the document. |
+| `dropped` | Total dropped across all groups. Omitted when none were. |
+| `retrieved` | The **oldest** retrieval among the groups — a document is only as current as its stalest part. Omitted when no group has data. |
+
+Per NOTAM:
+
+| Field | Meaning |
+|---|---|
+| `n` | NOTAM number, e.g. `A1234/26`. Unique; usable as a list key. |
+| `icao` | ICAO location. Omitted when empty. |
+| `txt` | The NOTAM text as the app shows it. |
+| `cat` | The app's category, derived there from the ICAO Q-code's subject letters. The complete set is `NOTAM-OBST` (obstacle or obstacle lights), `NOTAM-PJE` (parachute jumping), `NOTAM-UAS` (unmanned aircraft), `NOTAM-RA` (restricted area) and plain `NOTAM` for everything else. Treat an unknown value as a generic NOTAM. |
+| `sect` | The section heading the app puts above this NOTAM: `Marked as read`, `Current`, `Next 24h`, `Next 90 days`. Untranslated on the phone too. Omitted when empty. |
+| `traffic` | Affected traffic as the ICAO field, e.g. `IV`. Omitted when empty. |
+| `read` | Whether the pilot marked it read on the phone. |
+| `from`, `to` | Effective period, ISO 8601 UTC. **Either may be missing**: a permanent NOTAM has no end, and an unparsable date yields no start. |
+| `area.c`, `area.r` | Affected circle: centre as `[lon, lat]`, radius in metres. Omitted when the app has no valid region. |
+
+**A client must not present this as an airspace check.** Three limits make that the wrong reading,
+and all three are stated in the document so that a client can state them to the pilot:
+
+- the filter is horizontal only, so a NOTAM 500 ft above the ground is listed for an aircraft at
+  FL100 and vice versa;
+- it is anchored on route **waypoints**, not on the legs between them, so a NOTAM beside a long leg
+  is not listed at all;
+- `data: false` means nothing is known, which is not the same as nothing being there.
+
+The one rule that matters most: **a group means "no NOTAMs here" only when `data` is `true`, `notams`
+is absent, and `cut` is absent.** Any other combination means the client does not know.
+
 ## Transport 1: HTTP over the local network
 
 The app listens on TCP port **8973** on all interfaces, but only while the feature is enabled in
@@ -188,6 +265,7 @@ Settings.
 | `GET /enroute/v1/hello` | capability document |
 | `GET /enroute/v1/route` | route document, `ETag: W/"<routeRev>"` |
 | `GET /enroute/v1/nav` | navigation frame, `ETag: W/"<navRev>"`, `304 Not Modified` when `If-None-Match` matches |
+| `GET /enroute/v1/notams` | NOTAM document, `ETag: W/"<notamRev>"`, `304 Not Modified` when `If-None-Match` matches |
 | `GET /enroute/v1/route.geojson` | the app's own GeoJSON route |
 | `GET /` | a small HTML page that polls `/nav`, for development and for checking the link from a desktop browser |
 | any other path | `404` |
@@ -198,10 +276,14 @@ Responses carry `Content-Type: application/json`, `Cache-Control: no-store` and
 cannot read the data cross-origin.
 
 Clients poll `/enroute/v1/nav` once per second with `If-None-Match`, which costs a bare `304` when
-nothing has changed, and fetch `/enroute/v1/route` only when `routeRev` changes. Polling is
-deliberately preferred over a streamed response: a watch radio wakes for each poll either way, a
-poll is its own reconnect logic, and `QHttpServerResponder`'s lifetime ends when the request handler
-returns.
+nothing has changed, and fetch `/enroute/v1/route` only when `routeRev` changes. `/enroute/v1/notams`
+is polled far more slowly — **60 seconds is the recommended period** — because its content moves when
+NOTAM data is downloaded, which happens a few times a day, and otherwise only as the wall clock
+carries a NOTAM into or out of force.
+
+Polling is deliberately preferred over a streamed response: a watch radio wakes for each poll either
+way, a poll is its own reconnect logic, and `QHttpServerResponder`'s lifetime ends when the request
+handler returns.
 
 ### Authentication
 

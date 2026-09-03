@@ -49,10 +49,12 @@ function parseArgs(argv) {
         code: '418302', beacon: true, period: 1000,
     };
     for (let i = 0; i < argv.length; i++) {
-        const key = argv[i].replace(/^--/, '');
+        // Both "--port 8973" and "--port=8973" are accepted, because rejecting
+        // the second is the kind of papercut that costs a minute every time.
+        const [key, inlineValue] = argv[i].replace(/^--/, '').split(/=(.*)/s, 2);
         if (key === 'no-beacon') { out.beacon = false; continue; }
         if (key === 'help' || key === 'h') { out.help = true; continue; }
-        const value = argv[++i];
+        const value = inlineValue ?? argv[++i];
         switch (key) {
         case 'port':   out.port = Number(value); break;
         case 'gs':     out.gs = Number(value); break;
@@ -86,6 +88,9 @@ Fault injection, for exercising a client's unhappy paths:
   GET /enroute/v1/debug/stall?s=30          stop publishing for 30 s (stale render)
   GET /enroute/v1/debug/nan                 emit a frame with every optional key absent
   GET /enroute/v1/debug/route?n=100         regenerate as a 100-waypoint route
+  GET /enroute/v1/debug/notams?m=none       no NOTAM data for any waypoint
+  GET /enroute/v1/debug/notams?m=warn       add the "not current" warning
+  GET /enroute/v1/debug/notams?m=cap        cap at 2, so groups report "cut"
   GET /enroute/v1/debug/reset               back to normal
 `);
     process.exit(0);
@@ -221,6 +226,11 @@ const state = {
     forcedStatus: null,
     stallUntil: 0,
     allAbsent: false,
+    notamRev: 1,
+    notamsAbsent: false,
+    notamWarning: null,
+    notamCap: 60,
+    notamsRetrievedAt: Date.now() - 42 * 60 * 1000,
     startedAt: Date.now(),
 };
 
@@ -440,6 +450,97 @@ function sendJson(res, body, etag) {
     res.end(payload);
 }
 
+//
+// NOTAMs
+//
+// Deliberately awkward fixtures rather than tidy ones: a permanent NOTAM with no
+// end date, one already marked read, one whose text is long enough to need
+// scrolling on a watch, and one waypoint with no data at all. Those are the cases
+// that break a client, and a mock that only serves the happy path is worth
+// very little.
+//
+
+const NOTAM_FIXTURES = [
+    {
+        n: 'A1234/26', icao: 'EDNY', cat: 'NOTAM', sect: 'Current', traffic: 'IV', read: false,
+        txt: 'RWY 06/24 CLSD DUE TO WIP. TWY A AVBL FOR TAXI ONLY BTN APRON 1 AND RWY 06 THR.',
+        from: '2026-09-01T06:00:00Z', to: '2026-09-30T16:00:00Z',
+        area: { c: [9.51139, 47.67139], r: 9260 },
+    },
+    {
+        // No "to": a permanent NOTAM. A client that assumes both dates exist
+        // renders "until Invalid Date" here.
+        n: 'A0087/26', icao: 'EDNY', cat: 'NOTAM-OBST', sect: 'Current', traffic: 'IV', read: false,
+        txt: 'CRANE ERECTED 850M SW ARP, ELEV 1580FT AMSL, LGTD.',
+        from: '2026-08-14T00:00:00Z',
+        area: { c: [9.49500, 47.66500], r: 3704 },
+    },
+    {
+        n: 'A0912/26', icao: 'EDNY', cat: 'NOTAM-PJE', sect: 'Marked as read', traffic: 'IV', read: true,
+        txt: 'PARACHUTE JUMPING EXERCISE WI 2NM RADIUS OF 474012N 0093021E, SFC-FL130.',
+        from: '2026-09-03T07:00:00Z', to: '2026-09-03T17:00:00Z',
+        area: { c: [9.50583, 47.67000], r: 3704 },
+    },
+    {
+        // No area at all, and a text long enough to need scrolling.
+        n: 'W0455/26', icao: 'EDMM', cat: 'NOTAM-RA', sect: 'Next 24h', read: false,
+        txt: 'TEMPO RESTRICTED AREA ESTABLISHED DUE TO AIR DISPLAY. ENTRY PROHIBITED FOR ALL '
+           + 'TFC EXC ACFT PARTICIPATING IN THE DISPLAY AND ACFT ON IFR FLIGHT PLAN CLEARED BY ATC. '
+           + 'CTC MUNICH INFORMATION 129.045 PRIOR TO ENTERING.',
+        from: '2026-09-04T08:00:00Z', to: '2026-09-04T18:00:00Z',
+    },
+];
+
+function notamDocument() {
+    notamDocument.emitted = 0;
+    const groups = state.waypoints.map((waypoint, index) => {
+        const group = { wp: index, n: waypoint.n };
+
+        // Every third waypoint has no data, which is what exercises the
+        // "nothing is known" rendering. The first waypoint carries the fixtures.
+        if (state.notamsAbsent || index % 3 === 2) {
+            group.data = false;
+            return group;
+        }
+
+        group.data = true;
+        group.retrieved = new Date(state.notamsRetrievedAt).toISOString().replace(/\.\d{3}Z$/, 'Z');
+
+        const forWaypoint = index === 0 ? NOTAM_FIXTURES : NOTAM_FIXTURES.slice(0, 1);
+        const budget = Math.max(0, state.notamCap - notamDocument.emitted);
+        const entries = forWaypoint.slice(0, budget);
+        notamDocument.emitted += entries.length;
+
+        if (entries.length > 0) { group.notams = entries; }
+        const cut = forWaypoint.length - entries.length;
+        if (cut > 0) { group.cut = cut; }
+        return group;
+    });
+
+    const document = {
+        v: 1,
+        sid: state.sid,
+        notamRev: state.notamRev,
+        filter: { radius: 37040, horizontalOnly: true, flightLevelApplied: false },
+        groups,
+        n: notamDocument.emitted,
+    };
+
+    if (state.notamWarning) { document.warning = state.notamWarning; }
+
+    const dropped = groups.reduce((sum, group) => sum + (group.cut ?? 0), 0);
+    if (dropped > 0) { document.dropped = dropped; }
+
+    const withData = groups.filter((group) => group.data);
+    if (withData.length > 0) {
+        document.retrieved = withData
+            .map((group) => group.retrieved)
+            .sort()[0];
+    }
+
+    return document;
+}
+
 const DEBUG_PAGE = `<!doctype html><meta charset="utf-8"><title>Enroute companion (mock)</title>
 <style>body{font:13px ui-monospace,monospace;background:#111;color:#eee;margin:1rem}
 pre{white-space:pre-wrap}h1{font-size:14px;color:#8cf}</style>
@@ -453,6 +554,13 @@ tick();setInterval(tick,1000);</script>`;
 
 const server = http.createServer((req, res) => {
     const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
+
+    // One line per request. Without this a client that never connected looks exactly
+    // like one that is polling happily, which costs real time to work out.
+    res.on('finish', () => {
+        const from = req.socket.remoteAddress ?? '?';
+        console.log(`${req.method} ${url.pathname} -> ${res.statusCode}  ${from}`);
+    });
 
     if (req.method !== 'GET') {
         res.writeHead(405, { Allow: 'GET' }).end();
@@ -490,6 +598,13 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    if (path === '/enroute/v1/notams') {
+        const etag = `W/"${state.notamRev}"`;
+        if (req.headers['if-none-match'] === etag) { res.writeHead(304).end(); return; }
+        sendJson(res, notamDocument(), etag);
+        return;
+    }
+
     // Fault injection
     if (path === '/enroute/v1/debug/status') {
         const s = url.searchParams.get('s');
@@ -517,10 +632,25 @@ const server = http.createServer((req, res) => {
         sendJson(res, { ok: true, waypoints: state.waypoints.length, routeRev: state.routeRev });
         return;
     }
+    if (path === '/enroute/v1/debug/notams') {
+        const mode = url.searchParams.get('m') ?? 'normal';
+        state.notamsAbsent = (mode === 'none');
+        state.notamWarning = (mode === 'warn')
+            ? 'NOTAMs not current around waypoint, requesting update'
+            : null;
+        state.notamCap = (mode === 'cap') ? 2 : 60;
+        state.notamRev++;
+        sendJson(res, { ok: true, mode, notamRev: state.notamRev });
+        return;
+    }
     if (path === '/enroute/v1/debug/reset') {
         state.forcedStatus = null;
         state.stallUntil = 0;
         state.allAbsent = false;
+        state.notamsAbsent = false;
+        state.notamWarning = null;
+        state.notamCap = 60;
+        state.notamRev++;
         state.waypoints = SHORT_ROUTE;
         state.routeRev++;
         state.startedAt = Date.now();
