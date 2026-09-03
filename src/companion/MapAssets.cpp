@@ -23,7 +23,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QRegularExpression>
-#include <QTextDocumentFragment>
 
 #include "GlobalObject.h"
 #include "GlobalSettings.h"
@@ -158,8 +157,45 @@ Companion::MapAssets::MapAssets(QObject* parent)
 
 void Companion::MapAssets::refresh()
 {
-    m_baseMap = openFiles(GlobalObject::dataManager()->baseMapsVector());
-    m_terrain = openFiles(GlobalObject::dataManager()->terrainMaps());
+    auto newBaseMap = openFiles(GlobalObject::dataManager()->baseMapsVector());
+    auto newTerrain = openFiles(GlobalObject::dataManager()->terrainMaps());
+
+    // The revision is in every tile URL, so moving it makes a client throw away its
+    // whole tile cache and refetch the style. The signals that bring us here can fire
+    // without the set of files having changed at all, and paying that price for
+    // nothing is worse on a watch than on a phone.
+    const auto changed = [](const QVector<QSharedPointer<FileFormats::MBTILES>>& before,
+                            const QVector<QSharedPointer<FileFormats::MBTILES>>& after)
+    {
+        if (before.size() != after.size())
+        {
+            return true;
+        }
+        for (qsizetype i = 0; i < before.size(); ++i)
+        {
+            if (before.at(i).isNull() || after.at(i).isNull())
+            {
+                return true;
+            }
+            if (before.at(i)->fileName() != after.at(i)->fileName())
+            {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    const auto moved = m_revision == 0
+                       || changed(m_baseMap, newBaseMap)
+                       || changed(m_terrain, newTerrain);
+
+    m_baseMap = std::move(newBaseMap);
+    m_terrain = std::move(newTerrain);
+
+    if (!moved)
+    {
+        return;
+    }
 
     m_revision++;
     emit revisionChanged();
@@ -197,22 +233,36 @@ QJsonArray Companion::MapAssets::centreHint() const
 
 QString Companion::MapAssets::attribution() const
 {
-    for (const auto& filePtr : m_baseMap)
+    // Composed from the same conditions GeoMapProvider::copyrightNotice() uses, and
+    // not from the base map's own metadata, which credits OpenStreetMap alone. The
+    // style draws the aviation data layer too, so a client that showed only the
+    // metadata's notice would be rendering openAIP and open flightmaps data while
+    // crediting neither.
+    //
+    // Compact rather than complete: copyrightNotice() is several paragraphs of HTML
+    // with links, which belongs on a device where a link can be followed. The full
+    // notice stays on the phone; this is the line a watch can carry.
+    QStringList sources;
+    auto* const dataManager = GlobalObject::dataManager();
+
+    if (dataManager->aviationMaps()->hasFile())
     {
-        if (filePtr.isNull())
-        {
-            continue;
-        }
-        const auto raw = filePtr->metaData().value(u"attribution"_s);
-        if (raw.isEmpty())
-        {
-            continue;
-        }
-        // The MBTiles metadata holds a fragment of HTML with links in it. A watch
-        // renders plain text, and the link is not reachable from there anyway.
-        return QTextDocumentFragment::fromHtml(raw).toPlainText().simplified();
+        sources << u"openAIP"_s << u"open flightmaps"_s;
     }
-    return {};
+    if (dataManager->baseMaps()->hasFile())
+    {
+        sources << u"OpenStreetMap contributors"_s;
+    }
+    if (dataManager->terrainMaps()->hasFile())
+    {
+        sources << u"Terrain Tiles"_s;
+    }
+
+    if (sources.isEmpty())
+    {
+        return {};
+    }
+    return u"© "_s + sources.join(u" · "_s);
 }
 
 
