@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QBuffer>
 #include <QFile>
 #include <QHttpHeaders>
 #include <QJsonArray>
@@ -76,6 +77,30 @@ namespace
         return QFile::exists(u":/flightMap/fonts/"_s + stack);
     }
 
+    /*! \brief Sends a body that may be larger than a socket buffer
+     *
+     *  QHttpServerResponder::write() with a QByteArray hands the bytes to the socket
+     *  and returns, while the responder's own lifetime ends when the request handler
+     *  does. The QIODevice overload exists for the case where that is not enough: the
+     *  responder keeps feeding the socket afterwards, and takes ownership of the
+     *  device. The aviation data is four and a half megabytes, which is well past the
+     *  point where relying on the socket buffer is a reasonable thing to do.
+     *
+     *  Written after chasing a truncated response that turned out not to be this at
+     *  all -- it was the development machine's WSL network boundary cutting the body,
+     *  and the app was serving all of it. So this is a precaution rather than a fix,
+     *  and no observed bug is claimed for it.
+     */
+    void writeLarge(const QByteArray& data,
+                    const QByteArray& mimeType,
+                    QHttpServerResponder& responder)
+    {
+        auto* buffer = new QBuffer;
+        buffer->setData(data);
+        buffer->open(QIODevice::ReadOnly);
+        responder.write(buffer, mimeType);
+    }
+
     void writeResource(const QString& resourcePath,
                        const char* contentType,
                        QHttpServerResponder& responder)
@@ -86,7 +111,7 @@ namespace
             responder.write(QHttpServerResponder::StatusCode::NotFound);
             return;
         }
-        responder.write(file.readAll(), contentType);
+        writeLarge(file.readAll(), contentType, responder);
     }
 
     /*! \brief Content type for a tile of the given MBTiles format
@@ -351,6 +376,106 @@ bool Companion::MapAssets::baseMapCentre(double& lon, double& lat, double& zoom)
 }
 
 
+namespace
+{
+
+    /*! \brief Resolves one "@marker" from the generated aviation layers
+     *
+     *  The generator cannot bake in what the running app decides -- the pilot's
+     *  altitude filter, their font size, and every colour and opacity that depends on
+     *  night mode -- so those appear as markers. The day and night alternatives are
+     *  extracted from the same QML the layers come from and travel in the generated
+     *  file, so nothing is written down twice.
+     */
+    QJsonValue resolveMarker(const QString& marker, const QJsonObject& values)
+    {
+        auto* const settings = GlobalObject::globalSettings();
+
+        if (marker == u"@altitudeLimitFt"_s)
+        {
+            const auto limit = settings->airspaceAltitudeLimit();
+            // QML uses 10e6 for "no limit", and the filter compares against it, so an
+            // unset limit has to be a number and not a null.
+            return limit.isFinite() ? limit.toFeet() : 10e6;
+        }
+
+        if (marker.startsWith(u"@fontSize:"_s))
+        {
+            bool ok = false;
+            const auto factor = marker.mid(10).toDouble(&ok);
+            return (ok ? factor : 1.0) * settings->fontSize();
+        }
+
+        const auto name = marker.mid(1);
+        const auto pair = values.value(name).toObject();
+        if (pair.isEmpty())
+        {
+            return {};
+        }
+        return pair.value(settings->nightMode() ? u"night"_s : u"day"_s);
+    }
+
+    /*! \brief Replaces every marker in a JSON tree, in place */
+    QJsonValue resolveMarkers(const QJsonValue& node, const QJsonObject& values)
+    {
+        if (node.isString())
+        {
+            const auto text = node.toString();
+            return text.startsWith(u'@') ? resolveMarker(text, values) : node;
+        }
+        if (node.isArray())
+        {
+            QJsonArray result;
+            const auto array = node.toArray();
+            for (const auto& item : array)
+            {
+                result.append(resolveMarkers(item, values));
+            }
+            return result;
+        }
+        if (node.isObject())
+        {
+            QJsonObject result;
+            const auto object = node.toObject();
+            for (auto it = object.constBegin(); it != object.constEnd(); ++it)
+            {
+                result.insert(it.key(), resolveMarkers(it.value(), values));
+            }
+            return result;
+        }
+        return node;
+    }
+
+} // namespace
+
+
+void Companion::MapAssets::addAviationLayers(QJsonObject& style)
+{
+    QFile file(u":/flightMap/aviation-layers.json"_s);
+    if (!file.open(QIODevice::ReadOnly))
+    {
+        return;
+    }
+    const auto document = QJsonDocument::fromJson(file.readAll()).object();
+    const auto values = document.value(u"values"_s).toObject();
+    const auto layers = document.value(u"layers"_s).toArray();
+    if (layers.isEmpty())
+    {
+        return;
+    }
+
+    // Appended, not merged in at a position: the generator preserves the order the QML
+    // declares, which that file describes as sorted by importance from low to high, and
+    // the whole aviation overlay belongs above the base map.
+    auto existing = style.value(u"layers"_s).toArray();
+    for (const auto& layer : layers)
+    {
+        existing.append(resolveMarkers(layer, values));
+    }
+    style.insert(u"layers"_s, existing);
+}
+
+
 QByteArray Companion::MapAssets::styleDocument(const QString& baseUrl) const
 {
     // The same three files and the same three placeholders the app uses for its own
@@ -378,26 +503,32 @@ QByteArray Companion::MapAssets::styleDocument(const QString& baseUrl) const
     data.replace("%URLT%", (baseUrl + u"/"_s + terrainPath()).toUtf8());
     data.replace("%URL2%", baseUrl.toUtf8());
 
+    auto document = QJsonDocument::fromJson(data).object();
+    if (document.isEmpty())
+    {
+        return data;
+    }
+
+    // The aviation overlay. Without it a client renders roads and towns and no
+    // airspace, because the app declares the aviation-data source in its style file
+    // but draws every layer from it in QML.
+    addAviationLayers(document);
+
     // The app's own style has no centre, because its renderer is always told where to
     // look. A companion device is not, so one is added here when the map files know.
     double lon = 0.0;
     double lat = 0.0;
     double zoom = 0.0;
-    if (baseMapCentre(lon, lat, zoom))
+    if (baseMapCentre(lon, lat, zoom) && !document.contains(u"center"_s))
     {
-        auto document = QJsonDocument::fromJson(data).object();
-        if (!document.isEmpty() && !document.contains(u"center"_s))
-        {
-            QJsonArray centre;
-            centre.append(lon);
-            centre.append(lat);
-            document.insert(u"center"_s, centre);
-            document.insert(u"zoom"_s, zoom);
-            data = QJsonDocument(document).toJson(QJsonDocument::Compact);
-        }
+        QJsonArray centre;
+        centre.append(lon);
+        centre.append(lat);
+        document.insert(u"center"_s, centre);
+        document.insert(u"zoom"_s, zoom);
     }
 
-    return data;
+    return QJsonDocument(document).toJson(QJsonDocument::Compact);
 }
 
 
@@ -550,7 +681,13 @@ bool Companion::MapAssets::writeTile(
             headers.append(QHttpHeaders::WellKnownHeader::ContentEncoding, "gzip");
         }
         headers.append("X-Content-Type-Options", "nosniff");
-        responder.write(tileData, headers);
+
+        // Same precaution as writeLarge(): a vector tile runs to a couple of hundred
+        // kilobytes, which is already past what a socket buffer holds.
+        auto* buffer = new QBuffer;
+        buffer->setData(tileData);
+        buffer->open(QIODevice::ReadOnly);
+        responder.write(buffer, headers);
         return true;
     }
 
@@ -589,7 +726,7 @@ bool Companion::MapAssets::handle(const QStringList& pathElements,
     // its own URL rather than inside the style.
     if (head == u"aviationData.geojson"_s && tail.isEmpty())
     {
-        responder.write(GlobalObject::geoMapProvider()->geoJSON(), "application/geo+json");
+        writeLarge(GlobalObject::geoMapProvider()->geoJSON(), "application/geo+json", responder);
         return true;
     }
 
@@ -604,10 +741,15 @@ bool Companion::MapAssets::handle(const QStringList& pathElements,
                           responder);
             return true;
         }
-        if (tail.constFirst() == u"fonts"_s && tail.size() == 3
-            && isFontStack(tail[1]) && isGlyphRange(tail[2]))
+        if (tail.constFirst() == u"fonts"_s && tail.size() == 3 && isGlyphRange(tail[2]))
         {
-            writeResource(u":/flightMap/fonts/"_s + tail[1] + u"/"_s + tail[2],
+            // A client that asks for a stack this app does not ship gets a shipped one
+            // instead of a 404. That is not politeness: a symbol layer whose font
+            // never arrives stalls the entire style load in MapLibre, so the map goes
+            // blank rather than merely unlabelled. Every renderer has its own default
+            // stack and none of them is ours.
+            const auto stack = isFontStack(tail[1]) ? tail[1] : u"Roboto Regular"_s;
+            writeResource(u":/flightMap/fonts/"_s + stack + u"/"_s + tail[2],
                           "application/x-protobuf",
                           responder);
             return true;
