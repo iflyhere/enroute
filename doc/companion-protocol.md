@@ -42,7 +42,7 @@ only.
 
 ## Revisions
 
-Four counters carry all cache coherency:
+Five counters carry all cache coherency:
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -50,6 +50,7 @@ Four counters carry all cache coherency:
 | `routeRev` | `quint32` | Incremented whenever the route document changes. Also changes when the pilot's unit preferences change, because those alter `units` and every `*Text` field. |
 | `navRev` | `quint32` | Incremented on every published navigation frame. Doubles as the `ETag` of the navigation frame. Appears only in that frame, not in the capability document. |
 | `notamRev` | `quint32` | Incremented whenever the NOTAM document's content changes. Derived by comparing successive encodings rather than counted from an event, so it moves only when a client would actually see something different. Appears only in the NOTAM document. |
+| `mapRev` | `quint32` | Changes whenever the set of downloaded map files changes. Appears in the capability document, and in every tile URL. A client that sees it move must refetch the style: the URLs in the one it holds no longer resolve, which is what stops its tile cache from outliving the maps it was filled from. |
 
 Every navigation frame repeats `routeRev`. That one field is the whole caching protocol: a client
 caches the route document keyed on `(sid, routeRev)` and refetches when either changes.
@@ -255,6 +256,55 @@ and all three are stated in the document so that a client can state them to the 
 The one rule that matters most: **a group means "no NOTAMs here" only when `data` is `true`, `notams`
 is absent, and `cut` is absent.** Any other combination means the client does not know.
 
+## The map
+
+A companion device with its own map renderer is served everything that renderer needs, and all of
+it comes off the phone: **a client needs no internet connection and no map service of its own.**
+
+| Request | Response |
+|---|---|
+| `GET /enroute/v1/map/style.json` | the app's own style document, with its URLs pointing back here |
+| `GET /enroute/v1/map/base-<mapRev>` | TileJSON for the vector base map |
+| `GET /enroute/v1/map/base-<mapRev>/{z}/{x}/{y}.pbf` | one vector tile, gzipped |
+| `GET /enroute/v1/map/terrain-<mapRev>` | TileJSON for the terrain layer used for hillshading |
+| `GET /enroute/v1/map/terrain-<mapRev>/{z}/{x}/{y}.png` | one terrain tile |
+| `GET /enroute/v1/map/aviationData.geojson` | the aviation data overlay |
+| `GET /enroute/v1/map/flightMap/sprites/sprite[@2x].{json,png}` | the sprite sheet |
+| `GET /enroute/v1/map/flightMap/fonts/{fontstack}/{range}.pbf` | one glyph range |
+
+**A client does not construct these URLs.** It fetches `style.json` and follows what is inside it.
+Every URL there is absolute and is built from the `Host` header of the request that asked for the
+style, so a phone answering on Wi-Fi, on loopback and on a tethering interface at the same time
+always names the address the client actually reached.
+
+`style.json` is the app's own style file, unmodified except for its three URL placeholders. That
+means a companion device draws the map the pilot has configured, night mode included, rather than
+a second styling maintained separately.
+
+Notes that matter when writing a client:
+
+- **Vector tiles arrive gzipped**, with `Content-Encoding: gzip`, because that is how they are
+  stored. An HTTP client that does not decompress transparently gets a corrupt protobuf.
+- **A tile that is not in any downloaded map is `204 No Content`, not `404`.** Asking beyond the
+  edge of a downloaded region is normal, not an error.
+- **A tile set with no files still returns a valid TileJSON.** The style always declares its terrain
+  source, but the terrain map is a separate optional download, so the common case is a pilot who has
+  a base map and no hillshading.
+- `mapRev` is in every tile URL. When it changes, refetch the style.
+- Everything under `/map/` needs the pairing code like every other endpoint.
+
+### Attribution is not optional
+
+The base map is OpenStreetMap data and the aviation data is openAIP and open flightmaps, licensed
+for non-commercial use with an attribution requirement. The attribution string travels in the
+TileJSON's `attribution` member, and **a client that renders these tiles must render the notice**.
+This is the one obligation that follows the data onto the second screen.
+
+### What is not served
+
+Raster base maps. The style uses the vector map, and the raster map reaches the app's own renderer
+by a different route. A client that wants it can ask for it in a later version of this protocol.
+
 ## Transport 1: HTTP over the local network
 
 The app listens on TCP port **8973** on all interfaces, but only while the feature is enabled in
@@ -266,6 +316,7 @@ Settings.
 | `GET /enroute/v1/route` | route document, `ETag: W/"<routeRev>"` |
 | `GET /enroute/v1/nav` | navigation frame, `ETag: W/"<navRev>"`, `304 Not Modified` when `If-None-Match` matches |
 | `GET /enroute/v1/notams` | NOTAM document, `ETag: W/"<notamRev>"`, `304 Not Modified` when `If-None-Match` matches |
+| `GET /enroute/v1/map/…` | the pilot's own map, see below |
 | `GET /enroute/v1/route.geojson` | the app's own GeoJSON route |
 | `GET /` | a small HTML page that polls `/nav`, for development and for checking the link from a desktop browser |
 | any other path | `404` |

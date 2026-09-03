@@ -51,6 +51,15 @@ namespace Companion
 
         /*! \brief Incremented whenever the NOTAM document changes */
         quint32 notam {0};
+
+        /*! \brief Changes whenever the set of downloaded map files changes
+         *
+         *  Every tile URL contains this, so that a client's own tile cache cannot
+         *  outlive the maps it was filled from. A client that sees this move must
+         *  reload the style document, because the URLs inside the one it holds no
+         *  longer resolve.
+         */
+        quint32 map {0};
     };
 
 
