@@ -123,4 +123,13 @@ data class NavFrame(
     val next: WaypointLeg?,
     val final: WaypointLeg?,
     val statusText: String,
+    /**
+     * Pressure altitude as a flight level, e.g. "FL065", or the placeholder.
+     *
+     * On the frame rather than on the position, because a barometer reads without a
+     * satellite in sight and OwnPosition.Unknown would swallow it.
+     */
+    val flightLevel: Measured,
+    /** True when the phone has a reading and does not believe it. */
+    val flightLevelImplausible: Boolean,
 )

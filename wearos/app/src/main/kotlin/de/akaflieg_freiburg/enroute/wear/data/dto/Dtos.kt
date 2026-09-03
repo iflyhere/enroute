@@ -43,8 +43,16 @@ data class HelloDto(
     @SerialName("mapAttribution") val mapAttribution: String = "",
     /** [longitude, latitude, zoom] to open on before anything better is known. */
     @SerialName("mapCentre") val mapCentre: List<Double> = emptyList(),
+    /** Label and halo colours for text drawn over the map. They swap with night mode. */
+    @SerialName("mapOverlay") val mapOverlay: OverlayColoursDto? = null,
     @SerialName("navPeriodMs") val navPeriodMs: Long = 1000,
     @SerialName("units") val units: UnitsDto = UnitsDto(),
+)
+
+@Serializable
+data class OverlayColoursDto(
+    @SerialName("label") val label: String = "",
+    @SerialName("halo") val halo: String = "",
 )
 
 @Serializable
@@ -96,6 +104,13 @@ data class NavFrameDto(
     @SerialName("own") val own: OwnPositionDto? = null,
     @SerialName("next") val next: NavLegDto? = null,
     @SerialName("final") val final: NavLegDto? = null,
+    /**
+     * Pressure altitude in metres, from the phone's barometer. Deliberately not
+     * inside "own": a barometer reads without a satellite in sight.
+     */
+    @SerialName("pAlt") val pressureAltitudeM: Double? = null,
+    /** True when there is a reading and the phone does not believe it. */
+    @SerialName("pAltImplausible") val pressureAltitudeImplausible: Boolean = false,
     @SerialName("fmt") val formatted: FormattedDto? = null,
 )
 
@@ -132,6 +147,8 @@ data class FormattedDto(
     @SerialName("finalETA") val finalEta: String? = null,
     @SerialName("alt") val altitude: String? = null,
     @SerialName("gs") val groundSpeed: String? = null,
+    /** The flight level as the moving map writes it: "FL065", or "-". */
+    @SerialName("pAlt") val pressureAltitude: String? = null,
     @SerialName("statusText") val statusText: String = "",
 )
 

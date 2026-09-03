@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -124,6 +125,28 @@ fun DataScreen(
             ) {
                 ValueText(frame.position.groundSpeed, alpha = contentAlpha, tag = TAG_GS)
                 ValueText(frame.position.altitudeAmsl, alpha = contentAlpha, tag = TAG_ALT)
+            }
+
+            // The flight level, from the phone's barometer, formatted there so it reads
+            // exactly as the moving map's own bar does. Dimmed when the phone has a
+            // reading it does not believe: it is worse to hide a distrusted flight level
+            // than to show it as distrusted, and worse still to show it as fact.
+            if (frame.flightLevel.text != Measured.PLACEHOLDER) {
+                Text(
+                    text = frame.flightLevel.text,
+                    color = if (frame.flightLevelImplausible) {
+                        CockpitColors.Caution
+                    } else {
+                        CockpitColors.OnBackground
+                    },
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .alpha(contentAlpha)
+                        .testTag(TAG_FL),
+                    textAlign = TextAlign.Center,
+                )
             }
 
             Spacer(Modifier.height(4.dp))
@@ -357,6 +380,7 @@ const val TAG_ETE_SUFFIX = ".ete"
 const val TAG_ETA_SUFFIX = ".eta"
 const val TAG_GS = "gs"
 const val TAG_ALT = "alt"
+const val TAG_FL = "fl"
 const val TAG_BANNER = "banner"
 const val TAG_AGE = "age"
 const val TAG_RECONNECT = "reconnect"
