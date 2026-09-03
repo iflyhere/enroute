@@ -36,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -52,18 +53,16 @@ import de.akaflieg_freiburg.enroute.wear.ui.connect.ConnectScreen
 import de.akaflieg_freiburg.enroute.wear.ui.data.DataScreen
 import de.akaflieg_freiburg.enroute.wear.ui.data.DataUiState
 import de.akaflieg_freiburg.enroute.wear.ui.map.MapLibreScreen
+import de.akaflieg_freiburg.enroute.wear.ui.log.FlightLogScreen
 import de.akaflieg_freiburg.enroute.wear.ui.notam.NotamScreen
 import de.akaflieg_freiburg.enroute.wear.ui.route.RouteScreen
+import de.akaflieg_freiburg.enroute.wear.ui.settings.SettingsScreen
 import de.akaflieg_freiburg.enroute.wear.ui.route.ZoomLevel
 import de.akaflieg_freiburg.enroute.wear.ui.weather.WeatherScreen
+import kotlinx.coroutines.launch
 
 private enum class Screen { Main, Connect, CodeEntry }
 
-private const val PAGE_DATA = 0
-private const val PAGE_MAP = 1
-private const val PAGE_NOTAM = 2
-private const val PAGE_WEATHER = 3
-private const val PAGE_COUNT = 4
 
 /**
  * The whole user interface.
@@ -118,9 +117,7 @@ fun EnrouteWearUi(
     when (screen) {
         Screen.Main -> MainPages(
             uiState = uiState,
-            host = settings.host,
-            port = settings.port,
-            pairingCode = settings.pairingCode,
+            settings = settings,
             onOpenConnect = { screen = Screen.Connect },
         )
 
@@ -153,20 +150,35 @@ fun EnrouteWearUi(
 @Composable
 private fun MainPages(
     uiState: State<DataUiState>,
-    host: String,
-    port: Int,
-    pairingCode: String,
+    settings: SettingsStore,
     onOpenConnect: () -> Unit,
 ) {
-    val pagerState = rememberPagerState(initialPage = PAGE_DATA) { PAGE_COUNT }
-    var zoom by remember { mutableStateOf<ZoomLevel>(ZoomLevel.Automatic) }
+    val host = settings.host
+    val port = settings.port
+    val pairingCode = settings.pairingCode
 
-    // Hoisted so the one rotary handler below can scroll it. Giving the list its own
-    // rotaryScrollable would mean a second focusable competing with the pager's, and
-    // then which of the two holds focus decides whether the bezel zooms or scrolls --
-    // a race with no good outcome. One focusable, one handler, dispatch by page.
+    // The layout is held in composition and written through to the store, rather than
+    // read from the store on every recomposition: SharedPreferences is a file, and the
+    // pager reads this on every frame it draws.
+    var order by remember { mutableStateOf(settings.pageOrder) }
+    var hidden by remember { mutableStateOf(settings.hiddenPages) }
+    var bezelAction by remember { mutableStateOf(BezelAction.byId(settings.bezelAction)) }
+    var chartMode by remember { mutableStateOf(ChartMode.byId(settings.chartMode)) }
+
+    val pages = visiblePages(order, hidden)
+
+    var zoom by remember { mutableStateOf<ZoomLevel>(ZoomLevel.Automatic) }
+    val pagerState = rememberPagerState(initialPage = 0) { pages.size }
+    val scope = rememberCoroutineScope()
+
+    // Hoisted so the one rotary handler below can scroll them. Giving each list its own
+    // rotaryScrollable would mean several focusables competing with the pager's, and
+    // then which of them holds focus decides what the bezel does -- a race with no good
+    // outcome. One focusable, one handler, dispatch by page.
     val notamListState = rememberScalingLazyListState()
     val weatherListState = rememberScalingLazyListState()
+    val logListState = rememberScalingLazyListState()
+    val settingsListState = rememberScalingLazyListState()
 
     // A picker or a rotary modifier is inert unless something in the hierarchy holds
     // focus. This is the trap every Wear developer hits once.
@@ -193,8 +205,33 @@ private fun MainPages(
                 // fixes. This line is what tells them apart on a real watch.
                 Log.d(TAG, "rotary " + event.verticalScrollPixels +
                     " on page " + pagerState.currentPage)
-                when (pagerState.currentPage) {
-                    PAGE_MAP -> {
+
+                val page = pages.getOrNull(pagerState.currentPage)
+
+                // Switching screens wins over the page's own use of the bezel, because
+                // it is the setting the pilot chose. Zoom stays reachable everywhere
+                // through the vertical drag below, which is why this is safe to take.
+                if (bezelAction == BezelAction.Pages) {
+                    rotaryAccumulator += event.verticalScrollPixels
+                    var step = 0
+                    while (rotaryAccumulator >= ROTARY_THRESHOLD) {
+                        rotaryAccumulator -= ROTARY_THRESHOLD
+                        step += 1
+                    }
+                    while (rotaryAccumulator <= -ROTARY_THRESHOLD) {
+                        rotaryAccumulator += ROTARY_THRESHOLD
+                        step -= 1
+                    }
+                    if (step != 0) {
+                        val target = (pagerState.currentPage + step)
+                            .coerceIn(0, pages.size - 1)
+                        scope.launch { pagerState.animateScrollToPage(target) }
+                    }
+                    return@onRotaryScrollEvent true
+                }
+
+                when (page) {
+                    WearPage.Map -> {
                         rotaryAccumulator += event.verticalScrollPixels
                         while (rotaryAccumulator >= ROTARY_THRESHOLD) {
                             rotaryAccumulator -= ROTARY_THRESHOLD
@@ -208,15 +245,25 @@ private fun MainPages(
                         true
                     }
 
-                    PAGE_NOTAM -> {
-                        // One to one with the bezel rather than a fling: reading a
-                        // NOTAM wants precise positioning, not momentum.
+                    // One to one with the bezel rather than a fling: reading a NOTAM
+                    // wants precise positioning, not momentum.
+                    WearPage.Notam -> {
                         notamListState.dispatchRawDelta(event.verticalScrollPixels)
                         true
                     }
 
-                    PAGE_WEATHER -> {
+                    WearPage.Weather -> {
                         weatherListState.dispatchRawDelta(event.verticalScrollPixels)
+                        true
+                    }
+
+                    WearPage.Log -> {
+                        logListState.dispatchRawDelta(event.verticalScrollPixels)
+                        true
+                    }
+
+                    WearPage.Settings -> {
+                        settingsListState.dispatchRawDelta(event.verticalScrollPixels)
                         true
                     }
 
@@ -225,17 +272,18 @@ private fun MainPages(
             }
             .focusRequester(focusRequester)
             .focusable()
-            .pointerInput(Unit) {
+            .pointerInput(pages) {
                 // A vertical drag zooms the map. Not a duplicate of the bezel: half
                 // the Wear OS watches ever sold have no rotary input, and this one
                 // gesture works on all of them, with one finger, through gloves, and
-                // without looking. The pager keeps horizontal drags, so the two do not
-                // collide.
+                // without looking. It is also what lets the bezel be spent on switching
+                // screens without taking zoom away. The pager keeps horizontal drags,
+                // so the two do not collide.
                 var dragAccumulator = 0f
                 detectVerticalDragGestures(
                     onDragStart = { dragAccumulator = 0f },
                 ) { change, dragAmount ->
-                    if (pagerState.currentPage != PAGE_MAP) {
+                    if (pages.getOrNull(pagerState.currentPage) != WearPage.Map) {
                         return@detectVerticalDragGestures
                     }
                     change.consume()
@@ -250,7 +298,7 @@ private fun MainPages(
                     }
                 }
             },
-    ) { page ->
+    ) { index ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -259,10 +307,10 @@ private fun MainPages(
                     onLongClick = onOpenConnect,
                 ),
         ) {
-            when (page) {
-                PAGE_DATA -> DataScreen(state = uiState.value)
+            when (pages.getOrNull(index)) {
+                WearPage.Data -> DataScreen(state = uiState.value)
 
-                PAGE_MAP -> {
+                WearPage.Map -> {
                     // The real map when the pilot has downloaded one, and the vector
                     // drawing when they have not. The fallback is not a lesser version
                     // of the same thing: it needs nothing but the route, so it still
@@ -276,11 +324,14 @@ private fun MainPages(
                             pairingCode = pairingCode,
                             route = uiState.value.session.route,
                             ownPosition = uiState.value.frame?.position,
-                            charts = uiState.value.session.vacs,
+                            charts = if (chartMode == ChartMode.Automatic) {
+                                uiState.value.session.vacs
+                            } else {
+                                null
+                            },
                             port = port,
                             zoom = zoom,
-                            isActive = pagerState.currentPage == PAGE_MAP,
-                            attribution = uiState.value.session.peer?.mapAttribution.orEmpty(),
+                            isActive = pages.getOrNull(pagerState.currentPage) == WearPage.Map,
                             fallbackCentre = uiState.value.session.peer?.mapCentre,
                             fallbackZoom = uiState.value.session.peer?.mapCentreZoom ?: 0.0,
                             labelColour = uiState.value.session.peer?.mapLabelColour,
@@ -299,18 +350,60 @@ private fun MainPages(
                     }
                 }
 
-                PAGE_NOTAM -> NotamScreen(
+                WearPage.Notam -> NotamScreen(
                     board = uiState.value.session.notams,
                     listState = notamListState,
                 )
 
-                PAGE_WEATHER -> WeatherScreen(
+                WearPage.Weather -> WeatherScreen(
                     board = uiState.value.session.weather,
                     listState = weatherListState,
                 )
+
+                WearPage.Log -> FlightLogScreen(
+                    board = uiState.value.session.flightLog,
+                    listState = logListState,
+                )
+
+                WearPage.Settings -> SettingsScreen(
+                    pages = pages,
+                    hidden = hidden,
+                    bezelAction = bezelAction,
+                    chartMode = chartMode,
+                    attribution = uiState.value.session.peer?.mapAttribution.orEmpty(),
+                    peerDescription = peerDescription(uiState.value, host, port),
+                    appVersion = APP_VERSION,
+                    listState = settingsListState,
+                    onMovePage = { page, delta ->
+                        order = movePage(pages, page, delta)
+                        settings.pageOrder = order
+                    },
+                    onToggleHidden = { page ->
+                        hidden = if (page.id in hidden) hidden - page.id else hidden + page.id
+                        settings.hiddenPages = hidden
+                    },
+                    onBezelAction = { action ->
+                        bezelAction = action
+                        settings.bezelAction = action.id
+                    },
+                    onChartMode = { mode ->
+                        chartMode = mode
+                        settings.chartMode = mode.id
+                    },
+                    onOpenConnect = onOpenConnect,
+                )
+
+                null -> Unit
             }
         }
     }
+}
+
+/** One line naming the phone, for the settings page. */
+private fun peerDescription(state: DataUiState, host: String, port: Int): String {
+    val peer = state.session.peer
+    val where = host + ":" + port
+    return if (peer == null) where else "Enroute " + peer.appVersion + " at " + where
 }
 
 private const val ROTARY_THRESHOLD = 120f
@@ -320,3 +413,7 @@ private const val ROTARY_THRESHOLD = 120f
 private const val DRAG_THRESHOLD = 80f
 
 private const val TAG = "EnrouteWear"
+
+// Kept beside the versionName in app/build.gradle.kts by hand. Reading
+// BuildConfig here would mean switching that generation on for one string.
+private const val APP_VERSION = "0.1.0"

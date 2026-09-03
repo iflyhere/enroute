@@ -32,6 +32,9 @@
 #include "config.h"
 #include "navigation/Leg.h"
 #include "navigation/Navigator.h"
+#include "flightlog/Flight.h"
+#include "flightlog/FlightDetector.h"
+#include "flightlog/FlightLog.h"
 #include "geomaps/VACLibrary.h"
 #include "notam/NOTAMProvider.h"
 #include "positioning/PositionProvider.h"
@@ -874,6 +877,96 @@ QJsonObject Companion::Snapshot::vacs(const Companion::Revisions& revisions,
         charts.append(chart);
     }
     document.insert("vac"_L1, charts);
+
+    return document;
+}
+
+
+QJsonObject Companion::Snapshot::flightLog(const Companion::Revisions& revisions, int limit)
+{
+    auto* const log = GlobalObject::flightLog();
+
+    QJsonObject document;
+    document.insert("v"_L1, Companion::protocolVersion);
+    document.insert("sid"_L1, static_cast<qint64>(revisions.session));
+
+    // The detector's own belief, as the enum name rather than its number, so that a
+    // client added later cannot silently mistake one state for another.
+    const auto state = QMetaEnum::fromType<Flightlog::FlightDetector::DetectionState>()
+                           .valueToKey(log->detectionState());
+    if (state != nullptr)
+    {
+        document.insert("state"_L1, QLatin1StringView(state));
+    }
+    document.insert("recording"_L1, log->trackRecording());
+
+    const auto all = log->flights();
+    document.insert("n"_L1, static_cast<qint64>(all.size()));
+
+    QJsonArray flights;
+    for (const auto& flight : all)
+    {
+        if (flights.size() >= limit)
+        {
+            break;
+        }
+
+        QJsonObject entry;
+        entry.insert("id"_L1, flight.uuid().toString(QUuid::WithoutBraces));
+
+        // A leg with no aerodrome recorded is normal -- a landing away from an ICAO
+        // field leaves the arrival blank -- so both are conditional and a client
+        // shows its own placeholder rather than receiving one.
+        if (!flight.departureICAO().isEmpty())
+        {
+            entry.insert("dep"_L1, flight.departureICAO());
+        }
+        if (!flight.arrivalICAO().isEmpty())
+        {
+            entry.insert("arr"_L1, flight.arrivalICAO());
+        }
+
+        insertIfValid(entry, "start"_L1, flight.startTime());
+        insertIfValid(entry, "land"_L1, flight.landingTime());
+        insertIfValid(entry, "off"_L1, flight.offBlockTime());
+        insertIfValid(entry, "on"_L1, flight.onBlockTime());
+
+        // The app's own H:MM strings rather than a duration in seconds. They are what
+        // a logbook column contains, and both are empty when the times do not allow
+        // one, which is a distinction a client should not have to rediscover.
+        const auto flightTime = flight.flightTime();
+        if (!flightTime.isEmpty())
+        {
+            entry.insert("ft"_L1, flightTime);
+        }
+        const auto blockTime = flight.blockTime();
+        if (!blockTime.isEmpty())
+        {
+            entry.insert("bt"_L1, blockTime);
+        }
+
+        if (!flight.aircraftCallsign().isEmpty())
+        {
+            entry.insert("cs"_L1, flight.aircraftCallsign());
+        }
+        if (flight.landingCount() > 0)
+        {
+            entry.insert("ldg"_L1, flight.landingCount());
+        }
+        if (flight.hasTrack())
+        {
+            entry.insert("track"_L1, true);
+        }
+
+        flights.append(entry);
+    }
+    document.insert("flights"_L1, flights);
+
+    const auto dropped = static_cast<int>(all.size()) - flights.size();
+    if (dropped > 0)
+    {
+        document.insert("dropped"_L1, dropped);
+    }
 
     return document;
 }

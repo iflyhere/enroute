@@ -70,6 +70,41 @@ class SettingsStore(context: Context) {
         get() = preferences.getString(KEY_CODE, Config.DEFAULT_PAIRING_CODE) ?: Config.DEFAULT_PAIRING_CODE
         set(value) = preferences.edit().putString(KEY_CODE, value).apply()
 
+    /**
+     * The pilot's page order, as identifiers.
+     *
+     * Stored as one string rather than a StringSet, because a set does not keep an
+     * order and the order is the whole point. Empty means "never chosen", which
+     * [visiblePages] turns into the default arrangement.
+     */
+    var pageOrder: List<String>
+        get() = preferences.getString(KEY_PAGE_ORDER, "")
+            .orEmpty()
+            .split(SEPARATOR)
+            .filter { entry -> entry.isNotBlank() }
+        set(value) = preferences.edit()
+            .putString(KEY_PAGE_ORDER, value.joinToString(SEPARATOR))
+            .apply()
+
+    /** Identifiers of pages the pilot has switched off. */
+    var hiddenPages: Set<String>
+        get() = preferences.getString(KEY_HIDDEN_PAGES, "")
+            .orEmpty()
+            .split(SEPARATOR)
+            .filter { entry -> entry.isNotBlank() }
+            .toSet()
+        set(value) = preferences.edit()
+            .putString(KEY_HIDDEN_PAGES, value.joinToString(SEPARATOR))
+            .apply()
+
+    var bezelAction: String
+        get() = preferences.getString(KEY_BEZEL, "") ?: ""
+        set(value) = preferences.edit().putString(KEY_BEZEL, value).apply()
+
+    var chartMode: String
+        get() = preferences.getString(KEY_CHART_MODE, "") ?: ""
+        set(value) = preferences.edit().putString(KEY_CHART_MODE, value).apply()
+
     /** Applies any of host, port and code that the launch intent carries. */
     fun applyOverrides(intent: Intent?) {
         intent?.getStringExtra("host")?.let { host = it }
@@ -86,5 +121,14 @@ class SettingsStore(context: Context) {
         const val KEY_PORT = "port"
         const val KEY_CODE = "pairingCode"
         const val KEY_CONFIGURED = "configured"
+        const val KEY_PAGE_ORDER = "pageOrder"
+        const val KEY_HIDDEN_PAGES = "hiddenPages"
+        const val KEY_BEZEL = "bezelAction"
+        const val KEY_CHART_MODE = "chartMode"
+
+        // A page identifier is a short lower-case word, so a comma cannot appear in
+        // one and needs no escaping.
+        const val SEPARATOR = ","
+
     }
 }

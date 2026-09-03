@@ -91,6 +91,12 @@ import java.net.URI
  * aviation layer, and it keeps a second copy of the waypoint layer above the chart, so
  * the chart covers the airspaces while the route stays visible. Which chart is shown
  * follows the app's own rule, bounding-box containment, applied to the aircraft.
+ *
+ * No attribution is drawn here. The notice the map data requires is on the settings
+ * page instead, permanently and one swipe away, which is the same arrangement the
+ * renderer's own info button makes -- and it gives a 454 pixel disc back two lines it
+ * was spending on every glance. The obligation is met by showing the credit, not by
+ * showing it on top of the map.
  */
 @Composable
 fun MapLibreScreen(
@@ -103,7 +109,6 @@ fun MapLibreScreen(
     port: Int,
     zoom: ZoomLevel,
     isActive: Boolean,
-    attribution: String,
     fallbackCentre: GeoPoint?,
     fallbackZoom: Double,
     labelColour: Long?,
@@ -207,22 +212,6 @@ fun MapLibreScreen(
             )
         }
 
-        if (attribution.isNotBlank()) {
-            MapText(
-                text = attribution,
-                labelColour = labelColour,
-                haloColour = haloColour,
-                fontSize = 9.sp,
-                lineHeight = 11.sp,
-                // Two lines, because one ellipsised the third source away -- and an
-                // attribution that drops a source it is crediting is not an
-                // attribution. The padding keeps both lines inside the round bezel.
-                maxLines = 2,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(horizontal = 26.dp, vertical = 4.dp),
-            )
-        }
     }
 
     // A pager keeps its neighbouring pages composed, so without this the renderer

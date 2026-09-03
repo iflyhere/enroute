@@ -19,6 +19,7 @@
 
 package de.akaflieg_freiburg.enroute.wear.transport
 
+import de.akaflieg_freiburg.enroute.wear.domain.FlightLogBoard
 import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
 import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
 import de.akaflieg_freiburg.enroute.wear.domain.NavFrame
@@ -56,6 +57,7 @@ sealed interface TransportEvent {
     data class NotamUpdate(val notams: NotamBoard) : TransportEvent
     data class WeatherUpdate(val weather: WeatherBoard) : TransportEvent
     data class VacUpdate(val vacs: VacBoard) : TransportEvent
+    data class FlightLogUpdate(val log: FlightLogBoard) : TransportEvent
     data class Failed(val reason: FailureReason, val detail: String? = null) : TransportEvent
 }
 

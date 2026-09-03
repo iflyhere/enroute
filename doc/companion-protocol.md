@@ -42,7 +42,7 @@ only.
 
 ## Revisions
 
-Seven counters carry all cache coherency:
+Eight counters carry all cache coherency:
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -52,6 +52,7 @@ Seven counters carry all cache coherency:
 | `notamRev` | `quint32` | Incremented whenever the NOTAM document's content changes. Derived by comparing successive encodings rather than counted from an event, so it moves only when a client would actually see something different. Appears only in the NOTAM document. |
 | `weatherRev` | `quint32` | Incremented whenever the weather document's content changes, derived the same way as `notamRev`. Appears only in the weather document. |
 | `vacRev` | `quint32` | Incremented whenever the set of approach charts changes, derived the same way as `notamRev`. Appears only in the approach chart document. |
+| `logRev` | `quint32` | Incremented whenever the flight log document changes, derived the same way as `notamRev`. Appears only in the flight log document. |
 | `mapRev` | `quint32` | Changes whenever the set of downloaded map files changes. Appears in the capability document, and in every tile URL. A client that sees it move must refetch the style: the URLs in the one it holds no longer resolve, which is what stops its tile cache from outliving the maps it was filled from. |
 
 Every navigation frame repeats `routeRev`. That one field is the whole caching protocol: a client
@@ -371,6 +372,54 @@ The image is served as `image/webp`, which is what the app stores. A chart from 
 collection has no image file until the app extracts it; the server extracts on first request, so
 the first fetch of such a chart is slower than the rest.
 
+### Flight log document
+
+The app's own logbook entries in the app's own order, newest first, with what its flight
+detector currently believes.
+
+**Read only.** A flight is started, ended and corrected on the phone, which owns the record.
+There is no endpoint that changes one, and a client should not offer a control that suggests
+otherwise.
+
+```
+{
+  "v": 1,
+  "sid": 2748219411,
+  "logRev": 6,
+  "state": "InFlight",
+  "recording": true,
+  "n": 57,
+  "flights": [
+    { "id": "7f1c2d90-0000-4000-8000-000000000001",
+      "dep": "EDTF", "arr": "EDTL",
+      "start": "2026-09-03T08:14:00Z", "land": "2026-09-03T09:01:00Z",
+      "off":   "2026-09-03T08:02:00Z", "on":   "2026-09-03T09:10:00Z",
+      "ft": "0:47", "bt": "1:08",
+      "cs": "D-EABC", "ldg": 1, "track": true }
+  ],
+  "dropped": 53
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `state` | The flight detector's state: `Idle`, `TakeoffPhase`, `InFlight` or `LandingPhase`, as the enum name. |
+| `recording` | Whether the app is recording a GPS track. |
+| `n` | Entries in the whole logbook. |
+| `flights` | The most recent entries, currently at most 25. |
+| `dropped` | `n` minus the number sent. Carried so a list can say it is not the whole logbook instead of quietly looking like one. Omitted when nothing was left behind. |
+| `dep`, `arr` | Aerodromes. **Either may be absent**: a landing away from an ICAO field leaves the arrival blank, and that is a real state, not missing data. |
+| `start`, `land`, `off`, `on` | Airborne and block times, ISO 8601 UTC. Any of the four may be absent — a flight still running has no landing time, and an entry written by hand may have none at all. |
+| `ft`, `bt` | Flight time and block time as the app's own `H:MM` strings, which is what a logbook column contains. Both absent when the recorded times do not permit one. |
+| `cs` | Aircraft callsign. |
+| `ldg` | Landings. Absent when zero. |
+| `track` | Whether a GPS track is stored with the entry. The track itself is not served. |
+
+The three detector states have colours on the app's own page, but those live in its QML and never
+reach the encoder, so they are not on the wire. A client picks its own and should follow the
+app's intent: green airborne, blue for a landing being confirmed, amber for a takeoff being
+confirmed.
+
 ## The map
 
 A companion device with its own map renderer is served everything that renderer needs, and all of
@@ -416,6 +465,12 @@ for non-commercial use with an attribution requirement. The attribution string t
 TileJSON's `attribution` member, and **a client that renders these tiles must render the notice**.
 This is the one obligation that follows the data onto the second screen.
 
+Where the notice is shown is the client's choice; that it is shown is not. Drawing it across a
+watch face costs two lines of a 454 pixel disc on every glance, so the companion app puts it on a
+permanent settings page one swipe away, which is the arrangement the renderer's own info button
+makes. What is not acceptable is dropping a source: the notice names three, and an attribution
+that ellipsises one away is not an attribution.
+
 ### What is not served
 
 Raster base maps. The style uses the vector map, and the raster map reaches the app's own renderer
@@ -435,6 +490,7 @@ Settings.
 | `GET /enroute/v1/weather` | weather document, `ETag: W/"<weatherRev>"`, `304 Not Modified` when `If-None-Match` matches |
 | `GET /enroute/v1/vacs` | approach chart document, `ETag: W/"<vacRev>"`, `304 Not Modified` when `If-None-Match` matches |
 | `GET /enroute/v1/map/vac/<name>` | the chart image named `<name>`, `image/webp`; `404` if the library has no such chart |
+| `GET /enroute/v1/log` | flight log document, `ETag: W/"<logRev>"`, `304 Not Modified` when `If-None-Match` matches |
 | `GET /enroute/v1/map/…` | the pilot's own map, see below |
 | `GET /enroute/v1/route.geojson` | the app's own GeoJSON route |
 | `GET /` | a small HTML page that polls `/nav`, for development and for checking the link from a desktop browser |
@@ -454,7 +510,8 @@ a METAR is issued about every half hour, but the summary states the observation'
 left alone for longer is visibly wrong about how old it is. `/enroute/v1/vacs` is slower
 still at **300 seconds**, because the chart library changes only when the pilot imports or
 removes a chart, which never happens in flight; that poll exists so a client which connected
-before an import still learns about it.
+before an import still learns about it. `/enroute/v1/log` sits at **30 seconds**, which is
+fast enough for the detector's takeoff banner to feel live without being a feed.
 
 Polling is deliberately preferred over a streamed response: a watch radio wakes for each poll either
 way, a poll is its own reconnect logic, and `QHttpServerResponder`'s lifetime ends when the request

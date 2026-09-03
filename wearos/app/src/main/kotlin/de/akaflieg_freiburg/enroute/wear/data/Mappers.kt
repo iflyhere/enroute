@@ -19,6 +19,7 @@
 
 package de.akaflieg_freiburg.enroute.wear.data
 
+import de.akaflieg_freiburg.enroute.wear.data.dto.FlightLogDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.FormattedDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.MetarDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NavFrameDto
@@ -33,6 +34,9 @@ import de.akaflieg_freiburg.enroute.wear.data.dto.TafDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.VacBoardDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.WeatherBoardDto
 import de.akaflieg_freiburg.enroute.wear.domain.ApproachChart
+import de.akaflieg_freiburg.enroute.wear.domain.DetectionState
+import de.akaflieg_freiburg.enroute.wear.domain.FlightEntry
+import de.akaflieg_freiburg.enroute.wear.domain.FlightLogBoard
 import de.akaflieg_freiburg.enroute.wear.domain.FlightCategory
 import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
 import de.akaflieg_freiburg.enroute.wear.domain.FlightStatus
@@ -322,6 +326,33 @@ fun VacBoardDto.toDomain(): VacBoard = VacBoard(
             south = dto.bounds[1],
             east = dto.bounds[2],
             north = dto.bounds[3],
+        )
+    },
+)
+
+fun FlightLogDto.toDomain(): FlightLogBoard = FlightLogBoard(
+    revision = logRevision,
+    state = DetectionState.fromWire(state),
+    recording = recording,
+    total = total,
+    dropped = dropped,
+    // Kept in wire order, which is the app's own: newest first. Re-sorting here would
+    // be a second opinion about a list the phone already ordered.
+    entries = flights.mapNotNull { dto ->
+        if (dto.id.isBlank()) return@mapNotNull null
+        FlightEntry(
+            id = dto.id,
+            departure = dto.departure?.takeIf { code -> code.isNotBlank() },
+            arrival = dto.arrival?.takeIf { code -> code.isNotBlank() },
+            startEpochSeconds = dto.start.toEpochSeconds(),
+            landingEpochSeconds = dto.landing.toEpochSeconds(),
+            offBlockEpochSeconds = dto.offBlock.toEpochSeconds(),
+            onBlockEpochSeconds = dto.onBlock.toEpochSeconds(),
+            flightTime = dto.flightTime?.takeIf { text -> text.isNotBlank() },
+            blockTime = dto.blockTime?.takeIf { text -> text.isNotBlank() },
+            callsign = dto.callsign?.takeIf { text -> text.isNotBlank() },
+            landings = dto.landings,
+            hasTrack = dto.hasTrack,
         )
     },
 )

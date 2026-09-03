@@ -104,6 +104,8 @@ Fault injection, for exercising a client's unhappy paths:
   GET /enroute/v1/debug/weather?m=loading   the "downloading" flag set
   GET /enroute/v1/debug/vacs?m=none         library reachable but empty
   GET /enroute/v1/debug/vacs?m=unavailable  library could not be reached
+  GET /enroute/v1/debug/log?s=Idle          force a flight detector state
+  GET /enroute/v1/debug/log?m=empty         an empty logbook
   GET /enroute/v1/debug/reset               back to normal
 `);
     process.exit(0);
@@ -250,6 +252,9 @@ const state = {
     vacRev: 1,
     vacsAbsent: false,
     vacsUnavailable: false,
+    logRev: 1,
+    logState: null,
+    logEmpty: false,
     startedAt: Date.now(),
 };
 
@@ -871,6 +876,85 @@ function vacDocument() {
     };
 }
 
+// ---------------------------------------------------------------------------
+// Flight log
+//
+// Entries chosen for the shapes a client is most likely to get wrong: a flight still
+// running with no landing time, one that landed away from an ICAO field, one with no
+// times at all, and enough of them to trip the "older flights not sent" line.
+
+const LOG_FIXTURES = [
+    {
+        id: '7f1c2d90-0000-4000-8000-000000000001',
+        dep: 'EDTF', arr: 'EDTL',
+        hoursAgo: 2, durationMinutes: 47, cs: 'D-EABC', ldg: 1, track: true,
+    },
+    {
+        // Landed away from an ICAO field: the arrival is genuinely unknown, and a
+        // client must show a placeholder rather than an empty gap.
+        id: '7f1c2d90-0000-4000-8000-000000000002',
+        dep: 'EDTF', arr: null,
+        hoursAgo: 26, durationMinutes: 95, cs: 'D-EABC', ldg: 3, track: false,
+    },
+    {
+        // Still in the air: no landing time, and therefore no duration.
+        id: '7f1c2d90-0000-4000-8000-000000000003',
+        dep: 'EDDS', arr: null,
+        hoursAgo: 0.4, durationMinutes: null, cs: 'D-EFGH', ldg: 0, track: true,
+    },
+    {
+        // No times at all. The phone allows a hand-written entry, and a client that
+        // assumes a start time crashes on this one.
+        id: '7f1c2d90-0000-4000-8000-000000000004',
+        dep: 'EDNY', arr: 'EDMO',
+        hoursAgo: null, durationMinutes: null, cs: null, ldg: 1, track: false,
+    },
+];
+
+function isoMinus(hours) {
+    return new Date(Date.now() - hours * 3600 * 1000).toISOString().replace(/\.\d+Z$/, 'Z');
+}
+
+function hoursMinutes(minutes) {
+    return Math.floor(minutes / 60) + ':' + String(minutes % 60).padStart(2, '0');
+}
+
+function flightLogDocument() {
+    const entries = state.logEmpty ? [] : LOG_FIXTURES.map((fixture) => {
+        const entry = { id: fixture.id, ldg: fixture.ldg };
+        if (fixture.dep) { entry.dep = fixture.dep; }
+        if (fixture.arr) { entry.arr = fixture.arr; }
+        if (fixture.hoursAgo !== null) {
+            entry.start = isoMinus(fixture.hoursAgo);
+            entry.off = isoMinus(fixture.hoursAgo + 0.2);
+            if (fixture.durationMinutes !== null) {
+                entry.land = isoMinus(fixture.hoursAgo - fixture.durationMinutes / 60);
+                entry.on = isoMinus(fixture.hoursAgo - fixture.durationMinutes / 60 - 0.15);
+                entry.ft = hoursMinutes(fixture.durationMinutes);
+                entry.bt = hoursMinutes(fixture.durationMinutes + 21);
+            }
+        }
+        if (fixture.cs) { entry.cs = fixture.cs; }
+        if (fixture.track) { entry.track = true; }
+        return entry;
+    });
+
+    return {
+        v: 1,
+        sid: state.sid,
+        logRev: state.logRev,
+        // Follows the simulated flight unless forced: the mock is always flying, so
+        // Idle would contradict the navigation frame it publishes in the same second.
+        state: state.logState ?? 'InFlight',
+        recording: true,
+        // Deliberately larger than the fixture count, so the "older flights not sent"
+        // line is exercised without shipping forty fixtures.
+        n: state.logEmpty ? 0 : 57,
+        flights: entries,
+        dropped: state.logEmpty ? 0 : 57 - entries.length,
+    };
+}
+
 const server = http.createServer((req, res) => {
     const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
 
@@ -964,6 +1048,13 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    if (path === '/enroute/v1/log') {
+        const etag = `W/"${state.logRev}"`;
+        if (req.headers['if-none-match'] === etag) { res.writeHead(304).end(); return; }
+        sendJson(res, flightLogDocument(), etag);
+        return;
+    }
+
     // Fault injection
     if (path === '/enroute/v1/debug/status') {
         const s = url.searchParams.get('s');
@@ -1016,6 +1107,15 @@ const server = http.createServer((req, res) => {
         state.vacsAbsent = mode === 'none';
         state.vacsUnavailable = mode === 'unavailable';
         state.vacRev++;
+        res.writeHead(204).end();
+        return;
+    }
+
+    if (path === '/enroute/v1/debug/log') {
+        const forced = url.searchParams.get('s');
+        state.logState = forced && forced !== '' ? forced : null;
+        state.logEmpty = url.searchParams.get('m') === 'empty';
+        state.logRev++;
         res.writeHead(204).end();
         return;
     }

@@ -270,3 +270,33 @@ data class VacDto(
     /** [west, south, east, north]. */
     @SerialName("bbox") val bounds: List<Double> = emptyList(),
 )
+
+@Serializable
+data class FlightLogDto(
+    @SerialName("v") val version: Int = 0,
+    @SerialName("sid") val sessionId: Long = 0,
+    @SerialName("logRev") val logRevision: Long = 0,
+    @SerialName("state") val state: String? = null,
+    @SerialName("recording") val recording: Boolean = false,
+    @SerialName("n") val total: Int = 0,
+    @SerialName("flights") val flights: List<FlightEntryDto> = emptyList(),
+    @SerialName("dropped") val dropped: Int = 0,
+)
+
+@Serializable
+data class FlightEntryDto(
+    @SerialName("id") val id: String = "",
+    @SerialName("dep") val departure: String? = null,
+    @SerialName("arr") val arrival: String? = null,
+    /** ISO 8601 UTC. Any of the four may be absent. */
+    @SerialName("start") val start: String? = null,
+    @SerialName("land") val landing: String? = null,
+    @SerialName("off") val offBlock: String? = null,
+    @SerialName("on") val onBlock: String? = null,
+    /** The phone's own H:MM strings. */
+    @SerialName("ft") val flightTime: String? = null,
+    @SerialName("bt") val blockTime: String? = null,
+    @SerialName("cs") val callsign: String? = null,
+    @SerialName("ldg") val landings: Int = 0,
+    @SerialName("track") val hasTrack: Boolean = false,
+)
