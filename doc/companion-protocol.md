@@ -55,6 +55,12 @@ Five counters carry all cache coherency:
 Every navigation frame repeats `routeRev`. That one field is the whole caching protocol: a client
 caches the route document keyed on `(sid, routeRev)` and refetches when either changes.
 
+**Refetch the capability document at the same moment.** It is rebuilt in lockstep with the route
+document, so a changed `routeRev` is also the only signal that its contents may have moved. A client
+that fetches it once and keeps it can miss a whole capability: connecting in the fraction of a second
+before the app first publishes its map revision leaves such a client believing, for the rest of the
+session, that no map is on offer.
+
 ## Documents
 
 ### Capability document
