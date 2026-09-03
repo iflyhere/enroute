@@ -22,6 +22,7 @@ package de.akaflieg_freiburg.enroute.wear.transport.http
 import de.akaflieg_freiburg.enroute.wear.data.WireJson
 import de.akaflieg_freiburg.enroute.wear.data.dto.HelloDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NavFrameDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.NotamBoardDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.RouteDto
 import de.akaflieg_freiburg.enroute.wear.data.toDomain
 import de.akaflieg_freiburg.enroute.wear.transport.FailureReason
@@ -103,6 +104,11 @@ class HttpNavTransport(
 
         var knownRoute: Pair<Long, Long>? = null   // session id to route revision
         var navETag: String? = null
+        var notamETag: String? = null
+
+        // Zero, not "now", so the first pass fetches NOTAMs instead of leaving the
+        // screen empty for a minute after connecting.
+        var notamsFetchedAt = 0L
 
         while (true) {
             try {
@@ -123,6 +129,25 @@ class HttpNavTransport(
                             emit(TransportEvent.RouteUpdate(route))
                             knownRoute = wanted
                         }
+                    }
+                }
+
+                // NOTAMs are on their own slow beat, and deliberately not tied to the
+                // nav revision: they change when the phone downloads data, a few times
+                // a day, not once a second. Polling them at the nav rate would cost a
+                // radio wake and a few kilobytes every second for data that is hours
+                // old. A 304 is the normal answer here.
+                val now = System.currentTimeMillis()
+                if (now - notamsFetchedAt >= NOTAM_PERIOD_MS) {
+                    notamsFetchedAt = now
+                    val notams = request(NOTAMS, ifNoneMatch = notamETag)
+                    if (notams != null) {
+                        notamETag = notams.etag
+                        emit(
+                            TransportEvent.NotamUpdate(
+                                WireJson.json.decodeFromString<NotamBoardDto>(notams.body).toDomain(),
+                            ),
+                        )
                     }
                 }
             } catch (cancelled: CancellationException) {
@@ -183,6 +208,12 @@ class HttpNavTransport(
         const val HELLO = "/hello"
         const val NAV = "/nav"
         const val ROUTE = "/route"
+        const val NOTAMS = "/notams"
+
+        // The phone rebuilds its NOTAM document every five minutes at the slowest, so
+        // a minute here means a client is never more than about a minute behind while
+        // costing one request per minute.
+        const val NOTAM_PERIOD_MS = 60_000L
         const val CONNECT_TIMEOUT_MS = 3_000
         const val READ_TIMEOUT_MS = 5_000
     }

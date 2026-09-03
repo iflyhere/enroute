@@ -21,6 +21,7 @@ package de.akaflieg_freiburg.enroute.wear.data
 
 import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
 import de.akaflieg_freiburg.enroute.wear.domain.NavFrame
+import de.akaflieg_freiburg.enroute.wear.domain.NotamBoard
 import de.akaflieg_freiburg.enroute.wear.transport.Backoff
 import de.akaflieg_freiburg.enroute.wear.transport.FailureReason
 import de.akaflieg_freiburg.enroute.wear.transport.NavTransport
@@ -57,6 +58,12 @@ data class SessionState(
     val peer: PeerInfo? = null,
     val frame: NavFrame? = null,
     val route: FlightRoute? = null,
+    /**
+     * Last NOTAM board received, kept across a reconnect on purpose. NOTAMs age in
+     * hours, so the ones from a minute ago are still the right answer while the link
+     * is down -- and a blank list would read as "nothing to report".
+     */
+    val notams: NotamBoard? = null,
 )
 
 class NavRepository(
@@ -123,6 +130,9 @@ class NavRepository(
 
                 is TransportEvent.RouteUpdate ->
                     current.copy(route = event.route)
+
+                is TransportEvent.NotamUpdate ->
+                    current.copy(notams = event.notams)
 
                 is TransportEvent.Failed ->
                     current.copy(connection = ConnectionState.Retrying(event.reason, 0))
