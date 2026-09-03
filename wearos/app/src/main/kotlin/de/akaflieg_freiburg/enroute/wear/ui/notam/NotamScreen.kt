@@ -73,7 +73,9 @@ fun NotamScreen(
     listState: ScalingLazyListState,
     modifier: Modifier = Modifier,
 ) {
-    // Keyed on the NOTAM number, which the protocol guarantees is unique, so an entry
+    // Keyed on the NOTAM number alone, deliberately unlike the list keys below: the
+    // same NOTAM listed under two waypoints is one NOTAM, so opening it in one place
+    // opens it in the other. And because it is the number and not a position, an entry
     // the pilot opened stays open when the board is refetched a minute later.
     val expanded = remember { mutableStateMapOf<String, Boolean>() }
 
@@ -110,7 +112,7 @@ fun NotamScreen(
 
                 when (group.knowledge) {
                     NotamKnowledge.Listed, NotamKnowledge.Incomplete -> {
-                        items(group.notams, key = { it.number }) { notam ->
+                        items(group.notams, key = { notamItemKey(group, it) }) { notam ->
                             NotamCard(
                                 notam = notam,
                                 expanded = expanded[notam.number] == true,
@@ -296,6 +298,18 @@ private fun FilterNote(board: NotamBoard) {
         }
     }
 }
+
+/**
+ * List key for one NOTAM in one group.
+ *
+ * The group index has to be in it. A NOTAM whose area covers two route waypoints is
+ * listed under both -- which is normal, not exotic -- and a lazy list keyed on the
+ * number alone then throws "Key was already used" the moment both entries are measured
+ * in the same pass. That is a crash in flight, and it took a mock fixture with a wide
+ * restricted area to produce it.
+ */
+internal fun notamItemKey(group: NotamGroup, notam: Notam): String =
+    group.waypointIndex.toString() + "-" + notam.number
 
 /** Null for the generic category, where a label would say nothing. */
 private fun categoryLabel(category: NotamCategory): String? = when (category) {
