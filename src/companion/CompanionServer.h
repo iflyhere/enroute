@@ -163,6 +163,9 @@ namespace Companion
          */
         [[nodiscard]] QByteArray navDocumentCompact() const {return m_navDocumentCompact;}
 
+        /*! \brief Encoded NOTAM document, or empty while the feature is off */
+        [[nodiscard]] QByteArray notamDocument() const {return m_notamDocument;}
+
         /*! \brief Current document revisions */
         [[nodiscard]] Companion::Revisions revisions() const {return m_revisions;}
 
@@ -202,6 +205,9 @@ namespace Companion
         /*! \brief Emitted after navDocument() has been updated */
         void navDocumentChanged();
 
+        /*! \brief Emitted after notamDocument() has been updated */
+        void notamDocumentChanged();
+
 
     private slots:
         // Marks the navigation frame as needing re-encoding. Cheap on purpose: the
@@ -215,6 +221,13 @@ namespace Companion
 
         void publishNav();
         void publishRoute();
+
+        // Rebuilds the NOTAM document and, if its content actually moved,
+        // increments the NOTAM revision. Cheap enough to call speculatively,
+        // which is why there is no dirty flag for it.
+        void publishNotams();
+
+        void markNotamsDirty();
 
         // Creates or destroys the transport in response to the settings.
         void updateTransport();
@@ -236,12 +249,26 @@ namespace Companion
         QByteArray m_routeDocument;
         QByteArray m_navDocument;
         QByteArray m_navDocumentCompact;
+        QByteArray m_notamDocument;
+
+        // The NOTAM document with its revision member left out, kept so that a
+        // rebuild can tell whether anything changed. An exact comparison and not
+        // a hash: a collision would mean the watch keeps showing NOTAMs that have
+        // been superseded, and that is not a trade worth a few kilobytes.
+        QByteArray m_notamFingerprint;
 
         bool m_navDirty {false};
 
         QTimer m_navTimer;
         QTimer m_navKeepAliveTimer;
         QTimer m_routeTimer;
+
+        // NOTAMs are refreshed on a slow beat as well as on change, because
+        // whether a NOTAM is current depends on the wall clock and not only on
+        // the data: the app's own section headings move a NOTAM from "Next 24h"
+        // to "Current" with no download involved.
+        QTimer m_notamTimer;
+        QTimer m_notamCoalesceTimer;
 
         // Held for as long as the feature is enabled. RemainingRouteInfo has no
         // notification signal, so it can only be watched as a bindable property.

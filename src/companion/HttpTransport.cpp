@@ -318,6 +318,11 @@ bool Companion::HttpTransport::handleRequest(const QHttpServerRequest& request,
         respond(compact ? m_server->navDocumentCompact() : m_server->navDocument(), revisions.nav);
         return true;
     }
+    if (endpoint == u"/notams"_s)
+    {
+        respond(m_server->notamDocument(), revisions.notam);
+        return true;
+    }
     if (endpoint == u"/route.geojson"_s)
     {
         // The app's own full-fidelity route, for debugging and desktop clients.

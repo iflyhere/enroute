@@ -69,4 +69,14 @@ namespace Companion
      */
     constexpr int coordinatePrecision = 5;
 
+    /*! \brief Upper bound on the number of NOTAMs in one document
+     *
+     *  A route that crosses a busy region can accumulate hundreds of NOTAMs, and
+     *  a NOTAM text runs to a few hundred characters, so an unbounded document
+     *  could reach several hundred kilobytes. The document says when it hit this
+     *  limit, so that a client can tell the pilot the list was shortened rather
+     *  than silently show a subset.
+     */
+    constexpr int maximumNotams = 60;
+
 } // namespace Companion

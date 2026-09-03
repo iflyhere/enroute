@@ -48,6 +48,9 @@ namespace Companion
 
         /*! \brief Incremented for every published navigation frame */
         quint32 nav {0};
+
+        /*! \brief Incremented whenever the NOTAM document changes */
+        quint32 notam {0};
     };
 
 
@@ -106,6 +109,28 @@ namespace Companion
          */
         [[nodiscard]] QJsonObject nav(const Companion::Revisions& revisions,
                                       bool withFormattedStrings = true);
+
+        /*! \brief NOTAMs along the route
+         *
+         *  Mirrors what the app already computes and shows: for every waypoint of the
+         *  route, NOTAMProvider::notams() restricted to that waypoint. No new
+         *  relevance logic is invented here, because that would be a safety claim the
+         *  app itself does not make.
+         *
+         *  The filter the app applies is horizontal only, a fixed radius around a
+         *  waypoint, and it does not use the flight level band that a NOTAM carries.
+         *  The document says so, so that a client cannot present this as more than it
+         *  is.
+         *
+         *  @param revisions Current document revisions. Unlike the other
+         *  encoders, this one does not stamp the NOTAM revision into the
+         *  document: whether that counter moved is decided by comparing two
+         *  encodings, so the caller adds it once it knows the answer.
+         *
+         *  @returns The document described under "NOTAM document" in
+         *  doc/companion-protocol.md, without its notamRev member
+         */
+        [[nodiscard]] QJsonObject notams(const Companion::Revisions& revisions);
 
     } // namespace Snapshot
 
