@@ -118,6 +118,12 @@ namespace Companion
         // session.
         [[nodiscard]] QByteArray styleDocument(const QString& baseUrl) const;
 
+        // Appends the aviation overlay -- airspaces, aerodromes, navaids -- to a style
+        // document. The app draws those from QML rather than from its style file, so a
+        // client that renders the style alone would get a base map and no aviation
+        // data at all.
+        static void addAviationLayers(QJsonObject& style);
+
         // Where the pilot's downloaded maps actually are, from the MBTiles
         // metadata. Put into the style so that a client with no route and no
         // position opens on the map rather than on the Gulf of Guinea, which is
