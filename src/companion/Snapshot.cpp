@@ -367,6 +367,13 @@ QJsonObject Companion::Snapshot::hello(const Companion::Revisions& revisions)
     document.insert("app"_L1, QLatin1StringView(ENROUTE_VERSION_STRING));
     document.insert("sid"_L1, static_cast<qint64>(revisions.session));
     document.insert("routeRev"_L1, static_cast<qint64>(revisions.route));
+
+    // Advertised so that a client knows whether the app can serve it a map at all,
+    // and knows to fetch a fresh style when the pilot's maps change underneath it.
+    if (revisions.map != 0)
+    {
+        document.insert("mapRev"_L1, static_cast<qint64>(revisions.map));
+    }
     document.insert("navPeriodMs"_L1, 1000);
     document.insert("units"_L1, unitsObject(aircraft));
     return document;

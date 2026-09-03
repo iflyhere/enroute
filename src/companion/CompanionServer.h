@@ -33,6 +33,7 @@ namespace Companion
 {
 
     class HttpTransport;
+    class MapAssets;
 
     /*! \brief Publishes route and navigation state to companion devices
      *
@@ -166,6 +167,20 @@ namespace Companion
         /*! \brief Encoded NOTAM document, or empty while the feature is off */
         [[nodiscard]] QByteArray notamDocument() const {return m_notamDocument;}
 
+        /*! \brief The pilot's own map, for a client that renders one itself
+         *
+         *  Defined out of line, because QPointer needs a complete type and pulling
+         *  MapAssets.h in here would drag the MBTiles reader into every translation
+         *  unit that only wants to talk to this server.
+         *
+         *  Null while the feature is off. Owned here rather than by the transport,
+         *  because it holds open SQLite handles on the map files and must therefore
+         *  be created and destroyed with the session and not with a request.
+         *
+         *  @returns The map asset server, or nullptr
+         */
+        [[nodiscard]] Companion::MapAssets* mapAssets() const;
+
         /*! \brief Current document revisions */
         [[nodiscard]] Companion::Revisions revisions() const {return m_revisions;}
 
@@ -275,6 +290,7 @@ namespace Companion
         std::vector<QPropertyNotifier> m_notifiers;
 
         QPointer<Companion::HttpTransport> m_httpTransport;
+        QPointer<Companion::MapAssets> m_mapAssets;
 
         QString m_errorString;
     };

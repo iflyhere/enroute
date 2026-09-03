@@ -26,9 +26,11 @@
 #include "GlobalSettings.h"
 #include "companion/CompanionServer.h"
 #include "companion/HttpTransport.h"
+#include "companion/MapAssets.h"
 #include "companion/Protocol.h"
 #include "navigation/Navigator.h"
 #include "notam/NOTAMProvider.h"
+#include "dataManagement/DataManager.h"
 #include "positioning/PositionProvider.h"
 
 using namespace Qt::Literals::StringLiterals;
@@ -232,6 +234,12 @@ void Companion::CompanionServer::publishRoute()
 }
 
 
+Companion::MapAssets* Companion::CompanionServer::mapAssets() const
+{
+    return m_mapAssets;
+}
+
+
 void Companion::CompanionServer::publishNotams()
 {
     // The encoder leaves notamRev out, which is what makes this comparison
@@ -273,6 +281,12 @@ void Companion::CompanionServer::updateTransport()
         {
             delete m_httpTransport;
         }
+        // Before detaching, because it holds SQLite handles on every downloaded map
+        // file and there is no reason to keep those open for a disabled feature.
+        if (!m_mapAssets.isNull())
+        {
+            delete m_mapAssets;
+        }
         detachFromDataSources();
 
         m_navTimer.stop();
@@ -302,8 +316,45 @@ void Companion::CompanionServer::updateTransport()
 
     attachToDataSources();
 
+    if (m_mapAssets.isNull())
+    {
+        m_mapAssets = new Companion::MapAssets(this);
+
+        // The style's tile URLs carry this, so a client that sees it move knows the
+        // style it holds is stale. publishRoute() is what rebuilds the capability
+        // document that carries it.
+        connect(m_mapAssets, &Companion::MapAssets::revisionChanged, this, [this]()
+        {
+            m_revisions.map = m_mapAssets->revision();
+            markRouteDirty();
+        });
+
+        // Deferred to the next turn of the event loop, and this is not a detail.
+        // Reading the data manager here is the first thing in the app that
+        // constructs it, and constructing a GlobalObject while another one is being
+        // constructed trips an assertion -- the singletons are only safe to reach
+        // once startup has settled. Nothing needs the map in the first millisecond;
+        // the capability document picks the revision up when the notifier fires.
+        QTimer::singleShot(0, m_mapAssets, [this]()
+        {
+            m_mapAssets->refresh();
+
+            // The same signals GeoMapProvider watches, so that a map the pilot
+            // downloads mid-flight reaches a companion device without a restart --
+            // and so that the revision moves, which is what invalidates the
+            // client's tile cache.
+            connect(GlobalObject::dataManager()->baseMapsVector(),
+                    &DataManagement::Downloadable_Abstract::filesChanged,
+                    m_mapAssets, &Companion::MapAssets::refresh);
+            connect(GlobalObject::dataManager()->terrainMaps(),
+                    &DataManagement::Downloadable_Abstract::filesChanged,
+                    m_mapAssets, &Companion::MapAssets::refresh);
+        });
+    }
+
     // Encode once up front, so that a client connecting immediately gets data
-    // rather than an empty document.
+    // rather than an empty document. The map revision is not in this first one,
+    // because reading the map files is deferred; it arrives with the next.
     publishRoute();
     m_navDirty = true;
     publishNav();
