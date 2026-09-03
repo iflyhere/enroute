@@ -42,7 +42,7 @@ only.
 
 ## Revisions
 
-Eight counters carry all cache coherency:
+Nine counters carry all cache coherency:
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -53,6 +53,7 @@ Eight counters carry all cache coherency:
 | `weatherRev` | `quint32` | Incremented whenever the weather document's content changes, derived the same way as `notamRev`. Appears only in the weather document. |
 | `vacRev` | `quint32` | Incremented whenever the set of approach charts changes, derived the same way as `notamRev`. Appears only in the approach chart document. |
 | `logRev` | `quint32` | Incremented whenever the flight log document changes, derived the same way as `notamRev`. Appears only in the flight log document. |
+| `trafficRev` | `quint32` | Incremented on **every** published traffic frame, unlike the counters above, which move only when their content changes. That is deliberate: a client has to be able to tell "no traffic" from "no data", and the only thing separating them is that frames keep arriving. |
 | `mapRev` | `quint32` | Changes whenever the set of downloaded map files changes. Appears in the capability document, and in every tile URL. A client that sees it move must refetch the style: the URLs in the one it holds no longer resolve, which is what stops its tile cache from outliving the maps it was filled from. |
 
 Every navigation frame repeats `routeRev`. That one field is the whole caching protocol: a client
@@ -420,6 +421,53 @@ reach the encoder, so they are not on the wire. A client picks its own and shoul
 app's intent: green airborne, blue for a landing being confirmed, amber for a takeoff being
 confirmed.
 
+### Traffic document
+
+What the pilot's traffic receiver is reporting, plus the receiver's own state.
+
+```
+{
+  "v": 1,
+  "sid": 2748219411,
+  "trafficRev": 918,
+  "rx": true,
+  "status": "Receiving traffic data via Bluetooth.",
+  "warning": { "lvl": 2, "type": 2, "d": "Traffic, 2 o'clock, same altitude",
+               "hd": 900, "vd": 30 },
+  "tfc": [
+    { "id": "DD4711", "cs": "D-KABC",
+      "lvl": 0, "col": "green", "t": "Glider",
+      "hd": 2400, "vd": 220,
+      "d": "Glider, +722 ft relative", "rel": true,
+      "c": [7.8427, 48.0008], "trk": 220, "unc": 60 }
+  ],
+  "noBearing": { "id": "DD9999", "lvl": 1, "col": "yellow", "t": "Aircraft",
+                 "hd": 3100, "vd": -90, "rel": true,
+                 "d": "Traffic nearby, bearing unknown" }
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `rx` | Whether a receiver's heartbeat is reaching the app. **This is the field that carries the weight.** An empty `tfc` array means one of two entirely different things — nothing is flying nearby, or nothing is listening — and a display that shows an empty sky without saying which is lying by omission. |
+| `status` | The app's own sentence about the receiver, which names what it tried. |
+| `err`, `selfTest` | The receiver's runtime and self-test errors, when it reports any. Omitted otherwise. |
+| `warning` | The app's current collision warning, present only while its alarm level is above zero. Its level and type are the receiver's. |
+| `tfc[].lvl` | Alarm level, 0 to 3, as the receiver reports it. |
+| `tfc[].col` | The app's **own** colour for that level, night mode included. A client must not derive one from `lvl`: the app maps three levels onto its palette twice over, and a second mapping would show a different colour for the same warning. |
+| `tfc[].t` | Aircraft type, as the enum name: `Glider`, `Aircraft`, `Jet`, `Copter`, `Balloon`, `Drone`, `Paraglider`, `Skydiver`, `TowPlane`, `StaticObstacle`, `Airship`, `HangGlider` or `unknown`. |
+| `tfc[].hd`, `tfc[].vd` | Horizontal distance in metres, and height difference in metres — positive above the aircraft. SI rather than formatted, unlike everything else on this link, because the app composes no separation line of its own to copy. A client formats these itself. |
+| `tfc[].d` | The app's own composed line about the target. |
+| `tfc[].rel` | The app's own relevance flag. Not a suggestion to hide anything: it is what the app itself would emphasise. |
+| `tfc[].c` | `[longitude, latitude]`, the **extrapolated** position — the one the app draws, so that two screens do not show the same aircraft in two places. |
+| `tfc[].trk` | Extrapolated true track in degrees. |
+| `tfc[].unc` | Position uncertainty radius in metres. |
+| `noBearing` | A target whose range the receiver knows but whose bearing it does not. FLARM reports this often. It cannot go on a map, and it must not be dropped — hence a member of its own that no map code will read by accident. |
+
+**A stale traffic picture is worse than none.** A client must discard what it holds when the
+link drops, unlike the NOTAM and weather documents, which stay useful for hours. Ten-second-old
+traffic shown as current is the one failure this document must not enable.
+
 ## The map
 
 A companion device with its own map renderer is served everything that renderer needs, and all of
@@ -491,6 +539,7 @@ Settings.
 | `GET /enroute/v1/vacs` | approach chart document, `ETag: W/"<vacRev>"`, `304 Not Modified` when `If-None-Match` matches |
 | `GET /enroute/v1/map/vac/<name>` | the chart image named `<name>`, `image/webp`; `404` if the library has no such chart |
 | `GET /enroute/v1/log` | flight log document, `ETag: W/"<logRev>"`, `304 Not Modified` when `If-None-Match` matches |
+| `GET /enroute/v1/traffic` | traffic document, `ETag: W/"<trafficRev>"`. The counter moves every second, so a `304` here means the app stopped publishing, not that nothing changed. |
 | `GET /enroute/v1/map/…` | the pilot's own map, see below |
 | `GET /enroute/v1/route.geojson` | the app's own GeoJSON route |
 | `GET /` | a small HTML page that polls `/nav`, for development and for checking the link from a desktop browser |
@@ -512,6 +561,9 @@ still at **300 seconds**, because the chart library changes only when the pilot 
 removes a chart, which never happens in flight; that poll exists so a client which connected
 before an import still learns about it. `/enroute/v1/log` sits at **30 seconds**, which is
 fast enough for the detector's takeoff banner to feel live without being a feed.
+`/enroute/v1/traffic` is the exception to all of this and is polled **at the navigation
+rate**: it is the other thing on this link worth a second of a pilot's attention, and a
+target that moved two seconds ago is a target drawn in the wrong place.
 
 Polling is deliberately preferred over a streamed response: a watch radio wakes for each poll either
 way, a poll is its own reconnect logic, and `QHttpServerResponder`'s lifetime ends when the request

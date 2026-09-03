@@ -23,6 +23,7 @@ import de.akaflieg_freiburg.enroute.wear.ui.BezelAction
 import de.akaflieg_freiburg.enroute.wear.ui.ChartMode
 import de.akaflieg_freiburg.enroute.wear.ui.WearPage
 import de.akaflieg_freiburg.enroute.wear.ui.movePage
+import de.akaflieg_freiburg.enroute.wear.ui.orderedPages
 import de.akaflieg_freiburg.enroute.wear.ui.visiblePages
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -83,6 +84,36 @@ class PageLayoutTest {
     }
 
     @Test
+    fun `a hidden page is still listed for the settings screen`() {
+        // The bug this exists to stop: the settings list was built from the visible
+        // pages, so switching one off removed the row that could switch it back on.
+        // A page could be hidden exactly once, permanently.
+        val hidden = setOf("notam", "weather")
+        val listed = orderedPages(emptyList())
+        assertTrue(WearPage.Notam in listed)
+        assertTrue(WearPage.Weather in listed)
+        assertTrue(WearPage.Notam !in visiblePages(emptyList(), hidden))
+    }
+
+    @Test
+    fun `every page can be reached from the settings list whatever is hidden`() {
+        val everythingHidden = WearPage.entries.map { page -> page.id }.toSet()
+        assertEquals(WearPage.entries.size, orderedPages(emptyList()).size)
+        assertEquals(WearPage.entries.toSet(), orderedPages(emptyList()).toSet())
+        // ...even when the pager itself is down to one page.
+        assertEquals(listOf(WearPage.Settings), visiblePages(emptyList(), everythingHidden))
+    }
+
+    @Test
+    fun `moving counts steps past a hidden neighbour`() {
+        // Moves are applied to the full order. Applying them to the visible list would
+        // make a page jump two places the next time a hidden neighbour came back.
+        val all = orderedPages(emptyList())
+        val moved = movePage(all, WearPage.Traffic, -1)
+        assertEquals(listOf("data", "traffic", "map"), moved.take(3))
+    }
+
+    @Test
     fun `settings is always present and always last`() {
         // The property the whole design rests on: hiding it, or ordering it away from
         // the end, would strand a pilot who hid everything else.
@@ -101,7 +132,10 @@ class PageLayoutTest {
     fun `moving a page down swaps it with its neighbour`() {
         val pages = visiblePages(emptyList(), emptySet())
         val moved = movePage(pages, WearPage.Data, 1)
-        assertEquals(listOf("map", "data", "notam", "weather", "log", "settings"), moved)
+        assertEquals(
+            listOf("map", "data", "traffic", "notam", "weather", "log", "settings"),
+            moved,
+        )
     }
 
     @Test
@@ -125,7 +159,7 @@ class PageLayoutTest {
         val stored = movePage(pages, WearPage.Weather, -1)
         val again = visiblePages(stored, emptySet())
         assertEquals(
-            listOf(WearPage.Data, WearPage.Map, WearPage.Weather, WearPage.Notam),
+            listOf(WearPage.Data, WearPage.Map, WearPage.Traffic, WearPage.Weather),
             again.take(4),
         )
     }

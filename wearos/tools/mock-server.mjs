@@ -106,6 +106,9 @@ Fault injection, for exercising a client's unhappy paths:
   GET /enroute/v1/debug/vacs?m=unavailable  library could not be reached
   GET /enroute/v1/debug/log?s=Idle          force a flight detector state
   GET /enroute/v1/debug/log?m=empty         an empty logbook
+  GET /enroute/v1/debug/traffic?m=silent    no receiver heartbeat
+  GET /enroute/v1/debug/traffic?m=empty     receiver present, nothing around
+  GET /enroute/v1/debug/traffic?a=2         raise every target to alarm level 2
   GET /enroute/v1/debug/reset               back to normal
 `);
     process.exit(0);
@@ -255,6 +258,10 @@ const state = {
     logRev: 1,
     logState: null,
     logEmpty: false,
+    trafficRev: 1,
+    trafficSilent: false,
+    trafficEmpty: false,
+    trafficAlarm: 0,
     startedAt: Date.now(),
 };
 
@@ -955,6 +962,114 @@ function flightLogDocument() {
     };
 }
 
+// ---------------------------------------------------------------------------
+// Traffic
+//
+// Targets are placed relative to the simulated aircraft, so they move with it and a
+// client's map can be checked without an aeroplane. The set covers the shapes that
+// break a display: an alarm-level target, one above and one below, one with no
+// callsign, and one whose bearing the receiver does not know at all.
+
+const TRAFFIC_FIXTURES = [
+    { id: 'DD4711', cs: 'D-KABC', t: 'Glider', bearing: 40, rangeM: 2400, vd: 220, lvl: 0 },
+    { id: 'DD0815', cs: 'D-EFGH', t: 'Aircraft', bearing: 210, rangeM: 5200, vd: -430, lvl: 0 },
+    // No callsign: the receiver has an id and nothing else, which is the common case
+    // for a Mode-S target.
+    { id: 'A1B2C3', cs: null, t: 'Jet', bearing: 315, rangeM: 9000, vd: 1500, lvl: 0 },
+    { id: 'DD2222', cs: 'D-1234', t: 'Glider', bearing: 95, rangeM: 900, vd: 30, lvl: 2 },
+];
+
+/** The app's own colours for the three alarm levels, day mode. */
+function alarmColour(level) {
+    if (level === 0) { return 'green'; }
+    if (level === 1) { return 'yellow'; }
+    return 'red';
+}
+
+function offsetFrom(origin, bearingDeg, distanceM) {
+    const bearing = bearingDeg * Math.PI / 180;
+    const north = distanceM * Math.cos(bearing);
+    const east = distanceM * Math.sin(bearing);
+    return {
+        lat: origin.lat + north / 111320.0,
+        lon: origin.lon + east / (111320.0 * Math.max(0.01, Math.cos(origin.lat * Math.PI / 180))),
+    };
+}
+
+function trafficDocument() {
+    state.trafficRev++;
+
+    if (state.trafficSilent) {
+        return {
+            v: 1, sid: state.sid, trafficRev: state.trafficRev,
+            rx: false,
+            status: 'Not receiving traffic receiver heartbeat through any of the '
+                + 'configured data connections.',
+            tfc: [],
+        };
+    }
+
+    const flight = flightState();
+    const here = flight ? flight.position : null;
+    const document = {
+        v: 1, sid: state.sid, trafficRev: state.trafficRev,
+        rx: true,
+        status: 'Receiving traffic data from a mock receiver.',
+        tfc: [],
+    };
+    if (!here || state.trafficEmpty) {
+        return document;
+    }
+
+    document.tfc = TRAFFIC_FIXTURES.map((fixture) => {
+        const level = fixture.lvl > 0 ? Math.max(fixture.lvl, state.trafficAlarm) : state.trafficAlarm;
+        const at = offsetFrom(here, fixture.bearing + (flight.track ?? 0), fixture.rangeM);
+        const target = {
+            lvl: level,
+            col: alarmColour(level),
+            t: fixture.t,
+            hd: fixture.rangeM,
+            vd: fixture.vd,
+            rel: fixture.rangeM < 6000,
+            c: [at.lon, at.lat],
+            // Flying roughly towards the aircraft, so the direction ticks point
+            // somewhere meaningful rather than all the same way.
+            trk: (fixture.bearing + 180) % 360,
+            unc: 60,
+            d: fixture.t + ', ' + (fixture.vd >= 0 ? '+' : '') + Math.round(fixture.vd / 0.3048)
+                + ' ft relative',
+        };
+        if (fixture.id) { target.id = fixture.id; }
+        if (fixture.cs) { target.cs = fixture.cs; }
+        return target;
+    });
+
+    // Range without bearing. FLARM reports this often, it cannot go on a map, and a
+    // client that silently drops it hides traffic.
+    document.noBearing = {
+        id: 'DD9999',
+        lvl: 1,
+        col: alarmColour(1),
+        t: 'Aircraft',
+        hd: 3100,
+        vd: -90,
+        rel: true,
+        d: 'Traffic nearby, bearing unknown',
+    };
+
+    if (state.trafficAlarm > 0) {
+        document.warning = {
+            lvl: state.trafficAlarm,
+            type: 2,
+            d: 'Traffic, 2 o\'clock, same altitude',
+            hd: 900,
+            vd: 30,
+        };
+    }
+
+    return document;
+}
+
 const server = http.createServer((req, res) => {
     const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
 
@@ -1048,6 +1163,15 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    if (path === '/enroute/v1/traffic') {
+        // Encoded per request rather than cached: the revision moves every time, the
+        // way the phone's does, so a client's ETag never matches and the frame is
+        // always fresh. That is deliberate for traffic and wrong for everything else.
+        const body = trafficDocument();
+        sendJson(res, body, `W/"${body.trafficRev}"`);
+        return;
+    }
+
     if (path === '/enroute/v1/log') {
         const etag = `W/"${state.logRev}"`;
         if (req.headers['if-none-match'] === etag) { res.writeHead(304).end(); return; }
@@ -1116,6 +1240,15 @@ const server = http.createServer((req, res) => {
         state.logState = forced && forced !== '' ? forced : null;
         state.logEmpty = url.searchParams.get('m') === 'empty';
         state.logRev++;
+        res.writeHead(204).end();
+        return;
+    }
+
+    if (path === '/enroute/v1/debug/traffic') {
+        const mode = url.searchParams.get('m');
+        state.trafficSilent = mode === 'silent';
+        state.trafficEmpty = mode === 'empty';
+        state.trafficAlarm = Number(url.searchParams.get('a') ?? 0) || 0;
         res.writeHead(204).end();
         return;
     }

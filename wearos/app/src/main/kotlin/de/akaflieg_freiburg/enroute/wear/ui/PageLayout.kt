@@ -29,6 +29,7 @@ package de.akaflieg_freiburg.enroute.wear.ui
 enum class WearPage(val id: String, val label: String) {
     Data("data", "Data"),
     Map("map", "Map"),
+    Traffic("traffic", "Traffic"),
     Notam("notam", "NOTAM"),
     Weather("weather", "Weather"),
     Log("log", "Log"),
@@ -52,7 +53,11 @@ enum class WearPage(val id: String, val label: String) {
 }
 
 /**
- * Turns a stored order and a stored hidden set into the pages the pager will show.
+ * Every page in the pilot's order, hidden ones included.
+ *
+ * This is what the settings screen lists. It has to be every page: a hidden page that
+ * vanished from the settings list too would be a page that could be switched off and
+ * never back on, which is exactly what happened the first time this was written.
  *
  * Every rule here exists because the stored value and the code can disagree:
  *
@@ -62,11 +67,9 @@ enum class WearPage(val id: String, val label: String) {
  *    page added in a new version appears instead of being invisible until the pilot
  *    resets their settings;
  *  - a duplicate is kept once;
- *  - Settings is forced last whatever the stored order says;
- *  - and the result is never empty, because a pager with no pages is a black screen
- *    with no way out.
+ *  - and Settings is forced last whatever the stored order says.
  */
-fun visiblePages(order: List<String>, hidden: Set<String>): List<WearPage> {
+fun orderedPages(order: List<String>): List<WearPage> {
     val seen = LinkedHashSet<WearPage>()
     for (id in order) {
         WearPage.byId(id)?.let { page -> seen.add(page) }
@@ -76,14 +79,20 @@ fun visiblePages(order: List<String>, hidden: Set<String>): List<WearPage> {
         seen.add(page)
     }
 
-    val result = seen
-        .filter { page -> page == WearPage.Settings || page.id !in hidden }
-        .toMutableList()
-
+    val result = seen.toMutableList()
     result.remove(WearPage.Settings)
     result.add(WearPage.Settings)
     return result
 }
+
+/**
+ * The pages the pager will show.
+ *
+ * [orderedPages] without the hidden ones. Settings survives whatever the hidden set
+ * says, so the result is never empty and there is always a way back.
+ */
+fun visiblePages(order: List<String>, hidden: Set<String>): List<WearPage> =
+    orderedPages(order).filter { page -> page == WearPage.Settings || page.id !in hidden }
 
 /**
  * Moves one page one step, within the pages that may move.

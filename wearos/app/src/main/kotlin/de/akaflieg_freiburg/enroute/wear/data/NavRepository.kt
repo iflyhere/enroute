@@ -23,6 +23,7 @@ import de.akaflieg_freiburg.enroute.wear.domain.FlightLogBoard
 import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
 import de.akaflieg_freiburg.enroute.wear.domain.NavFrame
 import de.akaflieg_freiburg.enroute.wear.domain.NotamBoard
+import de.akaflieg_freiburg.enroute.wear.domain.TrafficBoard
 import de.akaflieg_freiburg.enroute.wear.domain.VacBoard
 import de.akaflieg_freiburg.enroute.wear.domain.WeatherBoard
 import de.akaflieg_freiburg.enroute.wear.transport.Backoff
@@ -80,6 +81,15 @@ data class SessionState(
     val vacs: VacBoard? = null,
     /** The logbook as last reported. Read-only on this side. */
     val flightLog: FlightLogBoard? = null,
+    /**
+     * Traffic as last reported.
+     *
+     * Deliberately **not** kept across a reconnect, unlike the NOTAM and weather
+     * boards. Those age in hours; a traffic picture ages in seconds, and showing a
+     * ten-second-old aircraft as though it were current is the one failure this
+     * screen must not have.
+     */
+    val traffic: TrafficBoard? = null,
 )
 
 class NavRepository(
@@ -159,8 +169,17 @@ class NavRepository(
                 is TransportEvent.FlightLogUpdate ->
                     current.copy(flightLog = event.log)
 
+                is TransportEvent.TrafficUpdate ->
+                    current.copy(traffic = event.traffic)
+
+                // Traffic is dropped here and nowhere else. Every other board stays,
+                // because its content is still the best answer available; a traffic
+                // picture from before the link dropped is not an answer at all.
                 is TransportEvent.Failed ->
-                    current.copy(connection = ConnectionState.Retrying(event.reason, 0))
+                    current.copy(
+                        connection = ConnectionState.Retrying(event.reason, 0),
+                        traffic = null,
+                    )
             }
         }
     }
