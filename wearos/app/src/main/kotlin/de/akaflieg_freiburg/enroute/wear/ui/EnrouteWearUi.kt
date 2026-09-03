@@ -19,11 +19,14 @@
 
 package de.akaflieg_freiburg.enroute.wear.ui
 
+import android.util.Log
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.compose.runtime.Composable
@@ -38,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.focusable
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import de.akaflieg_freiburg.enroute.wear.data.Discovery
 import de.akaflieg_freiburg.enroute.wear.data.DiscoveredPhone
@@ -164,7 +168,13 @@ private fun MainPages(
     // A picker or a rotary modifier is inert unless something in the hierarchy holds
     // focus. This is the trap every Wear developer hits once.
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    // Re-taken on every page change, not once at the start. Swiping to the map attaches
+    // a MapView, and a View that lands in the hierarchy can take focus with it; asking
+    // for it back afterwards is what keeps the bezel working on every page.
+    LaunchedEffect(pagerState.currentPage) {
+        runCatching { focusRequester.requestFocus() }
+    }
 
     // A bezel emits many small events per detent, so they are accumulated and only a
     // full threshold moves a step. Otherwise one flick runs through the whole range.
@@ -175,6 +185,11 @@ private fun MainPages(
         modifier = Modifier
             .fillMaxSize()
             .onRotaryScrollEvent { event ->
+                // Logged because a bezel that does nothing gives no clue whether the
+                // events are missing or the handling is, and the two need opposite
+                // fixes. This line is what tells them apart on a real watch.
+                Log.d(TAG, "rotary " + event.verticalScrollPixels +
+                    " on page " + pagerState.currentPage)
                 when (pagerState.currentPage) {
                     PAGE_MAP -> {
                         rotaryAccumulator += event.verticalScrollPixels
@@ -201,7 +216,32 @@ private fun MainPages(
                 }
             }
             .focusRequester(focusRequester)
-            .focusable(),
+            .focusable()
+            .pointerInput(Unit) {
+                // A vertical drag zooms the map. Not a duplicate of the bezel: half
+                // the Wear OS watches ever sold have no rotary input, and this one
+                // gesture works on all of them, with one finger, through gloves, and
+                // without looking. The pager keeps horizontal drags, so the two do not
+                // collide.
+                var dragAccumulator = 0f
+                detectVerticalDragGestures(
+                    onDragStart = { dragAccumulator = 0f },
+                ) { change, dragAmount ->
+                    if (pagerState.currentPage != PAGE_MAP) {
+                        return@detectVerticalDragGestures
+                    }
+                    change.consume()
+                    dragAccumulator += dragAmount
+                    while (dragAccumulator <= -DRAG_THRESHOLD) {
+                        dragAccumulator += DRAG_THRESHOLD
+                        zoom = ZoomLevel.stepped(zoom, 1)
+                    }
+                    while (dragAccumulator >= DRAG_THRESHOLD) {
+                        dragAccumulator -= DRAG_THRESHOLD
+                        zoom = ZoomLevel.stepped(zoom, -1)
+                    }
+                }
+            },
     ) { page ->
         Box(
             modifier = Modifier
@@ -257,3 +297,9 @@ private fun MainPages(
 }
 
 private const val ROTARY_THRESHOLD = 120f
+
+// Pixels of drag per zoom step. A watch face is 480 pixels across, so this gives about
+// six steps across the whole screen -- coarse enough to hit without aiming.
+private const val DRAG_THRESHOLD = 80f
+
+private const val TAG = "EnrouteWear"

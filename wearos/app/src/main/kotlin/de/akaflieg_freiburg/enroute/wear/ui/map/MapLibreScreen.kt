@@ -20,6 +20,7 @@
 package de.akaflieg_freiburg.enroute.wear.ui.map
 
 import android.annotation.SuppressLint
+import android.view.ViewGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -121,6 +122,16 @@ fun MapLibreScreen(
 
                 MapView(context, options).also { view ->
                     view.onCreate(null)
+
+                    // A View inside an AndroidView takes focus when it is attached,
+                    // and rotary events go to whatever holds focus. The bezel then
+                    // reaches the renderer -- which has every gesture switched off and
+                    // drops them -- instead of the handler that turns them into zoom.
+                    // This is the trap that made the bezel look dead on the map page
+                    // while it worked everywhere else.
+                    view.isFocusable = false
+                    view.isFocusableInTouchMode = false
+                    view.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
                     holder.view = view
                     view.getMapAsync { map ->
                         holder.map = map
@@ -153,13 +164,22 @@ fun MapLibreScreen(
             },
         )
 
+        // Feedback for the bezel and the drag. Without it a zoom step on a map with
+        // few features looks like nothing happened, and the pilot keeps turning.
+        Text(
+            text = ZoomLevel.label(zoom),
+            color = CockpitColors.Muted,
+            fontSize = 11.sp,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp),
+        )
+
         if (route == null || route.waypoints.isEmpty()) {
             Text(
                 text = "No route",
                 color = CockpitColors.Muted,
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 28.dp),
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 30.dp),
             )
         }
 
