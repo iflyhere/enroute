@@ -23,6 +23,7 @@ import de.akaflieg_freiburg.enroute.wear.data.WireJson
 import de.akaflieg_freiburg.enroute.wear.data.dto.HelloDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NavFrameDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NotamBoardDto
+import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
 import de.akaflieg_freiburg.enroute.wear.data.dto.RouteDto
 import de.akaflieg_freiburg.enroute.wear.data.toDomain
 import de.akaflieg_freiburg.enroute.wear.transport.FailureReason
@@ -98,6 +99,11 @@ class HttpNavTransport(
                     protocolVersion = hello.version,
                     sessionId = hello.sessionId,
                     navPeriodMs = hello.navPeriodMs,
+                    mapRevision = hello.mapRevision,
+                    mapAttribution = hello.mapAttribution,
+                    mapCentre = hello.mapCentre.takeIf { it.size >= 2 }
+                        ?.let { GeoPoint(latDeg = it[1], lonDeg = it[0]) },
+                    mapCentreZoom = hello.mapCentre.getOrElse(2) { 0.0 },
                 ),
             ),
         )

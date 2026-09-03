@@ -37,6 +37,12 @@ data class HelloDto(
     @SerialName("sid") val sessionId: Long = 0,
     @SerialName("routeRev") val routeRevision: Long = 0,
     @SerialName("navRev") val navRevision: Long = 0,
+    /** Absent when the pilot has downloaded no maps, so there is nothing to render. */
+    @SerialName("mapRev") val mapRevision: Long = 0,
+    /** The notice the map data carries. Shown by us, since the map widget is not. */
+    @SerialName("mapAttribution") val mapAttribution: String = "",
+    /** [longitude, latitude, zoom] to open on before anything better is known. */
+    @SerialName("mapCentre") val mapCentre: List<Double> = emptyList(),
     @SerialName("navPeriodMs") val navPeriodMs: Long = 1000,
     @SerialName("units") val units: UnitsDto = UnitsDto(),
 )

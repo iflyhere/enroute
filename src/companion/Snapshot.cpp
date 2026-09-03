@@ -358,7 +358,9 @@ namespace
 } // namespace
 
 
-QJsonObject Companion::Snapshot::hello(const Companion::Revisions& revisions)
+QJsonObject Companion::Snapshot::hello(const Companion::Revisions& revisions,
+                                       const QString& mapAttribution,
+                                       const QJsonArray& mapCentre)
 {
     const auto aircraft = GlobalObject::navigator()->aircraft();
 
@@ -373,6 +375,17 @@ QJsonObject Companion::Snapshot::hello(const Companion::Revisions& revisions)
     if (revisions.map != 0)
     {
         document.insert("mapRev"_L1, static_cast<qint64>(revisions.map));
+
+        // Carried so a client too small for the renderer's own attribution widget
+        // can still show the notice the licence requires.
+        if (!mapAttribution.isEmpty())
+        {
+            document.insert("mapAttribution"_L1, mapAttribution);
+        }
+        if (!mapCentre.isEmpty())
+        {
+            document.insert("mapCentre"_L1, mapCentre);
+        }
     }
     document.insert("navPeriodMs"_L1, 1000);
     document.insert("units"_L1, unitsObject(aircraft));

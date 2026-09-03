@@ -47,6 +47,7 @@ import de.akaflieg_freiburg.enroute.wear.ui.connect.CodeEntryScreen
 import de.akaflieg_freiburg.enroute.wear.ui.connect.ConnectScreen
 import de.akaflieg_freiburg.enroute.wear.ui.data.DataScreen
 import de.akaflieg_freiburg.enroute.wear.ui.data.DataUiState
+import de.akaflieg_freiburg.enroute.wear.ui.map.MapLibreScreen
 import de.akaflieg_freiburg.enroute.wear.ui.notam.NotamScreen
 import de.akaflieg_freiburg.enroute.wear.ui.route.RouteScreen
 import de.akaflieg_freiburg.enroute.wear.ui.route.ZoomLevel
@@ -111,6 +112,9 @@ fun EnrouteWearUi(
     when (screen) {
         Screen.Main -> MainPages(
             uiState = uiState,
+            host = settings.host,
+            port = settings.port,
+            pairingCode = settings.pairingCode,
             onOpenConnect = { screen = Screen.Connect },
         )
 
@@ -143,6 +147,9 @@ fun EnrouteWearUi(
 @Composable
 private fun MainPages(
     uiState: State<DataUiState>,
+    host: String,
+    port: Int,
+    pairingCode: String,
     onOpenConnect: () -> Unit,
 ) {
     val pagerState = rememberPagerState(initialPage = PAGE_DATA) { PAGE_COUNT }
@@ -207,15 +214,38 @@ private fun MainPages(
             when (page) {
                 PAGE_DATA -> DataScreen(state = uiState.value)
 
-                PAGE_MAP -> RouteScreen(
-                    // Read at composition: a route changes a few times a flight.
-                    route = uiState.value.session.route,
-                    currentLeg = uiState.value.frame?.legIndex,
-                    zoom = zoom,
-                    // Read in the draw phase: the aircraft moves once a second.
-                    ownPosition = { uiState.value.frame?.position },
-                    notams = uiState.value.session.notams,
-                )
+                PAGE_MAP -> {
+                    // The real map when the pilot has downloaded one, and the vector
+                    // drawing when they have not. The fallback is not a lesser version
+                    // of the same thing: it needs nothing but the route, so it still
+                    // works on a phone with no maps on it at all.
+                    val mapRevision = uiState.value.session.peer?.mapRevision ?: 0L
+                    if (mapRevision > 0L) {
+                        MapLibreScreen(
+                            styleUrl = "http://" + host + ":" + port +
+                                "/enroute/v1/map/style.json",
+                            host = host,
+                            pairingCode = pairingCode,
+                            route = uiState.value.session.route,
+                            ownPosition = uiState.value.frame?.position,
+                            zoom = zoom,
+                            isActive = pagerState.currentPage == PAGE_MAP,
+                            attribution = uiState.value.session.peer?.mapAttribution.orEmpty(),
+                            fallbackCentre = uiState.value.session.peer?.mapCentre,
+                            fallbackZoom = uiState.value.session.peer?.mapCentreZoom ?: 0.0,
+                        )
+                    } else {
+                        RouteScreen(
+                            // Read at composition: a route changes a few times a flight.
+                            route = uiState.value.session.route,
+                            currentLeg = uiState.value.frame?.legIndex,
+                            zoom = zoom,
+                            // Read in the draw phase: the aircraft moves once a second.
+                            ownPosition = { uiState.value.frame?.position },
+                            notams = uiState.value.session.notams,
+                        )
+                    }
+                }
 
                 PAGE_NOTAM -> NotamScreen(
                     board = uiState.value.session.notams,
