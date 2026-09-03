@@ -110,6 +110,12 @@ void GlobalObject::clear()
 
     isConstructingOrDeconstructing = true;
 
+    // First, because it is the only object here that observes several of the
+    // others. It holds QPropertyNotifiers into Navigator, PositionProvider and
+    // NOTAMProvider, and there is no order for those three that is safe unless
+    // this one goes before all of them.
+    delete g_companionServer;
+
     delete g_notamProvider;
 
     delete g_notificationManager;
@@ -122,7 +128,6 @@ void GlobalObject::clear()
     delete g_fileExchange;
     delete g_librarian;
     delete g_platformAdaptor;
-    delete g_companionServer;
     delete g_flightLog;
     delete g_navigator;
     delete g_passwordDB;

@@ -48,6 +48,17 @@ namespace
     // Importing a flight plan emits waypointsChanged once per waypoint.
     constexpr auto routeCoalescePeriod = std::chrono::milliseconds(250);
 
+    // NOTAMs arrive from the network every few hours at most, so this beat is not
+    // about catching new data -- a notifier does that. It exists because whether a
+    // NOTAM is in force depends on the wall clock, so the document goes stale on
+    // its own with nothing having happened.
+    constexpr auto notamPeriod = std::chrono::minutes(5);
+
+    // Both triggers for a NOTAM rebuild fire in bursts: a route import emits
+    // waypointsChanged repeatedly, and a batch of downloads finishing moves
+    // lastUpdate once per reply.
+    constexpr auto notamCoalescePeriod = std::chrono::seconds(2);
+
     constexpr int pairingCodeDigits = 6;
     constexpr quint32 pairingCodeModulus = 1000000;
 } // namespace
@@ -73,6 +84,14 @@ Companion::CompanionServer::CompanionServer(QObject* parent)
     m_routeTimer.setInterval(routeCoalescePeriod);
     m_routeTimer.setSingleShot(true);
     connect(&m_routeTimer, &QTimer::timeout, this, &Companion::CompanionServer::publishRoute);
+
+    m_notamTimer.setInterval(notamPeriod);
+    m_notamTimer.setTimerType(Qt::VeryCoarseTimer);
+    connect(&m_notamTimer, &QTimer::timeout, this, &Companion::CompanionServer::publishNotams);
+
+    m_notamCoalesceTimer.setInterval(notamCoalescePeriod);
+    m_notamCoalesceTimer.setSingleShot(true);
+    connect(&m_notamCoalesceTimer, &QTimer::timeout, this, &Companion::CompanionServer::publishNotams);
 }
 
 
@@ -212,6 +231,37 @@ void Companion::CompanionServer::publishRoute()
 }
 
 
+void Companion::CompanionServer::publishNotams()
+{
+    // The encoder leaves notamRev out, which is what makes this comparison
+    // possible: a document carrying its own revision would differ on every
+    // rebuild and every rebuild would look like a change.
+    auto document = Companion::Snapshot::notams(m_revisions);
+
+    const auto fingerprint = QJsonDocument(document).toJson(QJsonDocument::Compact);
+    if (fingerprint == m_notamFingerprint)
+    {
+        return;
+    }
+    m_notamFingerprint = fingerprint;
+
+    m_revisions.notam++;
+    document.insert("notamRev"_L1, static_cast<qint64>(m_revisions.notam));
+    m_notamDocument = QJsonDocument(document).toJson(QJsonDocument::Compact);
+
+    emit notamDocumentChanged();
+}
+
+
+void Companion::CompanionServer::markNotamsDirty()
+{
+    if (!m_notamCoalesceTimer.isActive())
+    {
+        m_notamCoalesceTimer.start();
+    }
+}
+
+
 void Companion::CompanionServer::updateTransport()
 {
     const auto enabled = GlobalObject::globalSettings()->companionNetworkEnabled();
@@ -227,11 +277,15 @@ void Companion::CompanionServer::updateTransport()
         m_navTimer.stop();
         m_navKeepAliveTimer.stop();
         m_routeTimer.stop();
+        m_notamTimer.stop();
+        m_notamCoalesceTimer.stop();
 
         m_helloDocument.clear();
         m_routeDocument.clear();
         m_navDocument.clear();
         m_navDocumentCompact.clear();
+        m_notamDocument.clear();
+        m_notamFingerprint.clear();
 
         setErrorString();
         emit serverUrlsChanged();
@@ -253,8 +307,11 @@ void Companion::CompanionServer::updateTransport()
     m_navDirty = true;
     publishNav();
 
+    publishNotams();
+
     m_navTimer.start();
     m_navKeepAliveTimer.start();
+    m_notamTimer.start();
 
     if (m_httpTransport.isNull())
     {
@@ -298,6 +355,19 @@ void Companion::CompanionServer::attachToDataSources()
             this, &Companion::CompanionServer::markRouteDirty);
     connect(navigator->flightRoute(), &Navigation::FlightRoute::summaryChanged,
             this, &Companion::CompanionServer::markRouteDirty);
+
+    // lastUpdate moves whenever NOTAM data lands, and unlike geoJSON it is cheap
+    // to compute -- a maximum over the retrieval timestamps rather than a whole
+    // feature collection. A notifier makes a bound property evaluate eagerly, so
+    // which of the two is observed here is not a matter of taste.
+    m_notifiers.push_back(GlobalObject::notamProvider()->bindableLastUpdate().addNotifier(
+        [this]() {markNotamsDirty();}));
+
+    // A changed route means different waypoints to ask about. markRouteDirty
+    // deliberately does not imply this, so that a route edit does not rebuild a
+    // document a client polls once a minute.
+    connect(navigator->flightRoute(), &Navigation::FlightRoute::waypointsChanged,
+            this, &Companion::CompanionServer::markNotamsDirty);
 }
 
 
