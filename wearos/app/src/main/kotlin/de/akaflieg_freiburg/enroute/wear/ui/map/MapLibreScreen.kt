@@ -36,11 +36,16 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.wear.compose.material3.LocalTextStyle
 import androidx.wear.compose.material3.Text
 import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
 import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
@@ -87,6 +92,8 @@ fun MapLibreScreen(
     attribution: String,
     fallbackCentre: GeoPoint?,
     fallbackZoom: Double,
+    labelColour: Long?,
+    haloColour: Long?,
     modifier: Modifier = Modifier,
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -166,35 +173,35 @@ fun MapLibreScreen(
 
         // Feedback for the bezel and the drag. Without it a zoom step on a map with
         // few features looks like nothing happened, and the pilot keeps turning.
-        Text(
+        MapText(
             text = ZoomLevel.label(zoom),
-            color = CockpitColors.Muted,
+            labelColour = labelColour,
+            haloColour = haloColour,
             fontSize = 11.sp,
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp),
         )
 
         if (route == null || route.waypoints.isEmpty()) {
-            Text(
+            MapText(
                 text = "No route",
-                color = CockpitColors.Muted,
+                labelColour = labelColour,
+                haloColour = haloColour,
                 fontSize = 13.sp,
-                textAlign = TextAlign.Center,
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 30.dp),
             )
         }
 
         if (attribution.isNotBlank()) {
-            Text(
+            MapText(
                 text = attribution,
-                color = CockpitColors.Muted,
+                labelColour = labelColour,
+                haloColour = haloColour,
                 fontSize = 9.sp,
                 lineHeight = 11.sp,
                 // Two lines, because one ellipsised the third source away -- and an
                 // attribution that drops a source it is crediting is not an
                 // attribution. The padding keeps both lines inside the round bezel.
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = 26.dp, vertical = 4.dp),
@@ -239,6 +246,46 @@ fun MapLibreScreen(
             holder.style = null
         }
     }
+}
+
+/**
+ * Text drawn over the map, which is the one place the cockpit palette does not apply.
+ *
+ * That palette assumes a black background and the map's is a daylight base map: white
+ * on white, which is how this page shipped and was rightly called out. The phone knows
+ * which pair reads on the map it is serving and swaps them with night mode, so the
+ * colours come from there. The halo is what carries the text over whatever the map puts
+ * underneath it -- a road casing, a lake, a shaded hillside.
+ *
+ * Falls back to the muted palette colour when the phone said nothing, which is legible
+ * on the black fallback screen.
+ */
+@Composable
+private fun MapText(
+    text: String,
+    labelColour: Long?,
+    haloColour: Long?,
+    fontSize: TextUnit,
+    modifier: Modifier = Modifier,
+    lineHeight: TextUnit = TextUnit.Unspecified,
+    maxLines: Int = Int.MAX_VALUE,
+) {
+    val label = labelColour?.let { Color(it) } ?: CockpitColors.Muted
+    val halo = haloColour?.let { Color(it) } ?: CockpitColors.Background
+
+    Text(
+        text = text,
+        color = label,
+        fontSize = fontSize,
+        lineHeight = lineHeight,
+        maxLines = maxLines,
+        overflow = TextOverflow.Ellipsis,
+        textAlign = TextAlign.Center,
+        style = LocalTextStyle.current.copy(
+            shadow = Shadow(color = halo, offset = Offset.Zero, blurRadius = HALO_BLUR),
+        ),
+        modifier = modifier,
+    )
 }
 
 /** Kept out of the composable so that Compose never has to reason about its identity. */
@@ -421,6 +468,9 @@ private const val OWNSHIP_RADIUS_DP = 6.0f
 
 // One map pixel per screen pixel. See the note where the options are built.
 private const val MAP_PIXEL_RATIO = 1.0f
+
+// Enough to lift a glyph off a road casing without turning it into a smudge.
+private const val HALO_BLUR = 4.0f
 
 private const val DEFAULT_HALF_SPAN_M = 20_000.0
 private const val MIN_HALF_SPAN_M = 1852.0

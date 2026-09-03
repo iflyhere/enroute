@@ -90,7 +90,8 @@ namespace Companion
          */
         [[nodiscard]] QJsonObject hello(const Companion::Revisions& revisions,
                                         const QString& mapAttribution = {},
-                                        const QJsonArray& mapCentre = {});
+                                        const QJsonArray& mapCentre = {},
+                                        const QJsonObject& mapOverlayColours = {});
 
         /*! \brief Route snapshot
          *

@@ -273,6 +273,8 @@ private fun MainPages(
                             attribution = uiState.value.session.peer?.mapAttribution.orEmpty(),
                             fallbackCentre = uiState.value.session.peer?.mapCentre,
                             fallbackZoom = uiState.value.session.peer?.mapCentreZoom ?: 0.0,
+                            labelColour = uiState.value.session.peer?.mapLabelColour,
+                            haloColour = uiState.value.session.peer?.mapHaloColour,
                         )
                     } else {
                         RouteScreen(

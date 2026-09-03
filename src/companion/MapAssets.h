@@ -122,7 +122,7 @@ namespace Companion
         // document. The app draws those from QML rather than from its style file, so a
         // client that renders the style alone would get a base map and no aviation
         // data at all.
-        static void addAviationLayers(QJsonObject& style);
+        static void addAviationLayers(QJsonObject& style, const QString& baseUrl);
 
         // Where the pilot's downloaded maps actually are, from the MBTiles
         // metadata. Put into the style so that a client with no route and no
@@ -152,6 +152,18 @@ namespace Companion
          *  @returns Longitude, latitude and zoom, or an empty array if unknown
          */
         [[nodiscard]] QJsonArray centreHint() const;
+
+        /*! \brief Colours for text a client draws over the map
+         *
+         *  A companion device drawing its own labels over this map faces the problem
+         *  the app already solved for its own overlays: a fixed colour is unreadable
+         *  on one of the two base maps. The app's answer is a label colour and a halo
+         *  colour that swap with night mode, and those are the two values sent here.
+         *
+         *  @returns An object with "label" and "halo", or an empty one if no map is
+         *  available
+         */
+        [[nodiscard]] QJsonObject overlayColours() const;
 
     private:
 
