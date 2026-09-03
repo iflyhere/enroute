@@ -19,6 +19,7 @@
 
 package de.akaflieg_freiburg.enroute.wear.data
 
+import de.akaflieg_freiburg.enroute.wear.domain.FlightLogBoard
 import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
 import de.akaflieg_freiburg.enroute.wear.domain.NavFrame
 import de.akaflieg_freiburg.enroute.wear.domain.NotamBoard
@@ -77,6 +78,8 @@ data class SessionState(
      * already on screen must not vanish when the link blinks on final approach.
      */
     val vacs: VacBoard? = null,
+    /** The logbook as last reported. Read-only on this side. */
+    val flightLog: FlightLogBoard? = null,
 )
 
 class NavRepository(
@@ -152,6 +155,9 @@ class NavRepository(
 
                 is TransportEvent.VacUpdate ->
                     current.copy(vacs = event.vacs)
+
+                is TransportEvent.FlightLogUpdate ->
+                    current.copy(flightLog = event.log)
 
                 is TransportEvent.Failed ->
                     current.copy(connection = ConnectionState.Retrying(event.reason, 0))

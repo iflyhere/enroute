@@ -33,6 +33,7 @@
 #include "notam/NOTAMProvider.h"
 #include "dataManagement/DataManager.h"
 #include "positioning/PositionProvider.h"
+#include "flightlog/FlightLog.h"
 #include "geomaps/VACLibrary.h"
 #include "weather/ObserverList.h"
 #include "weather/WeatherDataProvider.h"
@@ -76,6 +77,12 @@ namespace
     // never in flight. This beat exists so a client that connected before an import
     // still learns about it, not because the data moves on its own.
     constexpr auto vacPeriod = std::chrono::minutes(5);
+
+    constexpr auto logCoalescePeriod = std::chrono::seconds(2);
+
+    // How many log entries travel. A logbook grows without bound and a watch scrolls
+    // with a finger in a cockpit, so the rest are counted rather than sent.
+    constexpr int logEntryLimit = 25;
 
     constexpr int pairingCodeDigits = 6;
     constexpr quint32 pairingCodeModulus = 1000000;
@@ -122,6 +129,11 @@ Companion::CompanionServer::CompanionServer(QObject* parent)
     m_vacTimer.setInterval(vacPeriod);
     m_vacTimer.setTimerType(Qt::VeryCoarseTimer);
     connect(&m_vacTimer, &QTimer::timeout, this, &Companion::CompanionServer::publishVacs);
+
+    m_logCoalesceTimer.setInterval(logCoalescePeriod);
+    m_logCoalesceTimer.setSingleShot(true);
+    connect(&m_logCoalesceTimer, &QTimer::timeout,
+            this, &Companion::CompanionServer::publishFlightLog);
 }
 
 
@@ -404,6 +416,35 @@ void Companion::CompanionServer::publishVacs()
 void Companion::CompanionServer::markVacsDirty()
 {
     publishVacs();
+    publishFlightLog();
+}
+
+
+void Companion::CompanionServer::publishFlightLog()
+{
+    auto document = Companion::Snapshot::flightLog(m_revisions, logEntryLimit);
+
+    const auto fingerprint = QJsonDocument(document).toJson(QJsonDocument::Compact);
+    if (fingerprint == m_logFingerprint)
+    {
+        return;
+    }
+    m_logFingerprint = fingerprint;
+
+    m_revisions.log++;
+    document.insert("logRev"_L1, static_cast<qint64>(m_revisions.log));
+    m_logDocument = QJsonDocument(document).toJson(QJsonDocument::Compact);
+
+    emit logDocumentChanged();
+}
+
+
+void Companion::CompanionServer::markFlightLogDirty()
+{
+    if (!m_logCoalesceTimer.isActive())
+    {
+        m_logCoalesceTimer.start();
+    }
 }
 
 
@@ -433,6 +474,7 @@ void Companion::CompanionServer::updateTransport()
         m_weatherTimer.stop();
         m_weatherCoalesceTimer.stop();
         m_vacTimer.stop();
+        m_logCoalesceTimer.stop();
 
         m_helloDocument.clear();
         m_routeDocument.clear();
@@ -444,6 +486,8 @@ void Companion::CompanionServer::updateTransport()
         m_weatherFingerprint.clear();
         m_vacDocument.clear();
         m_vacFingerprint.clear();
+        m_logDocument.clear();
+        m_logFingerprint.clear();
 
         // The station list and its per-station observers exist only while the
         // feature is on. Leaving them alive would keep bindings into the weather
@@ -595,6 +639,17 @@ void Companion::CompanionServer::attachToDataSources()
             this, &Companion::CompanionServer::markWeatherDirty);
     connect(weather, &Weather::WeatherDataProvider::downloadingChanged,
             this, &Companion::CompanionServer::markWeatherDirty);
+
+    // Three separate signals rather than one: an entry can be added without the
+    // detector's state moving (a flight entered by hand) and the state moves several
+    // times per flight without the list changing.
+    auto* const flightLog = GlobalObject::flightLog();
+    connect(flightLog, &Flightlog::FlightLog::flightsChanged,
+            this, &Companion::CompanionServer::markFlightLogDirty);
+    connect(flightLog, &Flightlog::FlightLog::detectionStateChanged,
+            this, &Companion::CompanionServer::markFlightLogDirty);
+    connect(flightLog, &Flightlog::FlightLog::trackRecordingChanged,
+            this, &Companion::CompanionServer::markFlightLogDirty);
 }
 
 

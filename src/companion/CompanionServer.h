@@ -178,6 +178,9 @@ namespace Companion
         /*! \brief Encoded approach chart document, or empty while the feature is off */
         [[nodiscard]] QByteArray vacDocument() const {return m_vacDocument;}
 
+        /*! \brief Encoded flight log document, or empty while the feature is off */
+        [[nodiscard]] QByteArray logDocument() const {return m_logDocument;}
+
         /*! \brief Hands over the QML engine
          *
          *  GeoMaps::VACLibrary is a QML singleton, so an engine is the only way to
@@ -250,6 +253,9 @@ namespace Companion
         /*! \brief Emitted after vacDocument() has been updated */
         void vacDocumentChanged();
 
+        /*! \brief Emitted after logDocument() has been updated */
+        void logDocumentChanged();
+
 
     private slots:
         // Marks the navigation frame as needing re-encoding. Cheap on purpose: the
@@ -283,6 +289,10 @@ namespace Companion
 
         void markVacsDirty();
 
+        void publishFlightLog();
+
+        void markFlightLogDirty();
+
         // Creates or destroys the transport in response to the settings.
         void updateTransport();
 
@@ -306,6 +316,7 @@ namespace Companion
         QByteArray m_notamDocument;
         QByteArray m_weatherDocument;
         QByteArray m_vacDocument;
+        QByteArray m_logDocument;
 
         // The NOTAM document with its revision member left out, kept so that a
         // rebuild can tell whether anything changed. An exact comparison and not
@@ -314,6 +325,7 @@ namespace Companion
         QByteArray m_notamFingerprint;
         QByteArray m_weatherFingerprint;
         QByteArray m_vacFingerprint;
+        QByteArray m_logFingerprint;
 
         bool m_navDirty {false};
 
@@ -337,6 +349,11 @@ namespace Companion
         // No coalescing partner: the library emits one signal per import, not a
         // burst, and an import is a deliberate act rather than a data feed.
         QTimer m_vacTimer;
+
+        // The flight log changes when a flight starts or ends, and the detector's
+        // state changes a handful of times per flight. Coalesced, because a takeoff
+        // moves the state and adds an entry within the same second.
+        QTimer m_logCoalesceTimer;
 
         // The app's own station list, sorted by distance. Owned here rather than
         // created per request, because it caches one Weather::Observer per station
