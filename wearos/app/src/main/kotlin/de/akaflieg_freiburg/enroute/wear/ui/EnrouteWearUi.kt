@@ -23,14 +23,21 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import de.akaflieg_freiburg.enroute.wear.Config
 import de.akaflieg_freiburg.enroute.wear.data.Discovery
 import de.akaflieg_freiburg.enroute.wear.data.DiscoveredPhone
@@ -40,23 +47,33 @@ import de.akaflieg_freiburg.enroute.wear.ui.connect.CodeEntryScreen
 import de.akaflieg_freiburg.enroute.wear.ui.connect.ConnectScreen
 import de.akaflieg_freiburg.enroute.wear.ui.data.DataScreen
 import de.akaflieg_freiburg.enroute.wear.ui.data.DataUiState
+import de.akaflieg_freiburg.enroute.wear.ui.route.RouteScreen
+import de.akaflieg_freiburg.enroute.wear.ui.route.ZoomLevel
 
-private enum class Screen { Data, Connect, CodeEntry }
+private enum class Screen { Main, Connect, CodeEntry }
+
+private const val PAGE_DATA = 0
+private const val PAGE_MAP = 1
+private const val PAGE_COUNT = 2
 
 /**
  * The whole user interface.
  *
- * Deliberately a small state machine rather than a navigation graph: three screens do
- * not justify the dependency, and swipe-to-dismiss on Wear needs handling either way.
+ * Deliberately a small state machine rather than a navigation graph: a handful of
+ * screens do not justify the dependency, and swipe-to-dismiss on Wear needs handling
+ * either way.
  *
- * A long press on the data screen opens the connection screen. That keeps the data
- * screen free of controls a pilot could hit by accident, and there is nothing else on
- * it to compete with a long press.
+ * The data screen and the map are pages of one pager, so a sideways swipe moves between
+ * them. A long press on either opens the connection screen; that keeps controls off the
+ * screens a pilot reads in flight.
+ *
+ * @param uiState Passed as State rather than a value so that the map can read the
+ * aircraft position inside its draw lambda. See RouteScreen.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EnrouteWearUi(
-    state: DataUiState,
+    uiState: State<DataUiState>,
     settings: SettingsStore,
     discovery: Discovery,
     onSettingsChanged: () -> Unit,
@@ -65,7 +82,7 @@ fun EnrouteWearUi(
     // fresh install leads somewhere useful instead of retrying localhost forever.
     var screen by remember {
         mutableStateOf(
-            if (settings.host == Config.DEFAULT_HOST) Screen.Connect else Screen.Data,
+            if (settings.host == Config.DEFAULT_HOST) Screen.Connect else Screen.Main,
         )
     }
     val phones = remember { mutableStateListOf<DiscoveredPhone>() }
@@ -92,16 +109,10 @@ fun EnrouteWearUi(
     }
 
     when (screen) {
-        Screen.Data -> Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .combinedClickable(
-                    onClick = {},
-                    onLongClick = { screen = Screen.Connect },
-                ),
-        ) {
-            DataScreen(state = state)
-        }
+        Screen.Main -> MainPages(
+            uiState = uiState,
+            onOpenConnect = { screen = Screen.Connect },
+        )
 
         Screen.Connect -> ConnectScreen(
             phones = phones,
@@ -112,7 +123,7 @@ fun EnrouteWearUi(
                 settings.host = phone.host
                 settings.port = phone.port
                 onSettingsChanged()
-                screen = Screen.Data
+                screen = Screen.Main
             },
             onEnterCode = { screen = Screen.CodeEntry },
         )
@@ -127,3 +138,70 @@ fun EnrouteWearUi(
         )
     }
 }
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun MainPages(
+    uiState: State<DataUiState>,
+    onOpenConnect: () -> Unit,
+) {
+    val pagerState = rememberPagerState(initialPage = PAGE_DATA) { PAGE_COUNT }
+    var zoom by remember { mutableStateOf<ZoomLevel>(ZoomLevel.Automatic) }
+
+    // A picker or a rotary modifier is inert unless something in the hierarchy holds
+    // focus. This is the trap every Wear developer hits once.
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    // A bezel emits many small events per detent, so they are accumulated and only a
+    // full threshold moves a step. Otherwise one flick runs through the whole range.
+    var rotaryAccumulator by remember { mutableStateOf(0f) }
+
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier
+            .fillMaxSize()
+            .onRotaryScrollEvent { event ->
+                if (pagerState.currentPage != PAGE_MAP) {
+                    return@onRotaryScrollEvent false
+                }
+                rotaryAccumulator += event.verticalScrollPixels
+                while (rotaryAccumulator >= ROTARY_THRESHOLD) {
+                    rotaryAccumulator -= ROTARY_THRESHOLD
+                    zoom = ZoomLevel.stepped(zoom, 1)
+                }
+                while (rotaryAccumulator <= -ROTARY_THRESHOLD) {
+                    rotaryAccumulator += ROTARY_THRESHOLD
+                    zoom = ZoomLevel.stepped(zoom, -1)
+                }
+                // Consumed, or the system scrolls something else instead.
+                true
+            }
+            .focusRequester(focusRequester)
+            .focusable(),
+    ) { page ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .combinedClickable(
+                    onClick = {},
+                    onLongClick = onOpenConnect,
+                ),
+        ) {
+            when (page) {
+                PAGE_DATA -> DataScreen(state = uiState.value)
+
+                PAGE_MAP -> RouteScreen(
+                    // Read at composition: a route changes a few times a flight.
+                    route = uiState.value.session.route,
+                    currentLeg = uiState.value.frame?.legIndex,
+                    zoom = zoom,
+                    // Read in the draw phase: the aircraft moves once a second.
+                    ownPosition = { uiState.value.frame?.position },
+                )
+            }
+        }
+    }
+}
+
+private const val ROTARY_THRESHOLD = 120f
