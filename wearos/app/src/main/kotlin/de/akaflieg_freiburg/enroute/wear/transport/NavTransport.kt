@@ -21,6 +21,7 @@ package de.akaflieg_freiburg.enroute.wear.transport
 
 import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
 import de.akaflieg_freiburg.enroute.wear.domain.NavFrame
+import de.akaflieg_freiburg.enroute.wear.domain.NotamBoard
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -49,6 +50,7 @@ sealed interface TransportEvent {
     data class Connected(val peer: PeerInfo) : TransportEvent
     data class Nav(val frame: NavFrame) : TransportEvent
     data class RouteUpdate(val route: FlightRoute) : TransportEvent
+    data class NotamUpdate(val notams: NotamBoard) : TransportEvent
     data class Failed(val reason: FailureReason, val detail: String? = null) : TransportEvent
 }
 

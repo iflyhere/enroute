@@ -98,7 +98,7 @@ private fun EnrouteWearApp(settings: SettingsStore, discovery: Discovery) {
     // Deliberately not stopped when this screen goes away: surviving that is the
     // entire point of it.
     LaunchedEffect(Unit) {
-        if (settings.host != Config.DEFAULT_HOST) {
+        if (settings.isConfigured) {
             NavSessionService.start(context)
         }
     }
