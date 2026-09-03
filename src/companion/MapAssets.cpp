@@ -31,6 +31,7 @@
 #include "dataManagement/DataManager.h"
 #include "dataManagement/Downloadable_SingleFile.h"
 #include "geomaps/GeoMapProvider.h"
+#include "notam/NOTAMProvider.h"
 #include "positioning/PositionProvider.h"
 
 using namespace Qt::Literals::StringLiterals;
@@ -236,6 +237,46 @@ QString Companion::MapAssets::baseMapPath() const
 QString Companion::MapAssets::terrainPath() const
 {
     return u"terrain-"_s + QString::number(m_revision);
+}
+
+
+QJsonObject Companion::MapAssets::overlayColours() const
+{
+    if (m_baseMap.isEmpty())
+    {
+        return {};
+    }
+
+    QFile file(u":/flightMap/aviation-layers.json"_s);
+    if (!file.open(QIODevice::ReadOnly))
+    {
+        return {};
+    }
+    const auto values = QJsonDocument::fromJson(file.readAll())
+                            .object()
+                            .value(u"values"_s)
+                            .toObject();
+
+    // Read from the generated file rather than written out here, for the same reason
+    // the layers are: these two colours live in the QML and must not exist twice.
+    const auto pick = [&values](const QString& name)
+    {
+        const auto pair = values.value(name).toObject();
+        return pair.value(GlobalObject::globalSettings()->nightMode() ? u"night"_s : u"day"_s)
+            .toString();
+    };
+
+    const auto label = pick(u"overlayLabelColor"_s);
+    const auto halo = pick(u"overlayHaloColor"_s);
+    if (label.isEmpty() || halo.isEmpty())
+    {
+        return {};
+    }
+
+    QJsonObject colours;
+    colours.insert(u"label"_s, label);
+    colours.insert(u"halo"_s, halo);
+    return colours;
 }
 
 
@@ -449,7 +490,7 @@ namespace
 } // namespace
 
 
-void Companion::MapAssets::addAviationLayers(QJsonObject& style)
+void Companion::MapAssets::addAviationLayers(QJsonObject& style, const QString& baseUrl)
 {
     QFile file(u":/flightMap/aviation-layers.json"_s);
     if (!file.open(QIODevice::ReadOnly))
@@ -463,6 +504,25 @@ void Companion::MapAssets::addAviationLayers(QJsonObject& style)
     {
         return;
     }
+
+    // Sources the overlay needs and the base style does not declare. The generator
+    // reports them, so adding a layer on a new source upstream needs no change here --
+    // and a layer whose source is missing draws nothing at all, silently.
+    auto sources = style.value(u"sources"_s).toObject();
+    const auto needed = document.value(u"sources"_s).toArray();
+    for (const auto& name : needed)
+    {
+        const auto source = name.toString();
+        if (source.isEmpty() || sources.contains(source))
+        {
+            continue;
+        }
+        QJsonObject geojson;
+        geojson.insert(u"type"_s, u"geojson"_s);
+        geojson.insert(u"data"_s, baseUrl + u"/"_s + source + u".geojson"_s);
+        sources.insert(source, geojson);
+    }
+    style.insert(u"sources"_s, sources);
 
     // Appended, not merged in at a position: the generator preserves the order the QML
     // declares, which that file describes as sorted by importance from low to high, and
@@ -512,7 +572,7 @@ QByteArray Companion::MapAssets::styleDocument(const QString& baseUrl) const
     // The aviation overlay. Without it a client renders roads and towns and no
     // airspace, because the app declares the aviation-data source in its style file
     // but draws every layer from it in QML.
-    addAviationLayers(document);
+    addAviationLayers(document, baseUrl);
 
     // The app's own style has no centre, because its renderer is always told where to
     // look. A companion device is not, so one is added here when the map files know.
@@ -724,6 +784,14 @@ bool Companion::MapAssets::handle(const QStringList& pathElements,
     // Not tiled, because a GeoJSON source is not: a client fetches it once and keeps
     // it. That is a megabyte or two for a few countries, which is why it lives behind
     // its own URL rather than inside the style.
+    // The NOTAM overlay the moving map draws. Same document the app's own renderer
+    // gets, so the icons and the categories match what the pilot sees on the phone.
+    if (head == u"notams.geojson"_s && tail.isEmpty())
+    {
+        writeLarge(GlobalObject::notamProvider()->geoJSON(), "application/geo+json", responder);
+        return true;
+    }
+
     if (head == u"aviationData.geojson"_s && tail.isEmpty())
     {
         writeLarge(GlobalObject::geoMapProvider()->geoJSON(), "application/geo+json", responder);

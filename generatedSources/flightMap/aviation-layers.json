@@ -42,6 +42,10 @@
       "day": "black"
     }
   },
+  "sources": [
+    "aviation-data",
+    "notams"
+  ],
   "layers": [
     {
       "id": "FIS",
@@ -1308,6 +1312,37 @@
           "ORI"
         ],
         "icon-rotation-alignment": "map",
+        "text-field": [
+          "get",
+          "NAM"
+        ],
+        "text-size": "@fontSize:0.85",
+        "text-anchor": "top",
+        "text-offset": [
+          0,
+          1
+        ],
+        "text-optional": true,
+        "text-font": [
+          "Roboto Regular"
+        ]
+      }
+    },
+    {
+      "id": "notam-layer",
+      "type": "symbol",
+      "source": "notams",
+      "paint": {
+        "text-color": "@overlayLabelColor",
+        "text-halo-width": 2,
+        "text-halo-color": "@overlayHaloColor"
+      },
+      "layout": {
+        "icon-ignore-placement": true,
+        "icon-image": [
+          "get",
+          "CAT"
+        ],
         "text-field": [
           "get",
           "NAM"

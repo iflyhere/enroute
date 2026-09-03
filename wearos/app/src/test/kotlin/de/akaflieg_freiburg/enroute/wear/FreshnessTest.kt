@@ -22,6 +22,7 @@ package de.akaflieg_freiburg.enroute.wear
 import de.akaflieg_freiburg.enroute.wear.data.ConnectionState
 import de.akaflieg_freiburg.enroute.wear.data.SessionState
 import de.akaflieg_freiburg.enroute.wear.domain.FlightStatus
+import de.akaflieg_freiburg.enroute.wear.domain.Measured
 import de.akaflieg_freiburg.enroute.wear.domain.NavFrame
 import de.akaflieg_freiburg.enroute.wear.domain.OwnPosition
 import de.akaflieg_freiburg.enroute.wear.domain.RouteStatus
@@ -50,6 +51,8 @@ class FreshnessTest {
         next = null,
         final = null,
         statusText = "",
+        flightLevel = Measured.Absent,
+        flightLevelImplausible = false,
     )
 
     private fun connected(frame: NavFrame? = this.frame) =

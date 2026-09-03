@@ -25,6 +25,7 @@ import de.akaflieg_freiburg.enroute.wear.data.dto.NavFrameDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NotamBoardDto
 import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
 import de.akaflieg_freiburg.enroute.wear.data.dto.RouteDto
+import de.akaflieg_freiburg.enroute.wear.data.parseStyleColour
 import de.akaflieg_freiburg.enroute.wear.data.toDomain
 import de.akaflieg_freiburg.enroute.wear.transport.FailureReason
 import de.akaflieg_freiburg.enroute.wear.transport.NavTransport
@@ -187,6 +188,8 @@ class HttpNavTransport(
         mapCentre = hello.mapCentre.takeIf { it.size >= 2 }
             ?.let { GeoPoint(latDeg = it[1], lonDeg = it[0]) },
         mapCentreZoom = hello.mapCentre.getOrElse(2) { 0.0 },
+        mapLabelColour = parseStyleColour(hello.mapOverlay?.label),
+        mapHaloColour = parseStyleColour(hello.mapOverlay?.halo),
     )
 
     private class Response(val body: String, val etag: String?)

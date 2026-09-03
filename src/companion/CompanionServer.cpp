@@ -230,7 +230,9 @@ void Companion::CompanionServer::publishRoute()
                           .toJson(QJsonDocument::Compact);
     const auto attribution = m_mapAssets.isNull() ? QString() : m_mapAssets->attribution();
     const auto centre = m_mapAssets.isNull() ? QJsonArray() : m_mapAssets->centreHint();
-    m_helloDocument = QJsonDocument(Companion::Snapshot::hello(m_revisions, attribution, centre))
+    const auto colours = m_mapAssets.isNull() ? QJsonObject() : m_mapAssets->overlayColours();
+    m_helloDocument = QJsonDocument(
+                          Companion::Snapshot::hello(m_revisions, attribution, centre, colours))
                           .toJson(QJsonDocument::Compact);
 
     emit routeDocumentChanged();

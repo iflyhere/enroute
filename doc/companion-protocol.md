@@ -86,6 +86,12 @@ other server on the same network, and to learn how often navigation frames are p
 a client that needs to abbreviate or label an axis may use them, but primary display always uses the
 `*Text` fields.
 
+A client drawing its own text over the map should use **`mapOverlay`**, which carries a `label` and
+a `halo` colour as CSS-style values. The app keeps that pair for its own overlays and swaps it with
+night mode, because a fixed colour is unreadable on one of the two base maps — white text on a
+daylight map is white on white. A client that ignores this and uses its own palette will get that
+wrong in exactly the way the app already learned not to.
+
 ### Route document
 
 ```
@@ -157,12 +163,13 @@ GET /enroute/v1/nav?fmt=0        # omit the fmt object
   "note": "",
   "leg": 1,
   "own":   { "c": [7.87000, 48.00000], "alt": 1143, "agl": 812, "gs": 46.3, "tt": 122.4, "vs": -0.5 },
+  "pAlt": 1981,
   "next":  { "n": "KIRCHZARTEN", "dist": 7014, "ete": 152, "eta": 1788256052, "tc": 121.8 },
   "final": { "n": "EDTL", "dist": 52664, "ete": 1137, "eta": 1788257037 },
   "fmt": {
     "nextName": "KIRCHZARTEN", "nextDist": "3.8 nm", "nextETE": "0:03", "nextETA": "9:47", "nextTC": "122°",
     "finalName": "EDTL", "finalDist": "28.4 nm", "finalETE": "0:19", "finalETA": "10:03",
-    "alt": "3,750 ft", "gs": "90 kn", "statusText": ""
+    "alt": "3,750 ft", "gs": "90 kn", "pAlt": "FL065", "statusText": ""
   }
 }
 ```
@@ -174,6 +181,9 @@ GET /enroute/v1/nav?fmt=0        # omit the fmt object
 | `flightStatus` | `Navigator::flightStatus` | One of `ground`, `flight`, `unknown`. |
 | `note` | `RemainingRouteInfo::note` | Already translated by the phone. Non-empty when ETE could not be computed because wind or aircraft data are missing. |
 | `leg` | `FlightRoute::currentLeg()` | Index into `legs`. Omitted when there is no current leg. |
+| `pAlt` | `PositionProvider::pressureAltitude` | Pressure altitude in metres, from the phone's barometer. **Not inside `own`**, deliberately: a barometer reads without a satellite in sight, so this survives a lost fix. Omitted when there is no reading, or when the app does not believe the one it has. |
+| `pAltImplausible` | `PositionProvider::pressureAltitudeImplausible` | Present and `true` when there **is** a reading and the app has flagged it implausible. A disbelieved barometer is not the same as no barometer, and a client should say so rather than show a flight level as fact. |
+| `fmt.pAlt` | | The flight level as the moving map writes it — `FL065`, zero padded to three digits — or `-` when there is nothing to show. |
 | `own` | `PositionProvider::positionInfo()` | **Omitted entirely** when the position is invalid. Individual keys omitted when NaN. `alt` = true altitude AMSL in m, `agl` = true altitude AGL in m, `gs` = ground speed in m/s, `tt` = true track in degrees, `vs` = vertical speed in m/s. |
 | `next`, `final` | `RemainingRouteInfo` | **Omitted unless `status` is `onRoute`** — `RemainingRouteInfo` guarantees its `nextWP*` fields only in that state. `final` is additionally omitted when the final waypoint is not valid, which is the case when it is the same as the next waypoint. `dist` in whole metres, `ete` in whole seconds, `eta` in epoch seconds, `tc` in degrees. |
 | `fmt` | `Navigation::Aircraft` formatters | Pre-formatted, localised display strings. Suppressed by `?fmt=0`, and always suppressed on Bluetooth to keep a frame inside one notification. Nothing is lost: the SI half is a complete description. |
@@ -275,6 +285,7 @@ it comes off the phone: **a client needs no internet connection and no map servi
 | `GET /enroute/v1/map/terrain-<mapRev>` | TileJSON for the terrain layer used for hillshading |
 | `GET /enroute/v1/map/terrain-<mapRev>/{z}/{x}/{y}.png` | one terrain tile |
 | `GET /enroute/v1/map/aviationData.geojson` | the aviation data overlay |
+| `GET /enroute/v1/map/notams.geojson` | the NOTAM overlay, as the moving map draws it |
 | `GET /enroute/v1/map/flightMap/sprites/sprite[@2x].{json,png}` | the sprite sheet |
 | `GET /enroute/v1/map/flightMap/fonts/{fontstack}/{range}.pbf` | one glyph range |
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Extracts the aviation-data style layers from src/qml/items/FlightMap.qml and writes
+# Extracts the aviation overlay style layers from src/qml/items/FlightMap.qml and writes
 # them as a MapLibre style fragment, for serving to a companion device that renders the
 # map itself.
 #
@@ -52,6 +52,13 @@ RUNTIME = {
 # ships and therefore all a client can ask for.
 DEFAULT_FONT = "Roboto Regular"
 
+# The sources whose layers are worth sending on. "aviation-data" is the airspace,
+# aerodrome and navaid set; "notams" is what the moving map draws over it. Excluded on
+# purpose: "waypointlib" (the pilot's own library, which a watch cannot edit),
+# "rasterTiles" and "vac" (both raster, and each needs its own transport), and the
+# traffic layers, which have no source on a watch.
+WANTED_SOURCES = {"aviation-data", "notams"}
+
 SKIP = {
     "AirspaceLabels": "label layer, unreadable at watch size",
     "PRCLabels": "label layer, unreadable at watch size",
@@ -65,8 +72,51 @@ SKIP = {
 SCALED = re.compile(r"([0-9]*\.?[0-9]+)\s*\*\s*GlobalSettings\.fontSize")
 
 
+def strip_trailing_commas(text):
+    """Removes commas that JSON rejects and QML allows, without touching strings.
+
+    Done by scanning rather than by regex: a comma inside a string value followed by a
+    brace would otherwise be eaten, and the result would be a layer that parses into
+    something subtly different from what the app draws.
+    """
+    out = []
+    in_string = False
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if in_string:
+            out.append(ch)
+            if ch == "\\":
+                i += 1
+                if i < len(text):
+                    out.append(text[i])
+            elif ch == '"':
+                in_string = False
+            i += 1
+            continue
+
+        if ch == '"':
+            in_string = True
+            out.append(ch)
+            i += 1
+            continue
+
+        if ch == ",":
+            j = i + 1
+            while j < len(text) and text[j].isspace():
+                j += 1
+            if j < len(text) and text[j] in "}]":
+                i += 1          # drop the comma
+                continue
+
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
 def qml_to_json(text):
     """Turns a QML value expression into JSON, or raises if it cannot be done exactly."""
+    text = strip_trailing_commas(text)
     text = SCALED.sub(lambda m: json.dumps("@fontSize:" + m.group(1)), text)
     text = text.replace("GlobalSettings.fontSize", json.dumps("@fontSize:1"))
     for identifier, marker in RUNTIME.items():
@@ -151,7 +201,7 @@ def extract(text):
         source = re.search(r'property\s+string\s+source:\s*"([^"]+)"', block)
         if not (style_id and layer_type and source):
             continue
-        if source.group(1) != "aviation-data":
+        if source.group(1) not in WANTED_SOURCES:
             continue
 
         name = style_id.group(1)
@@ -159,7 +209,7 @@ def extract(text):
             skipped.append((name, SKIP[name]))
             continue
 
-        layer = {"id": name, "type": layer_type.group(1), "source": "aviation-data"}
+        layer = {"id": name, "type": layer_type.group(1), "source": source.group(1)}
 
         filter_at = block.find("property var filter:")
         if filter_at >= 0:
@@ -247,6 +297,7 @@ def main():
                            "from src/qml/items/FlightMap.qml and Global.qml. "
                            "Do not edit; regenerate.",
                 "values": values,
+                "sources": sorted({layer["source"] for layer in layers}),
                 "layers": layers,
             },
             indent=2,

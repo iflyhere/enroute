@@ -128,6 +128,8 @@ fun NavFrameDto.toDomain(): NavFrame {
         next = next?.toDomain(fmt?.nextName, fmt?.nextDistance, fmt?.nextEte, fmt?.nextEta),
         final = final?.toDomain(fmt?.finalName, fmt?.finalDistance, fmt?.finalEte, fmt?.finalEta),
         statusText = fmt?.statusText ?: "",
+        flightLevel = measured(pressureAltitudeM, fmt?.pressureAltitude),
+        flightLevelImplausible = pressureAltitudeImplausible,
     )
 }
 
@@ -193,6 +195,49 @@ private fun NotamGroupDto.toDomain(): NotamGroup {
         cut = cut + lostInMapping,
     )
 }
+
+/**
+ * A colour as the style files write it, turned into an opaque ARGB value.
+ *
+ * The style is CSS-flavoured, so both "#e0e0e0" and "black" occur. An unrecognised
+ * value returns null rather than a guess: the caller then keeps its own colour, which
+ * is wrong in a readable way instead of wrong in an invisible one -- and invisible is
+ * exactly the failure this parser exists to prevent.
+ */
+fun parseStyleColour(text: String?): Long? {
+    if (text == null) return null
+    val trimmed = text.trim().lowercase()
+    if (trimmed.isEmpty()) return null
+
+    NAMED_COLOURS[trimmed]?.let { return it }
+
+    if (!trimmed.startsWith("#")) return null
+    val digits = trimmed.substring(1)
+    val value = digits.toLongOrNull(16) ?: return null
+    return when (digits.length) {
+        3 -> {
+            // "#abc" is shorthand for "#aabbcc".
+            val r = (value shr 8) and 0xF
+            val g = (value shr 4) and 0xF
+            val b = value and 0xF
+            0xFF000000L or (r * 0x11 shl 16) or (g * 0x11 shl 8) or (b * 0x11)
+        }
+        6 -> 0xFF000000L or value
+        8 -> value
+        else -> null
+    }
+}
+
+// Only the names the app's own style files actually use. A wider table would suggest
+// this understands CSS, which it does not.
+private val NAMED_COLOURS = mapOf(
+    "black" to 0xFF000000L,
+    "white" to 0xFFFFFFFFL,
+    "red" to 0xFFFF0000L,
+    "green" to 0xFF008000L,
+    "blue" to 0xFF0000FFL,
+    "yellow" to 0xFFFFFF00L,
+)
 
 fun NotamBoardDto.toDomain(): NotamBoard = NotamBoard(
     revision = notamRevision,

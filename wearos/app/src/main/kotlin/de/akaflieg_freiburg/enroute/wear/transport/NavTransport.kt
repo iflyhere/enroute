@@ -76,6 +76,16 @@ data class PeerInfo(
      */
     val mapCentre: GeoPoint? = null,
     val mapCentreZoom: Double = 0.0,
+    /**
+     * Colours for text a client draws over the map, as the phone chose them.
+     *
+     * The cockpit palette here assumes a black background, which the data screen has
+     * and the map does not: white on a daylight base map is white on white. The phone
+     * already solves this for its own overlays and swaps the pair with night mode, so
+     * these come from there rather than being guessed at again.
+     */
+    val mapLabelColour: Long? = null,
+    val mapHaloColour: Long? = null,
 )
 
 enum class FailureReason {

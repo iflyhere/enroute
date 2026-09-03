@@ -235,6 +235,26 @@ namespace
         return {};
     }
 
+    /*! \brief Pressure altitude as a flight level, the way the moving map shows it
+     *
+     *  Three characters after "FL", zero padded, rounded to the nearest hundred feet:
+     *  the same shape as src/qml/items/NavBar.qml produces, so the watch and the phone
+     *  never disagree about which flight level the aircraft is at.
+     *
+     *  A dash when there is nothing to show, which the map also does for a reading that
+     *  is absent or negative -- and here also for one the app has flagged implausible.
+     */
+    QString flightLevelToString(Units::Distance pressureAltitude, bool trusted)
+    {
+        if (!trusted)
+        {
+            return u"-"_s;
+        }
+        const auto hundredsOfFeet = qRound(pressureAltitude.toFeet() / 100.0);
+        return u"FL"_s + QString::number(hundredsOfFeet).rightJustified(3, u'0');
+    }
+
+
     /*! \brief A true course, formatted the way the moving map's status bar does */
     QString courseToString(Units::Angle course)
     {
@@ -360,7 +380,8 @@ namespace
 
 QJsonObject Companion::Snapshot::hello(const Companion::Revisions& revisions,
                                        const QString& mapAttribution,
-                                       const QJsonArray& mapCentre)
+                                       const QJsonArray& mapCentre,
+                                       const QJsonObject& mapOverlayColours)
 {
     const auto aircraft = GlobalObject::navigator()->aircraft();
 
@@ -385,6 +406,10 @@ QJsonObject Companion::Snapshot::hello(const Companion::Revisions& revisions,
         if (!mapCentre.isEmpty())
         {
             document.insert("mapCentre"_L1, mapCentre);
+        }
+        if (!mapOverlayColours.isEmpty())
+        {
+            document.insert("mapOverlay"_L1, mapOverlayColours);
         }
     }
     document.insert("navPeriodMs"_L1, 1000);
@@ -448,6 +473,28 @@ QJsonObject Companion::Snapshot::nav(const Companion::Revisions& revisions,
     document.insert("status"_L1, toString(status));
     document.insert("flightStatus"_L1, toString(navigator->flightStatus()));
     document.insert("note"_L1, Companion::SnapshotAccess::note(info));
+
+    // Deliberately not inside "own": a barometer reads without a satellite in sight,
+    // so the flight level survives a lost fix and must not be nested under a member
+    // that disappears with it.
+    //
+    // Only sent when the app itself believes the reading. It keeps a plausibility flag
+    // on this sensor, and a client showing a flight level the app is distrusting would
+    // be claiming more than the app does. When there is a reading and it is distrusted,
+    // that is said out loud -- a disbelieved barometer is not the same as none.
+    auto* const positionProvider = GlobalObject::positionProvider();
+    const auto pressureAltitude = positionProvider->pressureAltitude();
+    const auto pressureAltitudeTrusted = pressureAltitude.isFinite()
+                                         && !pressureAltitude.isNegative()
+                                         && !positionProvider->pressureAltitudeImplausible();
+    if (pressureAltitudeTrusted)
+    {
+        insertIfFinite(document, "pAlt"_L1, pressureAltitude);
+    }
+    else if (pressureAltitude.isFinite())
+    {
+        document.insert("pAltImplausible"_L1, true);
+    }
 
     const auto currentLeg = navigator->flightRoute()->currentLeg(positionInfo);
     if (currentLeg >= 0)
@@ -515,6 +562,8 @@ QJsonObject Companion::Snapshot::nav(const Companion::Revisions& revisions,
         QJsonObject formatted;
         formatted.insert("alt"_L1, aircraft.verticalDistanceToString(positionInfo.trueAltitudeAMSL()));
         formatted.insert("gs"_L1, aircraft.horizontalSpeedToString(positionInfo.groundSpeed()));
+        formatted.insert("pAlt"_L1,
+                         flightLevelToString(pressureAltitude, pressureAltitudeTrusted));
         formatted.insert("statusText"_L1, statusText(status, aircraft));
 
         if (onRoute)
