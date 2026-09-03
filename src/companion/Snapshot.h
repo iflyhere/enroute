@@ -69,6 +69,9 @@ namespace Companion
         /*! \brief Incremented whenever the set of approach charts changes */
         quint32 vac {0};
 
+        /*! \brief Incremented whenever the flight log document changes */
+        quint32 log {0};
+
         /*! \brief Changes whenever the set of downloaded map files changes
          *
          *  Every tile URL contains this, so that a client's own tile cache cannot
@@ -208,6 +211,26 @@ namespace Companion
          */
         [[nodiscard]] QJsonObject vacs(const Companion::Revisions& revisions,
                                        GeoMaps::VACLibrary* library);
+
+        /*! \brief The pilot's flight log
+         *
+         *  The app's own entries in the app's own order, newest first, together with
+         *  what its flight detector currently believes. Only the most recent entries
+         *  travel; the rest are counted, not sent, because a log grows without bound
+         *  and a watch scrolls a list with a finger in a cockpit.
+         *
+         *  Read-only. A flight is started, ended and edited on the phone, which is
+         *  where the record belongs; nothing here can change one.
+         *
+         *  @param revisions Current document revisions
+         *
+         *  @param limit Number of entries to send
+         *
+         *  @returns The document described under "Flight log document" in
+         *  doc/companion-protocol.md, without its logRev member
+         */
+        [[nodiscard]] QJsonObject flightLog(const Companion::Revisions& revisions,
+                                            int limit);
 
     } // namespace Snapshot
 
