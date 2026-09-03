@@ -44,7 +44,23 @@ class SettingsStore(context: Context) {
 
     var host: String
         get() = preferences.getString(KEY_HOST, Config.DEFAULT_HOST) ?: Config.DEFAULT_HOST
-        set(value) = preferences.edit().putString(KEY_HOST, value).apply()
+        set(value) = preferences.edit()
+            .putString(KEY_HOST, value)
+            .putBoolean(KEY_CONFIGURED, true)
+            .apply()
+
+    /**
+     * Whether a phone has ever been chosen, by discovery, by hand or from a launch
+     * intent.
+     *
+     * Its own stored flag rather than "host differs from the default", which was the
+     * previous test and was wrong in the one configuration this app is developed in:
+     * the default host is 127.0.0.1, so pointing the watch at the mock server through
+     * adb reverse looked exactly like never having configured anything, and the session
+     * never started.
+     */
+    val isConfigured: Boolean
+        get() = preferences.getBoolean(KEY_CONFIGURED, false)
 
     var port: Int
         get() = preferences.getInt(KEY_PORT, Config.DEFAULT_PORT)
@@ -69,5 +85,6 @@ class SettingsStore(context: Context) {
         const val KEY_HOST = "host"
         const val KEY_PORT = "port"
         const val KEY_CODE = "pairingCode"
+        const val KEY_CONFIGURED = "configured"
     }
 }

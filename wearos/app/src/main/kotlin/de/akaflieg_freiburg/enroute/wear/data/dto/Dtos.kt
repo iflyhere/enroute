@@ -128,3 +128,60 @@ data class FormattedDto(
     @SerialName("gs") val groundSpeed: String? = null,
     @SerialName("statusText") val statusText: String = "",
 )
+
+@Serializable
+data class NotamBoardDto(
+    @SerialName("v") val version: Int = 0,
+    @SerialName("sid") val sessionId: Long = 0,
+    @SerialName("notamRev") val notamRevision: Long = 0,
+    @SerialName("warning") val warning: String? = null,
+    @SerialName("filter") val filter: NotamFilterDto = NotamFilterDto(),
+    @SerialName("groups") val groups: List<NotamGroupDto> = emptyList(),
+    @SerialName("n") val count: Int = 0,
+    @SerialName("dropped") val dropped: Int = 0,
+    @SerialName("retrieved") val retrieved: String? = null,
+)
+
+@Serializable
+data class NotamFilterDto(
+    /** Radius in metres around each waypoint within which a NOTAM is listed. */
+    @SerialName("radius") val radiusM: Double? = null,
+    @SerialName("horizontalOnly") val horizontalOnly: Boolean = true,
+    @SerialName("flightLevelApplied") val flightLevelApplied: Boolean = false,
+)
+
+@Serializable
+data class NotamGroupDto(
+    @SerialName("wp") val waypointIndex: Int = -1,
+    @SerialName("n") val name: String = "",
+    /**
+     * Whether NOTAM data for this waypoint was actually retrieved. Defaults to false,
+     * which is the safe reading: a document that fails to say means we do not know.
+     */
+    @SerialName("data") val hasData: Boolean = false,
+    @SerialName("retrieved") val retrieved: String? = null,
+    @SerialName("notams") val notams: List<NotamDto> = emptyList(),
+    @SerialName("cut") val cut: Int = 0,
+)
+
+@Serializable
+data class NotamDto(
+    @SerialName("n") val number: String = "",
+    @SerialName("icao") val icaoLocation: String? = null,
+    @SerialName("txt") val text: String = "",
+    @SerialName("cat") val category: String? = null,
+    @SerialName("sect") val section: String? = null,
+    @SerialName("traffic") val traffic: String? = null,
+    @SerialName("read") val read: Boolean = false,
+    /** ISO 8601 UTC. Either bound may be absent: a permanent NOTAM has no end. */
+    @SerialName("from") val from: String? = null,
+    @SerialName("to") val to: String? = null,
+    @SerialName("area") val area: NotamAreaDto? = null,
+)
+
+@Serializable
+data class NotamAreaDto(
+    /** [longitude, latitude], GeoJSON axis order. */
+    @SerialName("c") val centre: List<Double> = emptyList(),
+    @SerialName("r") val radiusM: Double = 0.0,
+)

@@ -22,18 +22,30 @@ package de.akaflieg_freiburg.enroute.wear.data
 import de.akaflieg_freiburg.enroute.wear.data.dto.FormattedDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NavFrameDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NavLegDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.NotamAreaDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.NotamBoardDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.NotamDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.NotamFilterDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.NotamGroupDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.RouteDto
 import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
 import de.akaflieg_freiburg.enroute.wear.domain.FlightStatus
 import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
 import de.akaflieg_freiburg.enroute.wear.domain.Measured
 import de.akaflieg_freiburg.enroute.wear.domain.NavFrame
+import de.akaflieg_freiburg.enroute.wear.domain.Notam
+import de.akaflieg_freiburg.enroute.wear.domain.NotamArea
+import de.akaflieg_freiburg.enroute.wear.domain.NotamBoard
+import de.akaflieg_freiburg.enroute.wear.domain.NotamCategory
+import de.akaflieg_freiburg.enroute.wear.domain.NotamFilter
+import de.akaflieg_freiburg.enroute.wear.domain.NotamGroup
 import de.akaflieg_freiburg.enroute.wear.domain.OwnPosition
 import de.akaflieg_freiburg.enroute.wear.domain.RouteLeg
 import de.akaflieg_freiburg.enroute.wear.domain.RouteStatus
 import de.akaflieg_freiburg.enroute.wear.domain.RouteWaypoint
 import de.akaflieg_freiburg.enroute.wear.domain.WaypointLeg
 import de.akaflieg_freiburg.enroute.wear.domain.WaypointType
+import java.time.Instant
 
 // Wire to domain. The mapping is explicit rather than automatic so that an unknown
 // enumeration value or a missing key becomes a defined fallback here, in one readable
@@ -118,3 +130,75 @@ fun NavFrameDto.toDomain(): NavFrame {
         statusText = fmt?.statusText ?: "",
     )
 }
+
+
+/**
+ * ISO 8601 to epoch seconds, or null if it cannot be parsed.
+ *
+ * java.time.Instant rather than SimpleDateFormat: it is available from API 26, this app
+ * requires 30, and it is the only one of the two that is thread-safe. An unparsable
+ * timestamp becomes null and the field is simply not shown, which is the same treatment
+ * an omitted one gets.
+ */
+private fun String?.toEpochSeconds(): Long? {
+    if (this == null) return null
+    return runCatching { Instant.parse(this).epochSecond }.getOrNull()
+}
+
+private fun NotamAreaDto.toDomain(): NotamArea? {
+    val point = centre.toGeoPoint() ?: return null
+    if (radiusM <= 0.0) return null
+    return NotamArea(centre = point, radiusM = radiusM)
+}
+
+private fun NotamFilterDto.toDomain(): NotamFilter = NotamFilter(
+    radiusM = radiusM,
+    horizontalOnly = horizontalOnly,
+    flightLevelApplied = flightLevelApplied,
+)
+
+private fun NotamDto.toDomain(): Notam? {
+    // A NOTAM without a number cannot be keyed in a list, marked read, or referred to
+    // in a radio call. Dropping it is better than showing an entry that cannot be
+    // acted on.
+    if (number.isBlank()) return null
+    return Notam(
+        number = number,
+        icaoLocation = icaoLocation?.takeIf { it.isNotBlank() },
+        text = text,
+        category = NotamCategory.fromWire(category),
+        section = section?.takeIf { it.isNotBlank() },
+        traffic = traffic?.takeIf { it.isNotBlank() },
+        read = read,
+        fromEpochSeconds = from.toEpochSeconds(),
+        toEpochSeconds = to.toEpochSeconds(),
+        area = area?.toDomain(),
+    )
+}
+
+private fun NotamGroupDto.toDomain(): NotamGroup {
+    val mapped = notams.mapNotNull { it.toDomain() }
+
+    // A NOTAM dropped by the mapping above has to be counted as cut, not silently
+    // lost: the whole point of the cut member is that an incomplete group is never
+    // presentable as an empty one.
+    val lostInMapping = notams.size - mapped.size
+
+    return NotamGroup(
+        waypointIndex = waypointIndex,
+        name = name,
+        hasData = hasData,
+        retrievedEpochSeconds = retrieved.toEpochSeconds(),
+        notams = mapped,
+        cut = cut + lostInMapping,
+    )
+}
+
+fun NotamBoardDto.toDomain(): NotamBoard = NotamBoard(
+    revision = notamRevision,
+    groups = groups.filter { it.waypointIndex >= 0 }.map { it.toDomain() },
+    warning = warning?.takeIf { it.isNotBlank() },
+    filter = filter.toDomain(),
+    retrievedEpochSeconds = retrieved.toEpochSeconds(),
+    dropped = dropped,
+)
