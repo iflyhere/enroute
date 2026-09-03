@@ -31,6 +31,7 @@
 #include "GlobalObject.h"
 #include "companion/CompanionServer.h"
 #include "companion/HttpTransport.h"
+#include "companion/MapAssets.h"
 #include "companion/Protocol.h"
 #include "navigation/FlightRoute.h"
 #include "navigation/Navigator.h"
@@ -318,6 +319,32 @@ bool Companion::HttpTransport::handleRequest(const QHttpServerRequest& request,
         respond(compact ? m_server->navDocumentCompact() : m_server->navDocument(), revisions.nav);
         return true;
     }
+    // The map, for a client that renders one itself. Routed before the document
+    // endpoints because it is the only one with a variable path below it.
+    if (endpoint == u"/map"_s || endpoint.startsWith(u"/map/"_s))
+    {
+        auto* const assets = m_server->mapAssets();
+        if (assets == nullptr)
+        {
+            return false;
+        }
+
+        // Built from the Host header rather than from a stored address. A phone
+        // answers on loopback, on Wi-Fi and possibly on a tethering interface, and
+        // every URL inside the style has to name the one the client actually
+        // reached, or its next request goes nowhere.
+        const auto host = request.headers().value(QHttpHeaders::WellKnownHeader::Host);
+        if (host.isEmpty())
+        {
+            return false;
+        }
+        const auto baseUrl = u"http://"_s + QString::fromUtf8(host)
+                             + Companion::pathPrefix + u"/map"_s;
+
+        const auto elements = endpoint.mid(4).split(u'/', Qt::SkipEmptyParts);
+        return assets->handle(elements, baseUrl, responder);
+    }
+
     if (endpoint == u"/notams"_s)
     {
         respond(m_server->notamDocument(), revisions.notam);

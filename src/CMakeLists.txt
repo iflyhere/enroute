@@ -66,6 +66,7 @@ set(SOURCES
     ../3rdParty/sunset/src/sunset.h
     companion/CompanionServer.h
     companion/HttpTransport.h
+    companion/MapAssets.h
     companion/Protocol.h
     companion/Snapshot.h
     dataManagement/DataManager.h
@@ -183,6 +184,7 @@ set(SOURCES
     ../3rdParty/sunset/src/sunset.cpp
     companion/CompanionServer.cpp
     companion/HttpTransport.cpp
+    companion/MapAssets.cpp
     companion/Snapshot.cpp
     dataManagement/DataManager.cpp
     dataManagement/Downloadable_Abstract.cpp
