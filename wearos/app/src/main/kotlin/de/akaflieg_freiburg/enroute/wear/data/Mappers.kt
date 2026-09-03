@@ -20,6 +20,7 @@
 package de.akaflieg_freiburg.enroute.wear.data
 
 import de.akaflieg_freiburg.enroute.wear.data.dto.FormattedDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.MetarDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NavFrameDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NavLegDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NotamAreaDto
@@ -28,10 +29,14 @@ import de.akaflieg_freiburg.enroute.wear.data.dto.NotamDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NotamFilterDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NotamGroupDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.RouteDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.TafDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.WeatherBoardDto
+import de.akaflieg_freiburg.enroute.wear.domain.FlightCategory
 import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
 import de.akaflieg_freiburg.enroute.wear.domain.FlightStatus
 import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
 import de.akaflieg_freiburg.enroute.wear.domain.Measured
+import de.akaflieg_freiburg.enroute.wear.domain.MetarReport
 import de.akaflieg_freiburg.enroute.wear.domain.NavFrame
 import de.akaflieg_freiburg.enroute.wear.domain.Notam
 import de.akaflieg_freiburg.enroute.wear.domain.NotamArea
@@ -43,8 +48,11 @@ import de.akaflieg_freiburg.enroute.wear.domain.OwnPosition
 import de.akaflieg_freiburg.enroute.wear.domain.RouteLeg
 import de.akaflieg_freiburg.enroute.wear.domain.RouteStatus
 import de.akaflieg_freiburg.enroute.wear.domain.RouteWaypoint
+import de.akaflieg_freiburg.enroute.wear.domain.TafReport
 import de.akaflieg_freiburg.enroute.wear.domain.WaypointLeg
 import de.akaflieg_freiburg.enroute.wear.domain.WaypointType
+import de.akaflieg_freiburg.enroute.wear.domain.WeatherBoard
+import de.akaflieg_freiburg.enroute.wear.domain.WeatherStation
 import java.time.Instant
 
 // Wire to domain. The mapping is explicit rather than automatic so that an unknown
@@ -247,3 +255,44 @@ fun NotamBoardDto.toDomain(): NotamBoard = NotamBoard(
     retrievedEpochSeconds = retrieved.toEpochSeconds(),
     dropped = dropped,
 )
+
+fun WeatherBoardDto.toDomain(): WeatherBoard = WeatherBoard(
+    revision = weatherRevision,
+    qnh = qnh?.takeIf { it.isNotBlank() },
+    sun = sun?.takeIf { it.isNotBlank() },
+    downloading = downloading,
+    // The phone sends the list already sorted by distance, so it is kept in wire
+    // order. Re-sorting here would need a position the watch does not have.
+    stations = stations.mapNotNull { dto ->
+        val metar = dto.metar?.toDomain()
+        val taf = dto.taf?.toDomain()
+        // A station with neither report has nothing to show. The phone filters these
+        // out too, so this only guards against a document from an older version.
+        if (metar == null && taf == null) return@mapNotNull null
+        WeatherStation(
+            name = dto.waypoint.name,
+            extendedName = dto.waypoint.extendedName,
+            point = dto.waypoint.coordinate.toGeoPoint(),
+            type = WaypointType.fromWire(dto.waypoint.type),
+            way = dto.way?.takeIf { it.isNotBlank() },
+            metar = metar,
+            taf = taf,
+        )
+    },
+)
+
+private fun MetarDto.toDomain(): MetarReport? {
+    if (raw.isBlank()) return null
+    return MetarReport(
+        raw = raw,
+        summary = summary?.takeIf { it.isNotBlank() },
+        category = FlightCategory.fromWire(category),
+        colour = parseStyleColour(colour),
+        observedEpochSeconds = observed.toEpochSeconds(),
+    )
+}
+
+private fun TafDto.toDomain(): TafReport? {
+    if (raw.isBlank()) return null
+    return TafReport(raw = raw, issuedEpochSeconds = issued.toEpochSeconds())
+}

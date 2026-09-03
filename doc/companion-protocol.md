@@ -42,7 +42,7 @@ only.
 
 ## Revisions
 
-Five counters carry all cache coherency:
+Six counters carry all cache coherency:
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -50,6 +50,7 @@ Five counters carry all cache coherency:
 | `routeRev` | `quint32` | Incremented whenever the route document changes. Also changes when the pilot's unit preferences change, because those alter `units` and every `*Text` field. |
 | `navRev` | `quint32` | Incremented on every published navigation frame. Doubles as the `ETag` of the navigation frame. Appears only in that frame, not in the capability document. |
 | `notamRev` | `quint32` | Incremented whenever the NOTAM document's content changes. Derived by comparing successive encodings rather than counted from an event, so it moves only when a client would actually see something different. Appears only in the NOTAM document. |
+| `weatherRev` | `quint32` | Incremented whenever the weather document's content changes, derived the same way as `notamRev`. Appears only in the weather document. |
 | `mapRev` | `quint32` | Changes whenever the set of downloaded map files changes. Appears in the capability document, and in every tile URL. A client that sees it move must refetch the style: the URLs in the one it holds no longer resolve, which is what stops its tile cache from outliving the maps it was filled from. |
 
 Every navigation frame repeats `routeRev`. That one field is the whole caching protocol: a client
@@ -272,6 +273,55 @@ and all three are stated in the document so that a client can state them to the 
 The one rule that matters most: **a group means "no NOTAMs here" only when `data` is `true`, `notams`
 is absent, and `cut` is absent.** Any other combination means the client does not know.
 
+### Weather document
+
+METAR and TAF for the stations the app has downloaded, **in the app's own order** — `ObserverList`
+sorts by distance to the last known position, so the nearest station is first and a client needs no
+geometry of its own.
+
+```
+{
+  "v": 1,
+  "sid": 2748219411,
+  "weatherRev": 3,
+  "qnh": "1022 hPa in LFGA, 33 min ago",
+  "sun": "SS 20:12, SR 06:41",
+  "downloading": false,
+  "st": [
+    { "wp": { "n": "LFGA", "en": "COLMAR HOUSSEN", "c": [7.35917, 48.11028],
+              "e": 191, "t": "AD", "cat": "AD-PAVED" },
+      "way": "DIST 20 nm · QUJ 286°",
+      "metar": { "raw": "METAR LFGA 032100Z AUTO VRB03KT CAVOK 21/12 Q1022",
+                 "sum": "METAR 33 min ago: CAVOK",
+                 "cat": "VFR",
+                 "col": "green",
+                 "obs": "2026-09-03T21:00:00Z" },
+      "taf":   { "raw": "TAF LFGA 031700Z 0318/0324 27007KT CAVOK",
+                 "iss": "2026-09-03T17:00:00Z" } }
+  ]
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `qnh` | The app's own QNH sentence, naming the station it came from and the age of the reading. Omitted when the app has nothing to say. |
+| `sun` | The app's own sunrise and sunset line. Omitted likewise. While the position is unknown the app itself says so, and that sentence travels verbatim rather than being replaced by an omission. |
+| `downloading` | True while the app is fetching. A client should say so, or a short list reads as the final answer while more is on its way. |
+| `st[].wp` | The station's waypoint, in **the same shape the route document uses**, so one decoder serves both. |
+| `st[].way` | Distance and bearing from the current position, worded by the app. Omitted while the position is unknown. |
+| `st[].metar.raw` | The report verbatim. Travels because a pilot reads METAR out loud and no summary replaces that. |
+| `st[].metar.sum` | The app's own one-line summary. It already states the observation's age, so a client must not compute a second age from `obs` and show both. |
+| `st[].metar.cat` | `VFR`, `MVFR`, `IFR`, `LIFR` or `unknown` — the enum name, not its number. |
+| `st[].metar.col` | The app's **own** colour for that category. A client must use this rather than deriving a colour from `cat`: the app maps five categories onto its palette, and a second mapping would show a different colour for the same weather. `transparent` for `unknown`. |
+| `st[].metar.obs`, `st[].taf.iss` | Observation and issue time, ISO 8601 UTC. Omitted when the app does not know them. |
+
+A station appears only if it has a METAR or a TAF. Either member may be absent; both being absent
+does not occur.
+
+**This is not a weather service.** The app downloads reports for stations near the route and the
+position, and this document carries exactly those. A station missing from the array has no report
+in the app, which is not the same claim as good weather there.
+
 ## The map
 
 A companion device with its own map renderer is served everything that renderer needs, and all of
@@ -333,6 +383,7 @@ Settings.
 | `GET /enroute/v1/route` | route document, `ETag: W/"<routeRev>"` |
 | `GET /enroute/v1/nav` | navigation frame, `ETag: W/"<navRev>"`, `304 Not Modified` when `If-None-Match` matches |
 | `GET /enroute/v1/notams` | NOTAM document, `ETag: W/"<notamRev>"`, `304 Not Modified` when `If-None-Match` matches |
+| `GET /enroute/v1/weather` | weather document, `ETag: W/"<weatherRev>"`, `304 Not Modified` when `If-None-Match` matches |
 | `GET /enroute/v1/map/…` | the pilot's own map, see below |
 | `GET /enroute/v1/route.geojson` | the app's own GeoJSON route |
 | `GET /` | a small HTML page that polls `/nav`, for development and for checking the link from a desktop browser |
@@ -347,7 +398,9 @@ Clients poll `/enroute/v1/nav` once per second with `If-None-Match`, which costs
 nothing has changed, and fetch `/enroute/v1/route` only when `routeRev` changes. `/enroute/v1/notams`
 is polled far more slowly — **60 seconds is the recommended period** — because its content moves when
 NOTAM data is downloaded, which happens a few times a day, and otherwise only as the wall clock
-carries a NOTAM into or out of force.
+carries a NOTAM into or out of force. `/enroute/v1/weather` sits between the two at **150 seconds**:
+a METAR is issued about every half hour, but the summary states the observation's age, so a list
+left alone for longer is visibly wrong about how old it is.
 
 Polling is deliberately preferred over a streamed response: a watch radio wakes for each poll either
 way, a poll is its own reconnect logic, and `QHttpServerResponder`'s lifetime ends when the request
