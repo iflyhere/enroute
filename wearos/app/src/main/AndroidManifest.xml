@@ -11,6 +11,9 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <application
         android:allowBackup="false"
@@ -41,5 +44,13 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <!-- connectedDevice rather than dataSync: the platform caps a dataSync
+             foreground service at roughly six hours in twenty-four and then stops it,
+             which on a long flight would mean the watch going dark mid-leg. -->
+        <service
+            android:name=".service.NavSessionService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice"/>
     </application>
 </manifest>
