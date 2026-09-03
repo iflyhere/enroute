@@ -300,3 +300,45 @@ data class FlightEntryDto(
     @SerialName("ldg") val landings: Int = 0,
     @SerialName("track") val hasTrack: Boolean = false,
 )
+
+@Serializable
+data class TrafficBoardDto(
+    @SerialName("v") val version: Int = 0,
+    @SerialName("sid") val sessionId: Long = 0,
+    @SerialName("trafficRev") val trafficRevision: Long = 0,
+    /** Whether a receiver's heartbeat is reaching the phone. */
+    @SerialName("rx") val receiving: Boolean = false,
+    @SerialName("status") val status: String? = null,
+    @SerialName("err") val runtimeError: String? = null,
+    @SerialName("selfTest") val selfTestError: String? = null,
+    @SerialName("warning") val warning: TrafficWarningDto? = null,
+    @SerialName("tfc") val targets: List<TrafficTargetDto> = emptyList(),
+    @SerialName("noBearing") val withoutBearing: TrafficTargetDto? = null,
+)
+
+@Serializable
+data class TrafficWarningDto(
+    @SerialName("lvl") val alarmLevel: Int = 0,
+    @SerialName("type") val alarmType: Int = 0,
+    @SerialName("d") val description: String? = null,
+    @SerialName("hd") val horizontalDistanceM: Double? = null,
+    @SerialName("vd") val verticalDistanceM: Double? = null,
+)
+
+@Serializable
+data class TrafficTargetDto(
+    @SerialName("id") val id: String? = null,
+    @SerialName("cs") val callSign: String? = null,
+    @SerialName("lvl") val alarmLevel: Int = 0,
+    /** The app's own colour for the alarm level, as a style colour string. */
+    @SerialName("col") val colour: String? = null,
+    @SerialName("t") val type: String? = null,
+    @SerialName("hd") val horizontalDistanceM: Double? = null,
+    @SerialName("vd") val verticalDistanceM: Double? = null,
+    @SerialName("d") val description: String? = null,
+    @SerialName("rel") val relevant: Boolean = false,
+    /** [longitude, latitude]. Absent when the receiver knows no bearing. */
+    @SerialName("c") val coordinate: List<Double> = emptyList(),
+    @SerialName("trk") val trackDeg: Double? = null,
+    @SerialName("unc") val uncertaintyRadiusM: Double? = null,
+)

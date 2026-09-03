@@ -38,6 +38,10 @@
 #include "geomaps/VACLibrary.h"
 #include "notam/NOTAMProvider.h"
 #include "positioning/PositionProvider.h"
+#include "traffic/TrafficDataProvider.h"
+#include "traffic/TrafficFactor_DistanceOnly.h"
+#include "traffic/TrafficFactor_WithPosition.h"
+#include "traffic/Warning.h"
 #include "weather/METAR.h"
 #include "weather/Observer.h"
 #include "weather/ObserverList.h"
@@ -966,6 +970,141 @@ QJsonObject Companion::Snapshot::flightLog(const Companion::Revisions& revisions
     if (dropped > 0)
     {
         document.insert("dropped"_L1, dropped);
+    }
+
+    return document;
+}
+
+
+namespace
+{
+    /*! \brief The members every traffic target has, with or without a bearing */
+    void insertCommon(QJsonObject& object, const Traffic::TrafficFactor_Abstract* target)
+    {
+        if (!target->ID().isEmpty())
+        {
+            object.insert("id"_L1, target->ID());
+        }
+        if (!target->callSign().isEmpty())
+        {
+            object.insert("cs"_L1, target->callSign());
+        }
+
+        object.insert("lvl"_L1, target->alarmLevel());
+
+        // The app's own colour for that alarm level, night mode included. A client
+        // must not derive one: the phone maps three levels onto its palette twice
+        // over, and a second mapping would show a different colour for the same
+        // warning.
+        object.insert("col"_L1, target->color());
+
+        const auto type = QMetaEnum::fromType<Traffic::TrafficFactor_Abstract::Type>()
+                              .valueToKey(target->type());
+        if (type != nullptr)
+        {
+            object.insert("t"_L1, QLatin1StringView(type));
+        }
+
+        insertIfFinite(object, "hd"_L1, target->hDist());
+        insertIfFinite(object, "vd"_L1, target->vDist());
+
+        // Already composed and translated by the app, and the one string a pilot
+        // reads rather than decodes.
+        const auto description = plainText(target->description());
+        if (!description.isEmpty())
+        {
+            object.insert("d"_L1, description);
+        }
+        object.insert("rel"_L1, target->relevant());
+    }
+} // namespace
+
+
+QJsonObject Companion::Snapshot::traffic(const Companion::Revisions& revisions)
+{
+    auto* const provider = GlobalObject::trafficDataProvider();
+
+    QJsonObject document;
+    document.insert("v"_L1, Companion::protocolVersion);
+    document.insert("sid"_L1, static_cast<qint64>(revisions.session));
+    document.insert("trafficRev"_L1, static_cast<qint64>(revisions.traffic));
+
+    // Whether a receiver is talking to the app at all. This is what separates "no
+    // traffic around" from "no traffic receiver", and a client that shows an empty
+    // sky without saying which of the two it means is lying by omission.
+    document.insert("rx"_L1, provider->receivingHeartbeat());
+    const auto status = plainText(provider->statusString());
+    if (!status.isEmpty())
+    {
+        document.insert("status"_L1, status);
+    }
+    const auto runtimeError = provider->trafficReceiverRuntimeError();
+    if (!runtimeError.isEmpty())
+    {
+        document.insert("err"_L1, runtimeError);
+    }
+    const auto selfTestError = provider->trafficReceiverSelfTestError();
+    if (!selfTestError.isEmpty())
+    {
+        document.insert("selfTest"_L1, selfTestError);
+    }
+
+    // The app's current collision warning, if it has one. Its alarm level is the
+    // receiver's, not a number this protocol invents.
+    const auto warning = provider->warning();
+    if (warning.alarmLevel() > 0)
+    {
+        QJsonObject encoded;
+        encoded.insert("lvl"_L1, warning.alarmLevel());
+        encoded.insert("type"_L1, warning.alarmType());
+        const auto description = plainText(warning.description());
+        if (!description.isEmpty())
+        {
+            encoded.insert("d"_L1, description);
+        }
+        insertIfFinite(encoded, "hd"_L1, warning.hDist());
+        insertIfFinite(encoded, "vd"_L1, warning.vDist());
+        document.insert("warning"_L1, encoded);
+    }
+
+    QJsonArray targets;
+    const auto objects = provider->trafficObjects();
+    for (const auto* const target : objects)
+    {
+        if ((target == nullptr) || !target->valid())
+        {
+            continue;
+        }
+
+        const auto coordinate = target->extrapolatedCoordinate();
+        if (!coordinate.isValid())
+        {
+            continue;
+        }
+
+        QJsonObject encoded;
+        insertCommon(encoded, target);
+        encoded.insert("c"_L1, toJSON(coordinate));
+
+        // The extrapolated track, not the reported one: it is what the app draws the
+        // aircraft symbol along, and a symbol pointing somewhere else than the phone's
+        // is a difference a pilot would notice at exactly the wrong moment.
+        insertIfFinite(encoded, "trk"_L1, target->extrapolatedTrueTrack());
+        insertIfFinite(encoded, "unc"_L1, target->uncertaintyRadius());
+
+        targets.append(encoded);
+    }
+    document.insert("tfc"_L1, targets);
+
+    // The receiver knows this one is nearby but not where. It cannot go on a map, and
+    // leaving it out would hide traffic the pilot is entitled to know about, so it
+    // travels in a member of its own that no map code will ever read by accident.
+    auto* const distanceOnly = provider->trafficObjectWithoutPosition();
+    if ((distanceOnly != nullptr) && distanceOnly->valid())
+    {
+        QJsonObject encoded;
+        insertCommon(encoded, distanceOnly);
+        document.insert("noBearing"_L1, encoded);
     }
 
     return document;

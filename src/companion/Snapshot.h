@@ -72,6 +72,15 @@ namespace Companion
         /*! \brief Incremented whenever the flight log document changes */
         quint32 log {0};
 
+        /*! \brief Incremented for every published traffic frame
+         *
+         *  Unlike the other counters this one is not derived from a comparison. A
+         *  traffic frame is republished on every tick even when nothing moved,
+         *  because a client has to be able to tell "no traffic" from "no data" and
+         *  the only thing that distinguishes them is that frames keep arriving.
+         */
+        quint32 traffic {0};
+
         /*! \brief Changes whenever the set of downloaded map files changes
          *
          *  Every tile URL contains this, so that a client's own tile cache cannot
@@ -231,6 +240,29 @@ namespace Companion
          */
         [[nodiscard]] QJsonObject flightLog(const Companion::Revisions& revisions,
                                             int limit);
+
+        /*! \brief Traffic from the pilot's traffic receiver
+         *
+         *  Everything the app's own moving map draws for traffic, plus the receiver's
+         *  own state. Live and safety-relevant, so this is the one document meant to
+         *  be polled at the navigation rate.
+         *
+         *  No relevance judgement is added. Each target carries the app's own
+         *  relevant flag, its own alarm level and its own colour for that level, so a
+         *  client colours a target the way the phone would rather than inventing a
+         *  second scale for the same warning.
+         *
+         *  Targets whose bearing the receiver does not know are carried separately
+         *  from those it does. FLARM reports range without bearing often enough that
+         *  dropping those would hide traffic a pilot is entitled to see, and drawing
+         *  them on a map at a guessed bearing would be worse than not drawing them.
+         *
+         *  @param revisions Current document revisions
+         *
+         *  @returns The document described under "Traffic document" in
+         *  doc/companion-protocol.md
+         */
+        [[nodiscard]] QJsonObject traffic(const Companion::Revisions& revisions);
 
     } // namespace Snapshot
 

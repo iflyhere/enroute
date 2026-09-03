@@ -31,6 +31,8 @@ import de.akaflieg_freiburg.enroute.wear.data.dto.NotamFilterDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NotamGroupDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.RouteDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.TafDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.TrafficBoardDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.TrafficTargetDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.VacBoardDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.WeatherBoardDto
 import de.akaflieg_freiburg.enroute.wear.domain.ApproachChart
@@ -55,6 +57,9 @@ import de.akaflieg_freiburg.enroute.wear.domain.RouteLeg
 import de.akaflieg_freiburg.enroute.wear.domain.RouteStatus
 import de.akaflieg_freiburg.enroute.wear.domain.RouteWaypoint
 import de.akaflieg_freiburg.enroute.wear.domain.TafReport
+import de.akaflieg_freiburg.enroute.wear.domain.TrafficBoard
+import de.akaflieg_freiburg.enroute.wear.domain.TrafficTarget
+import de.akaflieg_freiburg.enroute.wear.domain.TrafficWarning
 import de.akaflieg_freiburg.enroute.wear.domain.WaypointLeg
 import de.akaflieg_freiburg.enroute.wear.domain.VacBoard
 import de.akaflieg_freiburg.enroute.wear.domain.WaypointType
@@ -355,4 +360,38 @@ fun FlightLogDto.toDomain(): FlightLogBoard = FlightLogBoard(
             hasTrack = dto.hasTrack,
         )
     },
+)
+
+fun TrafficBoardDto.toDomain(): TrafficBoard = TrafficBoard(
+    revision = trafficRevision,
+    receiving = receiving,
+    status = status?.takeIf { text -> text.isNotBlank() },
+    runtimeError = runtimeError?.takeIf { text -> text.isNotBlank() },
+    selfTestError = selfTestError?.takeIf { text -> text.isNotBlank() },
+    warning = warning?.takeIf { entry -> entry.alarmLevel > 0 }?.let { entry ->
+        TrafficWarning(
+            alarmLevel = entry.alarmLevel,
+            alarmType = entry.alarmType,
+            description = entry.description?.takeIf { text -> text.isNotBlank() },
+            horizontalDistanceM = entry.horizontalDistanceM,
+            verticalDistanceM = entry.verticalDistanceM,
+        )
+    },
+    targets = targets.map { dto -> dto.toDomain() },
+    withoutBearing = withoutBearing?.toDomain(),
+)
+
+private fun TrafficTargetDto.toDomain(): TrafficTarget = TrafficTarget(
+    id = id?.takeIf { text -> text.isNotBlank() },
+    callSign = callSign?.takeIf { text -> text.isNotBlank() },
+    alarmLevel = alarmLevel,
+    colour = parseStyleColour(colour),
+    type = type?.takeIf { text -> text.isNotBlank() },
+    horizontalDistanceM = horizontalDistanceM,
+    verticalDistanceM = verticalDistanceM,
+    description = description?.takeIf { text -> text.isNotBlank() },
+    relevant = relevant,
+    point = coordinate.toGeoPoint(),
+    trackDeg = trackDeg,
+    uncertaintyRadiusM = uncertaintyRadiusM,
 )

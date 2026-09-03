@@ -25,6 +25,7 @@ import de.akaflieg_freiburg.enroute.wear.data.dto.HelloDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NavFrameDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NotamBoardDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.RouteDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.TrafficBoardDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.VacBoardDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.WeatherBoardDto
 import de.akaflieg_freiburg.enroute.wear.data.parseStyleColour
@@ -112,6 +113,7 @@ class HttpNavTransport(
         var weatherETag: String? = null
         var vacETag: String? = null
         var logETag: String? = null
+        var trafficETag: String? = null
 
         // Zero, not "now", so the first pass fetches NOTAMs instead of leaving the
         // screen empty for a minute after connecting.
@@ -177,6 +179,22 @@ class HttpNavTransport(
                 // states the observation's age, so a list left alone for five minutes
                 // would be visibly wrong about how old it is. A 304 is still the normal
                 // answer, because the phone only rebuilds when the content moves.
+                // Traffic rides at the navigation rate, with no beat of its own: it
+                // is the other thing on this link worth a second of a pilot's
+                // attention, and a target that moved two seconds ago is a target drawn
+                // in the wrong place. A 304 costs almost nothing when the phone has
+                // nothing new, which on the ground is every tick.
+                val traffic = request(TRAFFIC, ifNoneMatch = trafficETag)
+                if (traffic != null) {
+                    trafficETag = traffic.etag
+                    emit(
+                        TransportEvent.TrafficUpdate(
+                            WireJson.json.decodeFromString<TrafficBoardDto>(traffic.body)
+                                .toDomain(),
+                        ),
+                    )
+                }
+
                 // The logbook gains an entry when a flight ends, and the detector's
                 // state moves a handful of times per flight. Thirty seconds is fast
                 // enough for a takeoff banner to feel live without being a feed.
@@ -298,6 +316,7 @@ class HttpNavTransport(
         const val WEATHER = "/weather"
         const val VACS = "/vacs"
         const val LOG = "/log"
+        const val TRAFFIC = "/traffic"
 
         // The phone rebuilds its NOTAM document every five minutes at the slowest, so
         // a minute here means a client is never more than about a minute behind while

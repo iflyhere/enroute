@@ -57,6 +57,7 @@ import de.akaflieg_freiburg.enroute.wear.ui.log.FlightLogScreen
 import de.akaflieg_freiburg.enroute.wear.ui.notam.NotamScreen
 import de.akaflieg_freiburg.enroute.wear.ui.route.RouteScreen
 import de.akaflieg_freiburg.enroute.wear.ui.settings.SettingsScreen
+import de.akaflieg_freiburg.enroute.wear.ui.traffic.TrafficScreen
 import de.akaflieg_freiburg.enroute.wear.ui.route.ZoomLevel
 import de.akaflieg_freiburg.enroute.wear.ui.weather.WeatherScreen
 import kotlinx.coroutines.launch
@@ -167,6 +168,10 @@ private fun MainPages(
 
     val pages = visiblePages(order, hidden)
 
+    // Every page, so the settings list can offer a hidden one back. The pager
+    // uses the filtered list above; these two must not be the same value.
+    val allPages = orderedPages(order)
+
     var zoom by remember { mutableStateOf<ZoomLevel>(ZoomLevel.Automatic) }
     val pagerState = rememberPagerState(initialPage = 0) { pages.size }
     val scope = rememberCoroutineScope()
@@ -176,6 +181,7 @@ private fun MainPages(
     // then which of them holds focus decides what the bezel does -- a race with no good
     // outcome. One focusable, one handler, dispatch by page.
     val notamListState = rememberScalingLazyListState()
+    val trafficListState = rememberScalingLazyListState()
     val weatherListState = rememberScalingLazyListState()
     val logListState = rememberScalingLazyListState()
     val settingsListState = rememberScalingLazyListState()
@@ -249,6 +255,11 @@ private fun MainPages(
                     // wants precise positioning, not momentum.
                     WearPage.Notam -> {
                         notamListState.dispatchRawDelta(event.verticalScrollPixels)
+                        true
+                    }
+
+                    WearPage.Traffic -> {
+                        trafficListState.dispatchRawDelta(event.verticalScrollPixels)
                         true
                     }
 
@@ -329,6 +340,7 @@ private fun MainPages(
                             } else {
                                 null
                             },
+                            traffic = uiState.value.session.traffic,
                             port = port,
                             zoom = zoom,
                             isActive = pages.getOrNull(pagerState.currentPage) == WearPage.Map,
@@ -350,6 +362,11 @@ private fun MainPages(
                     }
                 }
 
+                WearPage.Traffic -> TrafficScreen(
+                    board = uiState.value.session.traffic,
+                    listState = trafficListState,
+                )
+
                 WearPage.Notam -> NotamScreen(
                     board = uiState.value.session.notams,
                     listState = notamListState,
@@ -366,7 +383,7 @@ private fun MainPages(
                 )
 
                 WearPage.Settings -> SettingsScreen(
-                    pages = pages,
+                    pages = allPages,
                     hidden = hidden,
                     bezelAction = bezelAction,
                     chartMode = chartMode,
@@ -375,7 +392,10 @@ private fun MainPages(
                     appVersion = APP_VERSION,
                     listState = settingsListState,
                     onMovePage = { page, delta ->
-                        order = movePage(pages, page, delta)
+                        // Moved within every page, not within the visible ones: a step
+                        // past a hidden neighbour has to count, or the order changes by
+                        // two places the next time that page is switched back on.
+                        order = movePage(allPages, page, delta)
                         settings.pageOrder = order
                     },
                     onToggleHidden = { page ->
