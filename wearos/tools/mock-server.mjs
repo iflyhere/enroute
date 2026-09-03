@@ -99,6 +99,8 @@ Fault injection, for exercising a client's unhappy paths:
   GET /enroute/v1/debug/notams?m=none       no NOTAM data for any waypoint
   GET /enroute/v1/debug/notams?m=warn       add the "not current" warning
   GET /enroute/v1/debug/notams?m=cap        cap at 2, so groups report "cut"
+  GET /enroute/v1/debug/weather?m=none      no stations at all
+  GET /enroute/v1/debug/weather?m=loading   the "downloading" flag set
   GET /enroute/v1/debug/reset               back to normal
 `);
     process.exit(0);
@@ -239,6 +241,9 @@ const state = {
     notamWarning: null,
     notamCap: 60,
     notamsRetrievedAt: Date.now() - 42 * 60 * 1000,
+    weatherRev: 1,
+    weatherAbsent: false,
+    weatherDownloading: false,
     startedAt: Date.now(),
 };
 
@@ -695,6 +700,92 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+// ---------------------------------------------------------------------------
+// Weather
+//
+// One station per flight category, so the colour mapping and the "unknown" case are
+// all exercised in a single pass. The colours are the app's own strings, not a guess:
+// METAR::flightCategoryColor() returns exactly these four.
+const WEATHER_FIXTURES = [
+    {
+        wp: { n: 'EDNY', en: 'FRIEDRICHSHAFEN', c: [9.51139, 47.67139], e: 417, t: 'AD', cat: 'AD-PAVED' },
+        metar: {
+            raw: 'METAR EDNY 031420Z 24005KT CAVOK 21/12 Q1018',
+            sum: 'METAR 14 min ago: CAVOK',
+            cat: 'VFR', col: 'green', obs: null,
+        },
+        taf: { raw: 'TAF EDNY 031100Z 0312/0412 25008KT CAVOK', iss: null },
+    },
+    {
+        wp: { n: 'EDTL', en: 'LAHR', c: [7.8275, 48.3692], e: 156, t: 'AD', cat: 'AD-PAVED' },
+        metar: {
+            raw: 'METAR EDTL 031420Z 19007KT 6000 BKN012 18/14 Q1016',
+            sum: 'METAR 14 min ago: MVMC',
+            cat: 'MVFR', col: 'yellow', obs: null,
+        },
+        taf: null,
+    },
+    {
+        // No TAF, and a low ceiling: the pair a client is most likely to mishandle.
+        wp: { n: 'EDDS', en: 'STUTTGART', c: [9.22196, 48.68987], e: 1276, t: 'AD', cat: 'AD-PAVED' },
+        metar: {
+            raw: 'METAR EDDS 031420Z 09012KT 1200 -RA OVC004 14/13 Q1014',
+            sum: 'METAR 14 min ago: IMC',
+            cat: 'IFR', col: 'red', obs: null,
+        },
+        taf: null,
+    },
+    {
+        // A TAF with no METAR at all, which must still produce a row.
+        wp: { n: 'EDTG', en: 'BREMGARTEN', c: [7.6339, 47.9061], e: 249, t: 'AD', cat: 'AD-GRASS' },
+        metar: null,
+        taf: { raw: 'TAF EDTG 031100Z 0312/0412 VRB03KT 9999 SCT040', iss: null },
+    },
+];
+
+function weatherDocument() {
+    const now = Date.now();
+    const flight = flightState();
+    const stations = state.weatherAbsent ? [] : WEATHER_FIXTURES.map((fixture) => {
+        const station = { wp: fixture.wp };
+
+        // The bearing line the app writes. Computed from the simulated position and
+        // through the same formatter the navigation frame uses, so it moves as the
+        // aircraft flies and honours the --units flag -- which is what a client's
+        // "did this actually update" check needs.
+        const here = flight ? flight.position : null;
+        const there = { lat: fixture.wp.c[1], lon: fixture.wp.c[0] };
+        if (here) {
+            station.way = 'DIST ' + fmtHDist(distanceTo(here, there), opts.units)
+                + ' · QUJ ' + Math.round(azimuthTo(here, there)) + '°';
+        }
+
+        if (fixture.metar) {
+            station.metar = {
+                ...fixture.metar,
+                obs: new Date(now - 14 * 60 * 1000).toISOString().replace(/\.\d+Z$/, 'Z'),
+            };
+        }
+        if (fixture.taf) {
+            station.taf = {
+                ...fixture.taf,
+                iss: new Date(now - 3 * 60 * 60 * 1000).toISOString().replace(/\.\d+Z$/, 'Z'),
+            };
+        }
+        return station;
+    });
+
+    return {
+        v: 1,
+        sid: state.sid,
+        weatherRev: state.weatherRev,
+        qnh: '1018 hPa in EDNY, 14 min ago',
+        sun: 'SS 20:12, SR 06:41',
+        downloading: state.weatherDownloading,
+        st: stations,
+    };
+}
+
     if (path === '/enroute/v1/hello') {
         sendJson(res, { ...helloDocument(), ...(mapFields ?? {}) }, `W/"${state.routeRev}"`);
         return;
@@ -718,6 +809,13 @@ const server = http.createServer((req, res) => {
         const etag = `W/"${state.notamRev}"`;
         if (req.headers['if-none-match'] === etag) { res.writeHead(304).end(); return; }
         sendJson(res, notamDocument(), etag);
+        return;
+    }
+
+    if (path === '/enroute/v1/weather') {
+        const etag = `W/"${state.weatherRev}"`;
+        if (req.headers['if-none-match'] === etag) { res.writeHead(304).end(); return; }
+        sendJson(res, weatherDocument(), etag);
         return;
     }
 
@@ -759,6 +857,15 @@ const server = http.createServer((req, res) => {
         sendJson(res, { ok: true, mode, notamRev: state.notamRev });
         return;
     }
+    if (path === '/enroute/v1/debug/weather') {
+        const mode = url.searchParams.get('m');
+        state.weatherAbsent = mode === 'none';
+        state.weatherDownloading = mode === 'loading';
+        state.weatherRev++;
+        res.writeHead(204).end();
+        return;
+    }
+
     if (path === '/enroute/v1/debug/reset') {
         state.forcedStatus = null;
         state.stallUntil = 0;

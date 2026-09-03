@@ -167,6 +167,9 @@ namespace Companion
         /*! \brief Encoded NOTAM document, or empty while the feature is off */
         [[nodiscard]] QByteArray notamDocument() const {return m_notamDocument;}
 
+        /*! \brief Encoded weather document, or empty while the feature is off */
+        [[nodiscard]] QByteArray weatherDocument() const {return m_weatherDocument;}
+
         /*! \brief The pilot's own map, for a client that renders one itself
          *
          *  Defined out of line, because QPointer needs a complete type and pulling
@@ -223,6 +226,9 @@ namespace Companion
         /*! \brief Emitted after notamDocument() has been updated */
         void notamDocumentChanged();
 
+        /*! \brief Emitted after weatherDocument() has been updated */
+        void weatherDocumentChanged();
+
 
     private slots:
         // Marks the navigation frame as needing re-encoding. Cheap on purpose: the
@@ -243,6 +249,14 @@ namespace Companion
         void publishNotams();
 
         void markNotamsDirty();
+
+        // Same shape as publishNotams(): rebuild, compare, and only then move the
+        // revision. Weather arrives in bursts -- one download updates every station
+        // at once -- so the comparison saves a client a great many identical
+        // refetches.
+        void publishWeather();
+
+        void markWeatherDirty();
 
         // Creates or destroys the transport in response to the settings.
         void updateTransport();
@@ -265,12 +279,14 @@ namespace Companion
         QByteArray m_navDocument;
         QByteArray m_navDocumentCompact;
         QByteArray m_notamDocument;
+        QByteArray m_weatherDocument;
 
         // The NOTAM document with its revision member left out, kept so that a
         // rebuild can tell whether anything changed. An exact comparison and not
         // a hash: a collision would mean the watch keeps showing NOTAMs that have
         // been superseded, and that is not a trade worth a few kilobytes.
         QByteArray m_notamFingerprint;
+        QByteArray m_weatherFingerprint;
 
         bool m_navDirty {false};
 
@@ -284,6 +300,17 @@ namespace Companion
         // to "Current" with no download involved.
         QTimer m_notamTimer;
         QTimer m_notamCoalesceTimer;
+
+        // Weather ages on the wall clock as much as on new data: a METAR expires,
+        // and the summary the app writes says how old the observation is. So this
+        // one has a slow beat of its own too.
+        QTimer m_weatherTimer;
+        QTimer m_weatherCoalesceTimer;
+
+        // The app's own station list, sorted by distance. Owned here rather than
+        // created per request, because it caches one Weather::Observer per station
+        // and its bindings are what keep that list current.
+        QPointer<Weather::ObserverList> m_observers;
 
         // Held for as long as the feature is enabled. RemainingRouteInfo has no
         // notification signal, so it can only be watched as a bindable property.

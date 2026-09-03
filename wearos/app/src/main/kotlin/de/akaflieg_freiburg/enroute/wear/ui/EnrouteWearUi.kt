@@ -55,13 +55,15 @@ import de.akaflieg_freiburg.enroute.wear.ui.map.MapLibreScreen
 import de.akaflieg_freiburg.enroute.wear.ui.notam.NotamScreen
 import de.akaflieg_freiburg.enroute.wear.ui.route.RouteScreen
 import de.akaflieg_freiburg.enroute.wear.ui.route.ZoomLevel
+import de.akaflieg_freiburg.enroute.wear.ui.weather.WeatherScreen
 
 private enum class Screen { Main, Connect, CodeEntry }
 
 private const val PAGE_DATA = 0
 private const val PAGE_MAP = 1
 private const val PAGE_NOTAM = 2
-private const val PAGE_COUNT = 3
+private const val PAGE_WEATHER = 3
+private const val PAGE_COUNT = 4
 
 /**
  * The whole user interface.
@@ -164,6 +166,7 @@ private fun MainPages(
     // then which of the two holds focus decides whether the bezel zooms or scrolls --
     // a race with no good outcome. One focusable, one handler, dispatch by page.
     val notamListState = rememberScalingLazyListState()
+    val weatherListState = rememberScalingLazyListState()
 
     // A picker or a rotary modifier is inert unless something in the hierarchy holds
     // focus. This is the trap every Wear developer hits once.
@@ -209,6 +212,11 @@ private fun MainPages(
                         // One to one with the bezel rather than a fling: reading a
                         // NOTAM wants precise positioning, not momentum.
                         notamListState.dispatchRawDelta(event.verticalScrollPixels)
+                        true
+                    }
+
+                    PAGE_WEATHER -> {
+                        weatherListState.dispatchRawDelta(event.verticalScrollPixels)
                         true
                     }
 
@@ -292,6 +300,11 @@ private fun MainPages(
                 PAGE_NOTAM -> NotamScreen(
                     board = uiState.value.session.notams,
                     listState = notamListState,
+                )
+
+                PAGE_WEATHER -> WeatherScreen(
+                    board = uiState.value.session.weather,
+                    listState = weatherListState,
                 )
             }
         }

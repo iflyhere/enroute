@@ -208,3 +208,41 @@ data class NotamAreaDto(
     @SerialName("c") val centre: List<Double> = emptyList(),
     @SerialName("r") val radiusM: Double = 0.0,
 )
+
+@Serializable
+data class WeatherBoardDto(
+    @SerialName("v") val version: Int = 0,
+    @SerialName("sid") val sessionId: Long = 0,
+    @SerialName("weatherRev") val weatherRevision: Long = 0,
+    @SerialName("qnh") val qnh: String? = null,
+    @SerialName("sun") val sun: String? = null,
+    @SerialName("downloading") val downloading: Boolean = false,
+    @SerialName("st") val stations: List<WeatherStationDto> = emptyList(),
+)
+
+@Serializable
+data class WeatherStationDto(
+    /** The same waypoint shape the route document uses, so one mapper serves both. */
+    @SerialName("wp") val waypoint: WaypointDto = WaypointDto(),
+    @SerialName("way") val way: String? = null,
+    @SerialName("metar") val metar: MetarDto? = null,
+    @SerialName("taf") val taf: TafDto? = null,
+)
+
+@Serializable
+data class MetarDto(
+    @SerialName("raw") val raw: String = "",
+    @SerialName("sum") val summary: String? = null,
+    @SerialName("cat") val category: String? = null,
+    /** The app's own colour for the category, as a style colour string. */
+    @SerialName("col") val colour: String? = null,
+    /** ISO 8601 UTC. */
+    @SerialName("obs") val observed: String? = null,
+)
+
+@Serializable
+data class TafDto(
+    @SerialName("raw") val raw: String = "",
+    /** ISO 8601 UTC. */
+    @SerialName("iss") val issued: String? = null,
+)

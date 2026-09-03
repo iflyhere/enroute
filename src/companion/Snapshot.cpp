@@ -22,6 +22,7 @@
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QJsonArray>
+#include <QMetaEnum>
 #include <QMetaProperty>
 #include <QRegularExpression>
 
@@ -33,6 +34,11 @@
 #include "navigation/Navigator.h"
 #include "notam/NOTAMProvider.h"
 #include "positioning/PositionProvider.h"
+#include "weather/METAR.h"
+#include "weather/Observer.h"
+#include "weather/ObserverList.h"
+#include "weather/TAF.h"
+#include "weather/WeatherDataProvider.h"
 
 using namespace Qt::Literals::StringLiterals;
 
@@ -696,6 +702,108 @@ QJsonObject Companion::Snapshot::notams(const Companion::Revisions& revisions)
     {
         document.insert("retrieved"_L1, oldestRetrieval.toUTC().toString(Qt::ISODate));
     }
+
+    return document;
+}
+
+
+QJsonObject Companion::Snapshot::weather(const Companion::Revisions& revisions,
+                                         Weather::ObserverList* observers)
+{
+    const auto aircraft = GlobalObject::navigator()->aircraft();
+    const auto now = QDateTime::currentDateTimeUtc();
+    const auto here = Positioning::PositionProvider::lastValidCoordinate();
+
+    QJsonObject document;
+    document.insert("v"_L1, Companion::protocolVersion);
+    document.insert("sid"_L1, static_cast<qint64>(revisions.session));
+
+    auto* const provider = GlobalObject::weatherDataProvider();
+
+    // Both are already composed sentences carrying the pilot's units, and both can
+    // contain markup, so they go through the same stripper the route summary uses.
+    const auto qnh = plainText(provider->QNHInfo());
+    if (!qnh.isEmpty())
+    {
+        document.insert("qnh"_L1, qnh);
+    }
+    const auto sun = plainText(provider->sunInfo());
+    if (!sun.isEmpty())
+    {
+        document.insert("sun"_L1, sun);
+    }
+    document.insert("downloading"_L1, provider->downloading());
+
+    QJsonArray stations;
+    if (observers != nullptr)
+    {
+        const auto list = observers->observers();
+        for (auto* const observer : list)
+        {
+            if (observer == nullptr)
+            {
+                continue;
+            }
+
+            const auto metar = observer->metar();
+            const auto taf = observer->taf();
+            if (!metar.isValid() && !taf.isValid())
+            {
+                continue;
+            }
+
+            QJsonObject station;
+            station.insert("wp"_L1, toJSON(observer->waypoint()));
+
+            // The bearing and distance line the app puts under a station name.
+            // Empty while the position is unknown, which is why it is conditional.
+            const auto way = plainText(
+                aircraft.describeWay(here, observer->waypoint().coordinate()));
+            if (!way.isEmpty())
+            {
+                station.insert("way"_L1, way);
+            }
+
+            if (metar.isValid())
+            {
+                QJsonObject encoded;
+                encoded.insert("raw"_L1, metar.rawText());
+                encoded.insert("sum"_L1, plainText(metar.summary(aircraft, now)));
+
+                // The category and the app's own colour for it. A client must not
+                // derive the colour from the category itself: the app maps five
+                // categories onto its own palette, and a watch inventing a second
+                // mapping would show a different colour for the same weather.
+                const auto category = QMetaEnum::fromType<Weather::METAR::FlightCategory>()
+                                          .valueToKey(metar.flightCategory());
+                if (category != nullptr)
+                {
+                    encoded.insert("cat"_L1, QLatin1StringView(category));
+                }
+                encoded.insert("col"_L1, metar.flightCategoryColor());
+
+                if (metar.observationTime().isValid())
+                {
+                    encoded.insert("obs"_L1, metar.observationTime().toUTC().toString(Qt::ISODate));
+                }
+                station.insert("metar"_L1, encoded);
+            }
+
+            if (taf.isValid())
+            {
+                QJsonObject encoded;
+                encoded.insert("raw"_L1, taf.rawText());
+                if (taf.issueTime().isValid())
+                {
+                    encoded.insert("iss"_L1, taf.issueTime().toUTC().toString(Qt::ISODate));
+                }
+                station.insert("taf"_L1, encoded);
+            }
+
+            stations.append(station);
+        }
+    }
+    document.insert("st"_L1, stations);
 
     return document;
 }
