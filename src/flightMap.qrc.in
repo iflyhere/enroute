@@ -5,6 +5,11 @@
         <file alias="flightMap/osm-liberty.json">${CMAKE_CURRENT_SOURCE_DIR}/flightMap/osm-liberty.json</file>
         <file alias="flightMap/osm-liberty-dark.json">${CMAKE_CURRENT_SOURCE_DIR}/flightMap/osm-liberty-dark.json</file>
 
+	<!-- Aviation overlay layers, generated from FlightMap.qml. See
+	     generatedSources/generateAviationLayers.py. Used when serving the map
+	     to a companion device, which renders it without the app's QML. -->
+	<file alias="flightMap/aviation-layers.json">${CMAKE_SOURCE_DIR}/generatedSources/flightMap/aviation-layers.json</file>
+
 	<!-- Sprites -->
 	<file alias="flightMap/sprites/sprite.json">${CMAKE_SOURCE_DIR}/generatedSources/flightMap/sprite.json</file>
 	<file alias="flightMap/sprites/sprite@2x.json">${CMAKE_SOURCE_DIR}/generatedSources/flightMap/sprite@2x.json</file>
