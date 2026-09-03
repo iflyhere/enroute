@@ -92,21 +92,15 @@ class HttpNavTransport(
             return@flow
         }
 
-        emit(
-            TransportEvent.Connected(
-                PeerInfo(
-                    appVersion = hello.appVersion,
-                    protocolVersion = hello.version,
-                    sessionId = hello.sessionId,
-                    navPeriodMs = hello.navPeriodMs,
-                    mapRevision = hello.mapRevision,
-                    mapAttribution = hello.mapAttribution,
-                    mapCentre = hello.mapCentre.takeIf { it.size >= 2 }
-                        ?.let { GeoPoint(latDeg = it[1], lonDeg = it[0]) },
-                    mapCentreZoom = hello.mapCentre.getOrElse(2) { 0.0 },
-                ),
-            ),
-        )
+        // Logged because everything downstream depends on it and none of it is visible
+        // from the outside: whether a map is offered, where the camera starts, which
+        // notice to display. A wrong assumption here costs a whole test round.
+        Log.i(TAG, "peer " + hello.appVersion + " v" + hello.version +
+            " mapRev=" + hello.mapRevision +
+            " centre=" + hello.mapCentre +
+            " navPeriod=" + hello.navPeriodMs)
+
+        emit(TransportEvent.Connected(peerOf(hello)))
 
         var knownRoute: Pair<Long, Long>? = null   // session id to route revision
         var navETag: String? = null
@@ -135,6 +129,17 @@ class HttpNavTransport(
                             emit(TransportEvent.RouteUpdate(route))
                             knownRoute = wanted
                         }
+
+                        // The capability document is rebuilt in lockstep with the route
+                        // document, so this is also the moment its contents can have
+                        // changed. Refetching it closes a window that cost a whole test
+                        // round: a client that connects in the fraction of a second
+                        // before the phone first publishes its map revision otherwise
+                        // spends the entire session believing no map is on offer,
+                        // because the capability document is fetched exactly once.
+                        request(HELLO)
+                            ?.let { WireJson.json.decodeFromString<HelloDto>(it.body) }
+                            ?.let { fresh -> emit(TransportEvent.Connected(peerOf(fresh))) }
                     }
                 }
 
@@ -171,6 +176,18 @@ class HttpNavTransport(
             delay(pollPeriodMs)
         }
     }.flowOn(Dispatchers.IO)
+
+    private fun peerOf(hello: HelloDto) = PeerInfo(
+        appVersion = hello.appVersion,
+        protocolVersion = hello.version,
+        sessionId = hello.sessionId,
+        navPeriodMs = hello.navPeriodMs,
+        mapRevision = hello.mapRevision,
+        mapAttribution = hello.mapAttribution,
+        mapCentre = hello.mapCentre.takeIf { it.size >= 2 }
+            ?.let { GeoPoint(latDeg = it[1], lonDeg = it[0]) },
+        mapCentreZoom = hello.mapCentre.getOrElse(2) { 0.0 },
+    )
 
     private class Response(val body: String, val etag: String?)
 
