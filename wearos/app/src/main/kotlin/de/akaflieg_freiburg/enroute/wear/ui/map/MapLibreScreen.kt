@@ -50,6 +50,7 @@ import androidx.wear.compose.material3.Text
 import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
 import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
 import de.akaflieg_freiburg.enroute.wear.domain.OwnPosition
+import de.akaflieg_freiburg.enroute.wear.domain.TrafficBoard
 import de.akaflieg_freiburg.enroute.wear.domain.VacBoard
 import de.akaflieg_freiburg.enroute.wear.ui.route.ZoomLevel
 import de.akaflieg_freiburg.enroute.wear.ui.theme.CockpitColors
@@ -60,6 +61,7 @@ import org.maplibre.android.maps.MapLibreMapOptions
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 import org.maplibre.android.geometry.LatLngQuad
+import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.RasterLayer
@@ -72,6 +74,8 @@ import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
 import java.net.URI
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * The pilot's own map, rendered on the watch.
@@ -106,6 +110,7 @@ fun MapLibreScreen(
     route: FlightRoute?,
     ownPosition: OwnPosition?,
     charts: VacBoard?,
+    traffic: TrafficBoard?,
     port: Int,
     zoom: ZoomLevel,
     isActive: Boolean,
@@ -168,6 +173,8 @@ fun MapLibreScreen(
                             holder.applyRoute(route)
                             holder.applyOwnPosition(ownPosition)
                             holder.applyChart(charts, ownPosition, host, port)
+                holder.applyTraffic(traffic)
+                            holder.applyTraffic(traffic)
                             holder.applyCamera(
                                 ownPosition, route, zoom, radiusPixels,
                                 fallbackCentre, fallbackZoom,
@@ -360,6 +367,61 @@ private class MapHolder {
         )
     }
 
+    /**
+     * Draws the traffic the receiver reports.
+     *
+     * A filled circle in the phone's own colour for the target's alarm level, and a
+     * short line along its extrapolated track. Not the aircraft symbol the phone
+     * draws: that is a QML item with its own rotated icon, and the sprite sheet this
+     * map is served has no equivalent, so a dot with a direction is the honest
+     * translation rather than a worse imitation.
+     *
+     * Rebuilt on every frame with no comparison. Traffic is the one overlay where a
+     * cached picture is a wrong picture, and a feature collection of a dozen points
+     * costs nothing next to a tile.
+     */
+    fun applyTraffic(traffic: TrafficBoard?) {
+        val currentStyle = style ?: return
+        val source = currentStyle.getSourceAs<GeoJsonSource>(TRAFFIC_SOURCE) ?: return
+        val trackSource = currentStyle.getSourceAs<GeoJsonSource>(TRAFFIC_TRACK_SOURCE) ?: return
+
+        val dots = mutableListOf<Feature>()
+        val tracks = mutableListOf<Feature>()
+
+        traffic?.targets.orEmpty().forEach { target ->
+            val point = target.point ?: return@forEach
+            val colour = target.colour
+                ?.let { value -> String.format("#%06X", (value and 0xFFFFFFL)) }
+                ?: TRAFFIC_FALLBACK_COLOUR
+
+            val feature = Feature.fromGeometry(
+                Point.fromLngLat(point.lonDeg, point.latDeg),
+            )
+            feature.addStringProperty("colour", colour)
+            feature.addStringProperty("label", target.label)
+            dots.add(feature)
+
+            // A fixed length in metres rather than one scaled by ground speed: the
+            // document carries no speed, and a line whose length implied one would be
+            // saying something the data does not.
+            val track = target.trackDeg ?: return@forEach
+            val end = offset(point, track, TRACK_LENGTH_M)
+            val line = Feature.fromGeometry(
+                LineString.fromLngLats(
+                    listOf(
+                        Point.fromLngLat(point.lonDeg, point.latDeg),
+                        Point.fromLngLat(end.lonDeg, end.latDeg),
+                    ),
+                ),
+            )
+            line.addStringProperty("colour", colour)
+            tracks.add(line)
+        }
+
+        source.setGeoJson(FeatureCollection.fromFeatures(dots))
+        trackSource.setGeoJson(FeatureCollection.fromFeatures(tracks))
+    }
+
     fun applyRoute(route: FlightRoute?) {
         val currentStyle = style ?: return
         // A route changes a handful of times in a flight; rebuilding its geometry on
@@ -483,6 +545,8 @@ private fun addOverlayLayers(style: Style) {
     style.addSource(GeoJsonSource(ROUTE_SOURCE))
     style.addSource(GeoJsonSource(WAYPOINT_SOURCE))
     style.addSource(GeoJsonSource(OWNSHIP_SOURCE))
+    style.addSource(GeoJsonSource(TRAFFIC_SOURCE))
+    style.addSource(GeoJsonSource(TRAFFIC_TRACK_SOURCE))
 
     style.addLayer(
         LineLayer(ROUTE_LAYER, ROUTE_SOURCE).withProperties(
@@ -498,6 +562,25 @@ private fun addOverlayLayers(style: Style) {
             PropertyFactory.circleColor(WAYPOINT_FILL),
             PropertyFactory.circleStrokeWidth(WAYPOINT_STROKE_DP),
             PropertyFactory.circleStrokeColor(ROUTE_COLOUR),
+        ),
+    )
+    // Above the route and below the aircraft: traffic must not be hidden by a course
+    // line, and must not hide where the pilot is.
+    style.addLayer(
+        LineLayer(TRAFFIC_TRACK_LAYER, TRAFFIC_TRACK_SOURCE).withProperties(
+            PropertyFactory.lineColor(Expression.get("colour")),
+            PropertyFactory.lineWidth(TRAFFIC_TRACK_WIDTH_DP),
+            PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
+        ),
+    )
+    style.addLayer(
+        CircleLayer(TRAFFIC_LAYER, TRAFFIC_SOURCE).withProperties(
+            PropertyFactory.circleRadius(TRAFFIC_RADIUS_DP),
+            // The colour travels per feature, because it is the phone's answer for
+            // that target's alarm level and not a property of the layer.
+            PropertyFactory.circleColor(Expression.get("colour")),
+            PropertyFactory.circleStrokeWidth(WAYPOINT_STROKE_DP),
+            PropertyFactory.circleStrokeColor(TRAFFIC_STROKE),
         ),
     )
     style.addLayer(
@@ -516,6 +599,10 @@ private const val OWNSHIP_SOURCE = "enroute-ownship"
 private const val ROUTE_LAYER = "enroute-route-line"
 private const val WAYPOINT_LAYER = "enroute-waypoint-dots"
 private const val OWNSHIP_LAYER = "enroute-ownship-dot"
+private const val TRAFFIC_SOURCE = "enroute-traffic"
+private const val TRAFFIC_TRACK_SOURCE = "enroute-traffic-tracks"
+private const val TRAFFIC_LAYER = "enroute-traffic-dots"
+private const val TRAFFIC_TRACK_LAYER = "enroute-traffic-tracks"
 private const val CHART_SOURCE = "enroute-vac"
 private const val CHART_LAYER = "enroute-vac-raster"
 
@@ -535,6 +622,17 @@ private const val ROUTE_WIDTH_DP = 3.0f
 private const val WAYPOINT_RADIUS_DP = 4.0f
 private const val WAYPOINT_STROKE_DP = 2.0f
 private const val OWNSHIP_RADIUS_DP = 6.0f
+private const val TRAFFIC_RADIUS_DP = 5.0f
+private const val TRAFFIC_TRACK_WIDTH_DP = 2.0f
+private const val TRAFFIC_STROKE = 0xFF000000.toInt()
+
+// Used when the phone sends a colour this client cannot parse. Grey rather than a
+// guessed alarm colour: an unreadable colour must not become a reassuring one.
+private const val TRAFFIC_FALLBACK_COLOUR = "#B3B3B3"
+
+// How long the direction line is, in metres. Long enough to read the heading at the
+// zoom levels a watch uses, short enough not to look like a predicted path.
+private const val TRACK_LENGTH_M = 900.0
 
 // One map pixel per screen pixel. See the note where the options are built.
 private const val MAP_PIXEL_RATIO = 1.0f
@@ -545,3 +643,21 @@ private const val HALO_BLUR = 4.0f
 private const val DEFAULT_HALF_SPAN_M = 20_000.0
 private const val MIN_HALF_SPAN_M = 1852.0
 private const val AUTOMATIC_MARGIN = 1.25
+
+/**
+ * A point the given distance from another along a bearing.
+ *
+ * Flat-earth arithmetic, which is exact enough for a line under a kilometre long and
+ * avoids pulling in a geodesy dependency for one direction tick.
+ */
+private fun offset(from: GeoPoint, bearingDeg: Double, distanceM: Double): GeoPoint {
+    val bearing = Math.toRadians(bearingDeg)
+    val northM = distanceM * cos(bearing)
+    val eastM = distanceM * sin(bearing)
+    val latDeg = from.latDeg + northM / METRES_PER_DEGREE
+    val lonDeg = from.lonDeg +
+        eastM / (METRES_PER_DEGREE * cos(Math.toRadians(from.latDeg)).coerceAtLeast(0.01))
+    return GeoPoint(latDeg = latDeg, lonDeg = lonDeg)
+}
+
+private const val METRES_PER_DEGREE = 111_320.0

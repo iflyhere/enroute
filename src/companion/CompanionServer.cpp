@@ -35,6 +35,7 @@
 #include "positioning/PositionProvider.h"
 #include "flightlog/FlightLog.h"
 #include "geomaps/VACLibrary.h"
+#include "traffic/TrafficDataProvider.h"
 #include "weather/ObserverList.h"
 #include "weather/WeatherDataProvider.h"
 
@@ -83,6 +84,10 @@ namespace
     // How many log entries travel. A logbook grows without bound and a watch scrolls
     // with a finger in a cockpit, so the rest are counted rather than sent.
     constexpr int logEntryLimit = 25;
+
+    // The navigation frame's rate. Traffic is the other thing on this link that is
+    // worth a second of a pilot's attention, and it moves at the same speed.
+    constexpr auto trafficPeriod = std::chrono::seconds(1);
 
     constexpr int pairingCodeDigits = 6;
     constexpr quint32 pairingCodeModulus = 1000000;
@@ -134,6 +139,10 @@ Companion::CompanionServer::CompanionServer(QObject* parent)
     m_logCoalesceTimer.setSingleShot(true);
     connect(&m_logCoalesceTimer, &QTimer::timeout,
             this, &Companion::CompanionServer::publishFlightLog);
+
+    m_trafficTimer.setInterval(trafficPeriod);
+    connect(&m_trafficTimer, &QTimer::timeout,
+            this, &Companion::CompanionServer::publishTraffic);
 }
 
 
@@ -417,6 +426,7 @@ void Companion::CompanionServer::markVacsDirty()
 {
     publishVacs();
     publishFlightLog();
+    publishTraffic();
 }
 
 
@@ -448,6 +458,21 @@ void Companion::CompanionServer::markFlightLogDirty()
 }
 
 
+void Companion::CompanionServer::publishTraffic()
+{
+    m_revisions.traffic++;
+    m_trafficDocument = QJsonDocument(Companion::Snapshot::traffic(m_revisions))
+                            .toJson(QJsonDocument::Compact);
+    emit trafficDocumentChanged();
+}
+
+
+void Companion::CompanionServer::markTrafficDirty()
+{
+    publishTraffic();
+}
+
+
 void Companion::CompanionServer::updateTransport()
 {
     const auto enabled = GlobalObject::globalSettings()->companionNetworkEnabled();
@@ -475,6 +500,7 @@ void Companion::CompanionServer::updateTransport()
         m_weatherCoalesceTimer.stop();
         m_vacTimer.stop();
         m_logCoalesceTimer.stop();
+        m_trafficTimer.stop();
 
         m_helloDocument.clear();
         m_routeDocument.clear();
@@ -488,6 +514,7 @@ void Companion::CompanionServer::updateTransport()
         m_vacFingerprint.clear();
         m_logDocument.clear();
         m_logFingerprint.clear();
+        m_trafficDocument.clear();
 
         // The station list and its per-station observers exist only while the
         // feature is on. Leaving them alive would keep bindings into the weather
@@ -567,6 +594,7 @@ void Companion::CompanionServer::updateTransport()
     m_notamTimer.start();
     m_weatherTimer.start();
     m_vacTimer.start();
+    m_trafficTimer.start();
 
     if (m_httpTransport.isNull())
     {
@@ -650,6 +678,11 @@ void Companion::CompanionServer::attachToDataSources()
             this, &Companion::CompanionServer::markFlightLogDirty);
     connect(flightLog, &Flightlog::FlightLog::trackRecordingChanged,
             this, &Companion::CompanionServer::markFlightLogDirty);
+
+    // A warning is the one traffic event that must not wait for the next beat. Up to
+    // a second of delay on a collision advisory is a second the pilot does not have.
+    connect(GlobalObject::trafficDataProvider(), &Traffic::TrafficDataProvider::warningChanged,
+            this, &Companion::CompanionServer::markTrafficDirty);
 }
 
 

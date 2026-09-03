@@ -365,6 +365,11 @@ bool Companion::HttpTransport::handleRequest(const QHttpServerRequest& request,
         respond(m_server->logDocument(), revisions.log);
         return true;
     }
+    if (endpoint == u"/traffic"_s)
+    {
+        respond(m_server->trafficDocument(), revisions.traffic);
+        return true;
+    }
     if (endpoint == u"/route.geojson"_s)
     {
         // The app's own full-fidelity route, for debugging and desktop clients.
