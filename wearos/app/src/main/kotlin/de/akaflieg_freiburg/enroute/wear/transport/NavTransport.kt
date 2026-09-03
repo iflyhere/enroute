@@ -23,6 +23,7 @@ import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
 import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
 import de.akaflieg_freiburg.enroute.wear.domain.NavFrame
 import de.akaflieg_freiburg.enroute.wear.domain.NotamBoard
+import de.akaflieg_freiburg.enroute.wear.domain.VacBoard
 import de.akaflieg_freiburg.enroute.wear.domain.WeatherBoard
 import kotlinx.coroutines.flow.Flow
 
@@ -54,6 +55,7 @@ sealed interface TransportEvent {
     data class RouteUpdate(val route: FlightRoute) : TransportEvent
     data class NotamUpdate(val notams: NotamBoard) : TransportEvent
     data class WeatherUpdate(val weather: WeatherBoard) : TransportEvent
+    data class VacUpdate(val vacs: VacBoard) : TransportEvent
     data class Failed(val reason: FailureReason, val detail: String? = null) : TransportEvent
 }
 

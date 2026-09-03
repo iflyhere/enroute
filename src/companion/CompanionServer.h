@@ -29,6 +29,11 @@
 #include "GlobalObject.h"
 #include "companion/Snapshot.h"
 
+namespace GeoMaps
+{
+    class VACLibrary;
+} // namespace GeoMaps
+
 namespace Companion
 {
 
@@ -170,6 +175,19 @@ namespace Companion
         /*! \brief Encoded weather document, or empty while the feature is off */
         [[nodiscard]] QByteArray weatherDocument() const {return m_weatherDocument;}
 
+        /*! \brief Encoded approach chart document, or empty while the feature is off */
+        [[nodiscard]] QByteArray vacDocument() const {return m_vacDocument;}
+
+        /*! \brief Hands over the QML engine
+         *
+         *  GeoMaps::VACLibrary is a QML singleton, so an engine is the only way to
+         *  reach the pilot's approach charts from C++. Called once from main(),
+         *  before any client can connect.
+         *
+         *  @param engine The application's QML engine
+         */
+        void setQmlEngine(QQmlEngine* engine);
+
         /*! \brief The pilot's own map, for a client that renders one itself
          *
          *  Defined out of line, because QPointer needs a complete type and pulling
@@ -229,6 +247,9 @@ namespace Companion
         /*! \brief Emitted after weatherDocument() has been updated */
         void weatherDocumentChanged();
 
+        /*! \brief Emitted after vacDocument() has been updated */
+        void vacDocumentChanged();
+
 
     private slots:
         // Marks the navigation frame as needing re-encoding. Cheap on purpose: the
@@ -258,6 +279,10 @@ namespace Companion
 
         void markWeatherDirty();
 
+        void publishVacs();
+
+        void markVacsDirty();
+
         // Creates or destroys the transport in response to the settings.
         void updateTransport();
 
@@ -280,6 +305,7 @@ namespace Companion
         QByteArray m_navDocumentCompact;
         QByteArray m_notamDocument;
         QByteArray m_weatherDocument;
+        QByteArray m_vacDocument;
 
         // The NOTAM document with its revision member left out, kept so that a
         // rebuild can tell whether anything changed. An exact comparison and not
@@ -287,6 +313,7 @@ namespace Companion
         // been superseded, and that is not a trade worth a few kilobytes.
         QByteArray m_notamFingerprint;
         QByteArray m_weatherFingerprint;
+        QByteArray m_vacFingerprint;
 
         bool m_navDirty {false};
 
@@ -307,10 +334,23 @@ namespace Companion
         QTimer m_weatherTimer;
         QTimer m_weatherCoalesceTimer;
 
+        // No coalescing partner: the library emits one signal per import, not a
+        // burst, and an import is a deliberate act rather than a data feed.
+        QTimer m_vacTimer;
+
         // The app's own station list, sorted by distance. Owned here rather than
         // created per request, because it caches one Weather::Observer per station
         // and its bindings are what keep that list current.
         QPointer<Weather::ObserverList> m_observers;
+
+        // Resolved from the engine on first use rather than at start, so that a pilot
+        // who never enables the companion never causes the chart library -- and the
+        // file maintenance its constructor schedules -- to be built any earlier than
+        // the app would have built it anyway.
+        [[nodiscard]] GeoMaps::VACLibrary* vacLibrary();
+
+        QPointer<QQmlEngine> m_qmlEngine;
+        QPointer<GeoMaps::VACLibrary> m_vacLibrary;
 
         // Held for as long as the feature is enabled. RemainingRouteInfo has no
         // notification signal, so it can only be watched as a bindable property.

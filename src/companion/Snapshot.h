@@ -22,6 +22,11 @@
 #include <QJsonArray>
 #include <QJsonObject>
 
+namespace GeoMaps
+{
+    class VACLibrary;
+} // namespace GeoMaps
+
 namespace Weather
 {
     class ObserverList;
@@ -60,6 +65,9 @@ namespace Companion
 
         /*! \brief Incremented whenever the weather document changes */
         quint32 weather {0};
+
+        /*! \brief Incremented whenever the set of approach charts changes */
+        quint32 vac {0};
 
         /*! \brief Changes whenever the set of downloaded map files changes
          *
@@ -177,6 +185,29 @@ namespace Companion
          */
         [[nodiscard]] QJsonObject weather(const Companion::Revisions& revisions,
                                           Weather::ObserverList* observers);
+
+        /*! \brief The pilot's approach charts
+         *
+         *  Lists every chart the app has, manually imported and from a downloaded
+         *  collection alike, with the four corner coordinates each one is drawn on.
+         *  The image bytes are not in here; each entry carries the path they are
+         *  served from.
+         *
+         *  No chart is singled out as the relevant one. The app's own rule for that
+         *  is GeoMaps::VACLibrary::vacs4Point(), which is plain bounding-box
+         *  containment, so a client can apply the identical rule to the boxes in
+         *  this document and stay in step with the phone without polling.
+         *
+         *  @param revisions Current document revisions
+         *
+         *  @param library The app's chart library, or nullptr if it could not be
+         *  reached, in which case the document lists no charts and says so.
+         *
+         *  @returns The document described under "Approach chart document" in
+         *  doc/companion-protocol.md, without its vacRev member
+         */
+        [[nodiscard]] QJsonObject vacs(const Companion::Revisions& revisions,
+                                       GeoMaps::VACLibrary* library);
 
     } // namespace Snapshot
 

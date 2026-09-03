@@ -31,6 +31,7 @@
 #include "dataManagement/DataManager.h"
 #include "dataManagement/Downloadable_SingleFile.h"
 #include "geomaps/GeoMapProvider.h"
+#include "geomaps/VACLibrary.h"
 #include "notam/NOTAMProvider.h"
 #include "positioning/PositionProvider.h"
 
@@ -782,6 +783,50 @@ bool Companion::MapAssets::writeTile(
 }
 
 
+void Companion::MapAssets::setVacLibrary(GeoMaps::VACLibrary* library)
+{
+    m_vacLibrary = library;
+}
+
+
+bool Companion::MapAssets::writeVac(const QString& name, QHttpServerResponder& responder)
+{
+    if (m_vacLibrary.isNull())
+    {
+        return false;
+    }
+
+    // get() takes a name and looks it up in the library, so the path element never
+    // becomes part of a filesystem path here. A client cannot reach a file outside
+    // the library by asking for one.
+    auto chart = m_vacLibrary->get(name);
+    if (!chart.isValid())
+    {
+        return false;
+    }
+
+    // A chart from a downloaded collection has no image file until the app extracts
+    // it. materialize() is what the app's own map does before drawing one, and it is
+    // a no-op for a chart that already has its file.
+    if (chart.fileName.isEmpty() || !QFile::exists(chart.fileName))
+    {
+        chart = m_vacLibrary->materialize(chart);
+    }
+    if (!chart.isValid() || chart.fileName.isEmpty())
+    {
+        return false;
+    }
+
+    QFile file(chart.fileName);
+    if (!file.open(QIODevice::ReadOnly))
+    {
+        return false;
+    }
+    writeLarge(file.readAll(), "image/webp", responder);
+    return true;
+}
+
+
 bool Companion::MapAssets::handle(const QStringList& pathElements,
                                   const QString& baseUrl,
                                   QHttpServerResponder& responder)
@@ -810,6 +855,13 @@ bool Companion::MapAssets::handle(const QStringList& pathElements,
     // its own URL rather than inside the style.
     // The NOTAM overlay the moving map draws. Same document the app's own renderer
     // gets, so the icons and the categories match what the pilot sees on the phone.
+    // One path element below "vac", and it is a chart name rather than a file path.
+    // Names may contain a dot, so no suffix is expected or stripped.
+    if (head == u"vac"_s && tail.size() == 1)
+    {
+        return writeVac(tail.constFirst(), responder);
+    }
+
     if (head == u"notams.geojson"_s && tail.isEmpty())
     {
         writeLarge(GlobalObject::notamProvider()->geoJSON(), "application/geo+json", responder);
