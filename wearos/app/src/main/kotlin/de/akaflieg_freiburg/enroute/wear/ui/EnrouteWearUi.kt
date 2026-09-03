@@ -276,6 +276,8 @@ private fun MainPages(
                             pairingCode = pairingCode,
                             route = uiState.value.session.route,
                             ownPosition = uiState.value.frame?.position,
+                            charts = uiState.value.session.vacs,
+                            port = port,
                             zoom = zoom,
                             isActive = pagerState.currentPage == PAGE_MAP,
                             attribution = uiState.value.session.peer?.mapAttribution.orEmpty(),

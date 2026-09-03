@@ -35,6 +35,7 @@
 // then point the client at 127.0.0.1:8973.
 
 import http from 'node:http';
+import zlib from 'node:zlib';
 import dgram from 'node:dgram';
 import process from 'node:process';
 
@@ -101,6 +102,8 @@ Fault injection, for exercising a client's unhappy paths:
   GET /enroute/v1/debug/notams?m=cap        cap at 2, so groups report "cut"
   GET /enroute/v1/debug/weather?m=none      no stations at all
   GET /enroute/v1/debug/weather?m=loading   the "downloading" flag set
+  GET /enroute/v1/debug/vacs?m=none         library reachable but empty
+  GET /enroute/v1/debug/vacs?m=unavailable  library could not be reached
   GET /enroute/v1/debug/reset               back to normal
 `);
     process.exit(0);
@@ -244,6 +247,9 @@ const state = {
     weatherRev: 1,
     weatherAbsent: false,
     weatherDownloading: false,
+    vacRev: 1,
+    vacsAbsent: false,
+    vacsUnavailable: false,
     startedAt: Date.now(),
 };
 
@@ -657,49 +663,6 @@ async function fetchMapFields() {
 
 await fetchMapFields();
 
-const server = http.createServer((req, res) => {
-    const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
-
-    // Attached before anything can return, or a forwarded request never shows up in
-    // the log and looks like a request the client never made.
-    res.on('finish', () => {
-        const from = req.socket.remoteAddress ?? '?';
-        console.log(`${req.method} ${url.pathname} -> ${res.statusCode}  ${from}`);
-    });
-
-    if (mapPeer && url.pathname.startsWith('/enroute/v1/map')) {
-        const upstream = http.request(
-            { host: mapPeer.host, port: mapPeer.port, path: req.url,
-              method: req.method, headers: req.headers },
-            (response) => {
-                res.writeHead(response.statusCode ?? 502, response.headers);
-                response.pipe(res);
-            });
-        upstream.on('error', (error) => {
-            res.writeHead(502, { 'Content-Type': 'text/plain' });
-            res.end('map peer: ' + error.message);
-        });
-        req.pipe(upstream);
-        return;
-    }
-
-    if (req.method !== 'GET') {
-        res.writeHead(405, { Allow: 'GET' }).end();
-        return;
-    }
-    if (!authorized(req, url)) {
-        res.writeHead(401, { 'WWW-Authenticate': 'Bearer' }).end();
-        return;
-    }
-
-    const path = url.pathname;
-
-    if (path === '/') {
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end(DEBUG_PAGE);
-        return;
-    }
-
 // ---------------------------------------------------------------------------
 // Weather
 //
@@ -786,6 +749,181 @@ function weatherDocument() {
     };
 }
 
+// ---------------------------------------------------------------------------
+// Approach charts
+//
+// The image is generated rather than shipped, because a real chart is copyrighted
+// aeronautical data and a fixture must not carry any. What is drawn instead is a
+// georeferencing test card: a blue square on the chart's top left corner, a green one
+// on its bottom right, and a red border. If the corner order or the axis order is
+// wrong anywhere between here and the renderer, the squares land in the wrong place
+// and say so at a glance -- which a realistic-looking chart would not.
+
+/** CRC-32, for the PNG chunks. */
+const CRC_TABLE = (() => {
+    const table = new Int32Array(256);
+    for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) { c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; }
+        table[n] = c;
+    }
+    return table;
+})();
+
+function crc32(buffer) {
+    let c = 0xffffffff;
+    for (const byte of buffer) { c = CRC_TABLE[(c ^ byte) & 0xff] ^ (c >>> 8); }
+    return (c ^ 0xffffffff) >>> 0;
+}
+
+/** One PNG chunk: length, type, payload, CRC. */
+function pngChunk(type, payload) {
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(payload.length);
+    const body = Buffer.concat([Buffer.from(type, 'latin1'), payload]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(body));
+    return Buffer.concat([length, body, crc]);
+}
+
+function testCardPng(size = 256) {
+    const stride = size * 4 + 1;           // one filter byte per row
+    const raw = Buffer.alloc(stride * size);
+    const quarter = Math.floor(size / 4);
+
+    for (let y = 0; y < size; y++) {
+        const row = y * stride;
+        raw[row] = 0;                      // filter: none
+        for (let x = 0; x < size; x++) {
+            const at = row + 1 + x * 4;
+            const edge = x < 4 || y < 4 || x >= size - 4 || y >= size - 4;
+            const topLeft = x < quarter && y < quarter;
+            const bottomRight = x >= size - quarter && y >= size - quarter;
+
+            let rgba;
+            if (edge) { rgba = [220, 40, 40, 255]; }
+            else if (topLeft) { rgba = [40, 90, 230, 255]; }
+            else if (bottomRight) { rgba = [40, 190, 90, 255]; }
+            // Elsewhere a light wash, deliberately semi-transparent: a chart drawn in
+            // the wrong place then shows what is underneath instead of hiding it.
+            else { rgba = [250, 250, 245, 150]; }
+            raw[at] = rgba[0];
+            raw[at + 1] = rgba[1];
+            raw[at + 2] = rgba[2];
+            raw[at + 3] = rgba[3];
+        }
+    }
+
+    const header = Buffer.alloc(13);
+    header.writeUInt32BE(size, 0);
+    header.writeUInt32BE(size, 4);
+    header[8] = 8;                         // 8 bits per channel
+    header[9] = 6;                         // RGBA
+    return Buffer.concat([
+        Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+        pngChunk('IHDR', header),
+        pngChunk('IDAT', zlib.deflateSync(raw)),
+        pngChunk('IEND', Buffer.alloc(0)),
+    ]);
+}
+
+/**
+ * One chart per leg midpoint, sized so the flown route passes through it.
+ *
+ * Built from the route rather than hard-coded, so that --route and --long produce
+ * charts the simulated aircraft actually flies into. That is the only way to watch a
+ * chart appear and disappear without waiting for a real approach.
+ */
+function vacFixtures() {
+    if (state.vacsAbsent) { return []; }
+    const out = [];
+    for (let i = 0; i + 1 < state.waypoints.length; i++) {
+        const a = state.waypoints[i];
+        const b = state.waypoints[i + 1];
+        const lat = (a.lat + b.lat) / 2;
+        const lon = (a.lon + b.lon) / 2;
+        const dLat = 0.06;
+        const dLon = 0.06 / Math.max(0.2, Math.cos(lat * Math.PI / 180));
+        const north = lat + dLat;
+        const south = lat - dLat;
+        const west = lon - dLon;
+        const east = lon + dLon;
+        out.push({
+            n: 'TEST-' + a.n + '-' + b.n,
+            d: 'Test card between ' + a.n + ' and ' + b.n,
+            sect: 'Bench fixtures',
+            // Top left, top right, bottom right, bottom left.
+            q: [[west, north], [east, north], [east, south], [west, south]],
+            bbox: [west, south, east, north],
+        });
+    }
+    return out;
+}
+
+function vacDocument() {
+    if (state.vacsUnavailable) {
+        return { v: 1, sid: state.sid, vacRev: state.vacRev, available: false, vac: [] };
+    }
+    return {
+        v: 1, sid: state.sid, vacRev: state.vacRev,
+        available: true,
+        vac: vacFixtures(),
+    };
+}
+
+const server = http.createServer((req, res) => {
+    const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
+
+    // Attached before anything can return, or a forwarded request never shows up in
+    // the log and looks like a request the client never made.
+    res.on('finish', () => {
+        const from = req.socket.remoteAddress ?? '?';
+        console.log(`${req.method} ${url.pathname} -> ${res.statusCode}  ${from}`);
+    });
+
+    // Ahead of the map forwarding on purpose: with --map a real phone answers 404 for
+    // a fixture name it has never heard of, and a missing image is indistinguishable
+    // from a chart drawn in the wrong place.
+    if (url.pathname.startsWith('/enroute/v1/map/vac/')) {
+        const body = testCardPng();
+        res.writeHead(200, { 'Content-Type': 'image/png', 'Content-Length': body.length });
+        res.end(body);
+        return;
+    }
+
+    if (mapPeer && url.pathname.startsWith('/enroute/v1/map')) {
+        const upstream = http.request(
+            { host: mapPeer.host, port: mapPeer.port, path: req.url,
+              method: req.method, headers: req.headers },
+            (response) => {
+                res.writeHead(response.statusCode ?? 502, response.headers);
+                response.pipe(res);
+            });
+        upstream.on('error', (error) => {
+            res.writeHead(502, { 'Content-Type': 'text/plain' });
+            res.end('map peer: ' + error.message);
+        });
+        req.pipe(upstream);
+        return;
+    }
+
+    if (req.method !== 'GET') {
+        res.writeHead(405, { Allow: 'GET' }).end();
+        return;
+    }
+    if (!authorized(req, url)) {
+        res.writeHead(401, { 'WWW-Authenticate': 'Bearer' }).end();
+        return;
+    }
+
+    const path = url.pathname;
+
+    if (path === '/') {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(DEBUG_PAGE);
+        return;
+    }
+
     if (path === '/enroute/v1/hello') {
         sendJson(res, { ...helloDocument(), ...(mapFields ?? {}) }, `W/"${state.routeRev}"`);
         return;
@@ -816,6 +954,13 @@ function weatherDocument() {
         const etag = `W/"${state.weatherRev}"`;
         if (req.headers['if-none-match'] === etag) { res.writeHead(304).end(); return; }
         sendJson(res, weatherDocument(), etag);
+        return;
+    }
+
+    if (path === '/enroute/v1/vacs') {
+        const etag = `W/"${state.vacRev}"`;
+        if (req.headers['if-none-match'] === etag) { res.writeHead(304).end(); return; }
+        sendJson(res, vacDocument(), etag);
         return;
     }
 
@@ -862,6 +1007,15 @@ function weatherDocument() {
         state.weatherAbsent = mode === 'none';
         state.weatherDownloading = mode === 'loading';
         state.weatherRev++;
+        res.writeHead(204).end();
+        return;
+    }
+
+    if (path === '/enroute/v1/debug/vacs') {
+        const mode = url.searchParams.get('m');
+        state.vacsAbsent = mode === 'none';
+        state.vacsUnavailable = mode === 'unavailable';
+        state.vacRev++;
         res.writeHead(204).end();
         return;
     }

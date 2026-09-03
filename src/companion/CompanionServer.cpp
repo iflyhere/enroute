@@ -33,6 +33,7 @@
 #include "notam/NOTAMProvider.h"
 #include "dataManagement/DataManager.h"
 #include "positioning/PositionProvider.h"
+#include "geomaps/VACLibrary.h"
 #include "weather/ObserverList.h"
 #include "weather/WeatherDataProvider.h"
 
@@ -70,6 +71,11 @@ namespace
     // an hour and a half; a minute of drift in the age line is not worth a wakeup.
     constexpr auto weatherPeriod = std::chrono::minutes(5);
     constexpr auto weatherCoalescePeriod = std::chrono::seconds(2);
+
+    // The chart library changes only when the pilot imports or removes one, which is
+    // never in flight. This beat exists so a client that connected before an import
+    // still learns about it, not because the data moves on its own.
+    constexpr auto vacPeriod = std::chrono::minutes(5);
 
     constexpr int pairingCodeDigits = 6;
     constexpr quint32 pairingCodeModulus = 1000000;
@@ -112,6 +118,10 @@ Companion::CompanionServer::CompanionServer(QObject* parent)
     m_weatherCoalesceTimer.setInterval(weatherCoalescePeriod);
     m_weatherCoalesceTimer.setSingleShot(true);
     connect(&m_weatherCoalesceTimer, &QTimer::timeout, this, &Companion::CompanionServer::publishWeather);
+
+    m_vacTimer.setInterval(vacPeriod);
+    m_vacTimer.setTimerType(Qt::VeryCoarseTimer);
+    connect(&m_vacTimer, &QTimer::timeout, this, &Companion::CompanionServer::publishVacs);
 }
 
 
@@ -320,6 +330,83 @@ void Companion::CompanionServer::markWeatherDirty()
 }
 
 
+void Companion::CompanionServer::setQmlEngine(QQmlEngine* engine)
+{
+    m_qmlEngine = engine;
+
+    // main() hands the engine over after loading the QML, which is after this object
+    // may already have published a chart document saying it could not reach the
+    // library. Republishing here is what keeps that answer from standing for the
+    // five minutes until the next beat.
+    // Only when the feature is actually running: a document exists exactly then, and
+    // this must not be what starts the machinery for a pilot who left it switched off.
+    if (!m_vacDocument.isEmpty())
+    {
+        markVacsDirty();
+    }
+}
+
+
+GeoMaps::VACLibrary* Companion::CompanionServer::vacLibrary()
+{
+    if (!m_vacLibrary.isNull())
+    {
+        return m_vacLibrary;
+    }
+    if (m_qmlEngine.isNull())
+    {
+        return nullptr;
+    }
+
+    // singletonInstance() constructs the library if the app has not needed it yet.
+    // That is the one visible side effect of enabling this feature: the library's
+    // constructor schedules its own file maintenance, which would otherwise wait
+    // until the pilot first opened the approach chart page.
+    m_vacLibrary = m_qmlEngine->singletonInstance<GeoMaps::VACLibrary*>(
+        u"akaflieg_freiburg.enroute"_s, u"VACLibrary"_s);
+    if (!m_vacLibrary.isNull())
+    {
+        connect(m_vacLibrary, &GeoMaps::VACLibrary::vacsChanged,
+                this, &Companion::CompanionServer::markVacsDirty, Qt::UniqueConnection);
+    }
+    return m_vacLibrary;
+}
+
+
+void Companion::CompanionServer::publishVacs()
+{
+    auto* const library = vacLibrary();
+
+    // MapAssets serves the chart images and needs the same library. Handed over here
+    // rather than at construction, because this is the first moment it exists.
+    if (!m_mapAssets.isNull())
+    {
+        m_mapAssets->setVacLibrary(library);
+    }
+
+    auto document = Companion::Snapshot::vacs(m_revisions, library);
+
+    const auto fingerprint = QJsonDocument(document).toJson(QJsonDocument::Compact);
+    if (fingerprint == m_vacFingerprint)
+    {
+        return;
+    }
+    m_vacFingerprint = fingerprint;
+
+    m_revisions.vac++;
+    document.insert("vacRev"_L1, static_cast<qint64>(m_revisions.vac));
+    m_vacDocument = QJsonDocument(document).toJson(QJsonDocument::Compact);
+
+    emit vacDocumentChanged();
+}
+
+
+void Companion::CompanionServer::markVacsDirty()
+{
+    publishVacs();
+}
+
+
 void Companion::CompanionServer::updateTransport()
 {
     const auto enabled = GlobalObject::globalSettings()->companionNetworkEnabled();
@@ -345,6 +432,7 @@ void Companion::CompanionServer::updateTransport()
         m_notamCoalesceTimer.stop();
         m_weatherTimer.stop();
         m_weatherCoalesceTimer.stop();
+        m_vacTimer.stop();
 
         m_helloDocument.clear();
         m_routeDocument.clear();
@@ -354,6 +442,8 @@ void Companion::CompanionServer::updateTransport()
         m_notamFingerprint.clear();
         m_weatherDocument.clear();
         m_weatherFingerprint.clear();
+        m_vacDocument.clear();
+        m_vacFingerprint.clear();
 
         // The station list and its per-station observers exist only while the
         // feature is on. Leaving them alive would keep bindings into the weather
@@ -426,11 +516,13 @@ void Companion::CompanionServer::updateTransport()
         m_observers = new Weather::ObserverList(this);
     }
     publishWeather();
+    publishVacs();
 
     m_navTimer.start();
     m_navKeepAliveTimer.start();
     m_notamTimer.start();
     m_weatherTimer.start();
+    m_vacTimer.start();
 
     if (m_httpTransport.isNull())
     {

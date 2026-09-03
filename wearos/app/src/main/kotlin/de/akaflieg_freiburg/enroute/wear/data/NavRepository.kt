@@ -22,6 +22,7 @@ package de.akaflieg_freiburg.enroute.wear.data
 import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
 import de.akaflieg_freiburg.enroute.wear.domain.NavFrame
 import de.akaflieg_freiburg.enroute.wear.domain.NotamBoard
+import de.akaflieg_freiburg.enroute.wear.domain.VacBoard
 import de.akaflieg_freiburg.enroute.wear.domain.WeatherBoard
 import de.akaflieg_freiburg.enroute.wear.transport.Backoff
 import de.akaflieg_freiburg.enroute.wear.transport.FailureReason
@@ -71,6 +72,11 @@ data class SessionState(
      * answer available while the link is down; the summary states its age.
      */
     val weather: WeatherBoard? = null,
+    /**
+     * The chart library as last reported. Kept across a reconnect because a chart
+     * already on screen must not vanish when the link blinks on final approach.
+     */
+    val vacs: VacBoard? = null,
 )
 
 class NavRepository(
@@ -143,6 +149,9 @@ class NavRepository(
 
                 is TransportEvent.WeatherUpdate ->
                     current.copy(weather = event.weather)
+
+                is TransportEvent.VacUpdate ->
+                    current.copy(vacs = event.vacs)
 
                 is TransportEvent.Failed ->
                     current.copy(connection = ConnectionState.Retrying(event.reason, 0))

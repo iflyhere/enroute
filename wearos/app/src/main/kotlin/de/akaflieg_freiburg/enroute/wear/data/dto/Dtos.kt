@@ -246,3 +246,27 @@ data class TafDto(
     /** ISO 8601 UTC. */
     @SerialName("iss") val issued: String? = null,
 )
+
+@Serializable
+data class VacBoardDto(
+    @SerialName("v") val version: Int = 0,
+    @SerialName("sid") val sessionId: Long = 0,
+    @SerialName("vacRev") val vacRevision: Long = 0,
+    /**
+     * Whether the phone could reach its chart library at all. False is not the same
+     * claim as an empty list, which is why it travels separately.
+     */
+    @SerialName("available") val available: Boolean = false,
+    @SerialName("vac") val charts: List<VacDto> = emptyList(),
+)
+
+@Serializable
+data class VacDto(
+    @SerialName("n") val name: String = "",
+    @SerialName("d") val description: String? = null,
+    @SerialName("sect") val section: String? = null,
+    /** Four corners as [longitude, latitude]: top left, top right, bottom right, bottom left. */
+    @SerialName("q") val quad: List<List<Double>> = emptyList(),
+    /** [west, south, east, north]. */
+    @SerialName("bbox") val bounds: List<Double> = emptyList(),
+)

@@ -22,9 +22,15 @@
 #include <QHttpServerResponder>
 #include <QJsonArray>
 #include <QObject>
+#include <QPointer>
 #include <QSharedPointer>
 
 #include "fileFormats/MBTILES.h"
+
+namespace GeoMaps
+{
+    class VACLibrary;
+} // namespace GeoMaps
 
 namespace Companion
 {
@@ -101,6 +107,15 @@ namespace Companion
          *  @returns True if the request was answered, false if the path is not one
          *  this class serves
          */
+        /*! \brief Hands over the approach chart library
+         *
+         *  Needed to serve the chart images. Owned elsewhere: this class only reads
+         *  it, and only when a client asks for a chart.
+         *
+         *  @param library The app's chart library, or nullptr
+         */
+        void setVacLibrary(GeoMaps::VACLibrary* library);
+
         [[nodiscard]] bool handle(const QStringList& pathElements,
                                   const QString& baseUrl,
                                   QHttpServerResponder& responder);
@@ -182,6 +197,11 @@ namespace Companion
         [[nodiscard]] QString baseMapPath() const;
         [[nodiscard]] QString terrainPath() const;
 
+        // Writes the chart named in the path, or answers 404. Kept separate from the
+        // tile writers because a chart is a single file the app already holds on
+        // disk, not something assembled from an MBTiles container.
+        [[nodiscard]] bool writeVac(const QString& name, QHttpServerResponder& responder);
+
         [[nodiscard]] static bool writeTile(
             const QVector<QSharedPointer<FileFormats::MBTILES>>& files,
             const QStringList& coordinates,
@@ -189,6 +209,8 @@ namespace Companion
 
         QVector<QSharedPointer<FileFormats::MBTILES>> m_baseMap;
         QVector<QSharedPointer<FileFormats::MBTILES>> m_terrain;
+
+        QPointer<GeoMaps::VACLibrary> m_vacLibrary;
 
         quint32 m_revision {0};
     };
