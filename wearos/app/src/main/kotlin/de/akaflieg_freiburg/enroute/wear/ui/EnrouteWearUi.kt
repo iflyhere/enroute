@@ -165,6 +165,7 @@ private fun MainPages(
     var hidden by remember { mutableStateOf(settings.hiddenPages) }
     var bezelAction by remember { mutableStateOf(BezelAction.byId(settings.bezelAction)) }
     var chartMode by remember { mutableStateOf(ChartMode.byId(settings.chartMode)) }
+    var alarmVibration by remember { mutableStateOf(settings.alarmVibration) }
 
     val pages = visiblePages(order, hidden)
 
@@ -364,6 +365,9 @@ private fun MainPages(
 
                 WearPage.Traffic -> TrafficScreen(
                     board = uiState.value.session.traffic,
+                    ownPosition = uiState.value.frame?.position?.point,
+                    ownTrackDeg = uiState.value.frame?.position?.trackDeg,
+                    verticalUnit = uiState.value.session.peer?.verticalUnit ?: "ft",
                     listState = trafficListState,
                 )
 
@@ -386,6 +390,7 @@ private fun MainPages(
                     pages = allPages,
                     hidden = hidden,
                     bezelAction = bezelAction,
+                    alarmVibration = alarmVibration,
                     chartMode = chartMode,
                     attribution = uiState.value.session.peer?.mapAttribution.orEmpty(),
                     peerDescription = peerDescription(uiState.value, host, port),
@@ -405,6 +410,10 @@ private fun MainPages(
                     onBezelAction = { action ->
                         bezelAction = action
                         settings.bezelAction = action.id
+                    },
+                    onAlarmVibration = { wanted ->
+                        alarmVibration = wanted
+                        settings.alarmVibration = wanted
                     },
                     onChartMode = { mode ->
                         chartMode = mode

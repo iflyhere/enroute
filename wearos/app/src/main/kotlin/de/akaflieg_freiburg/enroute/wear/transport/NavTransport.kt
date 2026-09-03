@@ -92,6 +92,15 @@ data class PeerInfo(
      * already solves this for its own overlays and swaps the pair with night mode, so
      * these come from there rather than being guessed at again.
      */
+    /**
+     * The pilot's own unit for a height, "ft" or "m".
+     *
+     * Carried so the traffic display can label a height difference the way the rest of
+     * the app does. Every other quantity arrives already formatted; this one does not,
+     * because the phone composes no separation line of its own.
+     */
+    val verticalUnit: String = "ft",
+
     val mapLabelColour: Long? = null,
     val mapHaloColour: Long? = null,
 )

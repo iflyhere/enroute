@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -45,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.ScalingLazyListState
 import androidx.wear.compose.material3.Text
+import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
 import de.akaflieg_freiburg.enroute.wear.domain.TrafficBoard
 import de.akaflieg_freiburg.enroute.wear.domain.TrafficTarget
 import de.akaflieg_freiburg.enroute.wear.domain.TrafficWarning
@@ -60,16 +62,25 @@ import kotlin.math.roundToInt
  * receiver's state is stated before anything else, in words, every time -- not as a
  * small icon a pilot has to notice the absence of.
  *
+ * The radar comes first, because that is the shape a pilot reads a traffic picture in
+ * and the shape every instrument in a cockpit uses. The list follows underneath it,
+ * one scroll away: it carries the identifiers, the types and the phone's own sentence
+ * about each target, which a dot on a circle cannot.
+ *
  * The list is ordered most alarming first and then nearest. That ordering is this
  * screen's own; the phone keeps its targets in a pool and draws them on a map, where
  * order does not exist. Colours and alarm levels are the phone's.
  *
- * A target whose bearing the receiver does not know is shown at the end, said in
- * words. It cannot go on a map, and it must not be dropped.
+ * A target whose bearing the receiver does not know appears twice, deliberately: as a
+ * dashed ring on the radar, which is the honest shape of "somewhere at this range",
+ * and at the end of the list in words.
  */
 @Composable
 fun TrafficScreen(
     board: TrafficBoard?,
+    ownPosition: GeoPoint?,
+    ownTrackDeg: Double?,
+    verticalUnit: String,
     listState: ScalingLazyListState,
     modifier: Modifier = Modifier,
 ) {
@@ -97,6 +108,27 @@ fun TrafficScreen(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            // A banner above the radar rather than a card in the list: when there is
+            // an alarm, this is the first thing on the screen and it names the
+            // direction to look in, the way a traffic instrument does.
+            board.warning?.let { warning ->
+                item { WarningBanner(warning, board, ownPosition, ownTrackDeg) }
+            }
+
+            if (board.receiving) {
+                item {
+                    TrafficRadar(
+                        board = board,
+                        ownPosition = ownPosition,
+                        ownTrackDeg = ownTrackDeg,
+                        verticalUnit = verticalUnit,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f),
+                    )
+                }
+            }
+
             item { Header(board) }
 
             board.warning?.let { warning -> item { WarningCard(warning) } }
@@ -202,6 +234,44 @@ private fun ErrorRow(text: String) {
         fontSize = 11.sp,
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp),
+    )
+}
+
+/**
+ * "Warning, one o'clock" -- the line a traffic instrument puts across the top.
+ *
+ * The clock position comes from the most alarming target's bearing relative to the
+ * aircraft's track. Without a known track there is no clock position to give, and the
+ * banner says only that there is a warning rather than pointing somewhere it cannot
+ * justify.
+ */
+@Composable
+private fun WarningBanner(
+    warning: TrafficWarning,
+    board: TrafficBoard,
+    ownPosition: GeoPoint?,
+    ownTrackDeg: Double?,
+) {
+    val colour = if (warning.alarmLevel >= 2) CockpitColors.Warning else CockpitColors.Caution
+    val worst = mostAlarming(radarFixes(board.targets, ownPosition, ownTrackDeg))
+    val direction = if (ownTrackDeg != null && worst != null) {
+        " " + clockPosition(worst.screenBearingDeg) + " o'clock"
+    } else {
+        ""
+    }
+
+    Text(
+        text = "Warning" + direction,
+        color = CockpitColors.Background,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Bold,
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 2.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(colour)
+            .padding(vertical = 6.dp),
     )
 }
 

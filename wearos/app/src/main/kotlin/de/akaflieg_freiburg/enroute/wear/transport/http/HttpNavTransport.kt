@@ -266,6 +266,7 @@ class HttpNavTransport(
         mapCentre = hello.mapCentre.takeIf { it.size >= 2 }
             ?.let { GeoPoint(latDeg = it[1], lonDeg = it[0]) },
         mapCentreZoom = hello.mapCentre.getOrElse(2) { 0.0 },
+        verticalUnit = hello.units.verticalDistance,
         mapLabelColour = parseStyleColour(hello.mapOverlay?.label),
         mapHaloColour = parseStyleColour(hello.mapOverlay?.halo),
     )

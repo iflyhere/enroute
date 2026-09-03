@@ -38,6 +38,13 @@ import de.akaflieg_freiburg.enroute.wear.R
 import de.akaflieg_freiburg.enroute.wear.data.SessionHolder
 import de.akaflieg_freiburg.enroute.wear.data.SettingsStore
 import de.akaflieg_freiburg.enroute.wear.transport.http.HttpNavTransport
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 /**
  * Keeps the link to the phone alive while the pilot is not looking at the watch.
@@ -62,6 +69,11 @@ class NavSessionService : Service() {
 
     private var wakeLock: PowerManager.WakeLock? = null
 
+    // Here rather than in a screen: a collision alarm has to reach the pilot whichever
+    // page is open, and whether or not the display is on at all.
+    private var alert: CollisionAlert? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     @Suppress("DEPRECATION")
     private var wifiLock: WifiManager.WifiLock? = null
 
@@ -85,15 +97,40 @@ class NavSessionService : Service() {
             )
         }
 
+        startAlarmWatch(settings)
+
         // Not sticky: if the system ever kills this, restarting it behind the pilot's
         // back would silently reopen a link they cannot see.
         return START_NOT_STICKY
     }
 
     override fun onDestroy() {
+        scope.cancel()
+        alert = null
         SessionHolder.stop()
         releaseLocks()
         super.onDestroy()
+    }
+
+    /**
+     * Buzzes the wrist when the phone's alarm level rises.
+     *
+     * Collected from the session rather than from a screen, and distinct from the
+     * traffic list: what matters here is only the level, so this survives every change
+     * to how traffic is displayed.
+     */
+    private fun startAlarmWatch(settings: SettingsStore) {
+        if (alert != null) {
+            return
+        }
+        val created = CollisionAlert(this)
+        alert = created
+        scope.launch {
+            SessionHolder.state
+                .map { state -> state.traffic?.warning?.alarmLevel ?: 0 }
+                .distinctUntilChanged()
+                .collect { level -> created.onAlarmLevel(level, settings.alarmVibration) }
+        }
     }
 
     private fun startForegroundCompat() {

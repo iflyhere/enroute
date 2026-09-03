@@ -69,6 +69,7 @@ fun SettingsScreen(
     pages: List<WearPage>,
     hidden: Set<String>,
     bezelAction: BezelAction,
+    alarmVibration: Boolean,
     chartMode: ChartMode,
     attribution: String,
     peerDescription: String,
@@ -77,6 +78,7 @@ fun SettingsScreen(
     onMovePage: (WearPage, Int) -> Unit,
     onToggleHidden: (WearPage) -> Unit,
     onBezelAction: (BezelAction) -> Unit,
+    onAlarmVibration: (Boolean) -> Unit,
     onChartMode: (ChartMode) -> Unit,
     onOpenConnect: () -> Unit,
     modifier: Modifier = Modifier,
@@ -113,6 +115,21 @@ fun SettingsScreen(
                 Note(
                     "Automatic puts the chart covering the aircraft on the map, the way " +
                         "the phone picks one. Charts are imported on the phone.",
+                )
+            }
+
+            item { SectionTitle("Traffic alarm") }
+            item {
+                ChoiceRow(
+                    options = listOf("Vibrate", "Silent"),
+                    selected = if (alarmVibration) 0 else 1,
+                    onSelect = { index -> onAlarmVibration(index == 0) },
+                )
+            }
+            item {
+                Note(
+                    "A collision alarm buzzes the wrist whichever screen is open, and " +
+                        "only when the phone raises the alarm level.",
                 )
             }
 
