@@ -464,6 +464,11 @@ What the pilot's traffic receiver is reporting, plus the receiver's own state.
 | `tfc[].unc` | Position uncertainty radius in metres. |
 | `noBearing` | A target whose range the receiver knows but whose bearing it does not. FLARM reports this often. It cannot go on a map, and it must not be dropped — hence a member of its own that no map code will read by accident. |
 
+**What a client does with an alarm.** `warning.lvl` is the receiver's own escalation, and it
+rises and falls as the geometry changes. A client that alerts on every frame of a level-two
+encounter will alert for half a minute continuously, which stops the alert meaning anything;
+alert when the level **rises**, and again only if it rises further.
+
 **A stale traffic picture is worse than none.** A client must discard what it holds when the
 link drops, unlike the NOTAM and weather documents, which stay useful for hours. Ten-second-old
 traffic shown as current is the one failure this document must not enable.

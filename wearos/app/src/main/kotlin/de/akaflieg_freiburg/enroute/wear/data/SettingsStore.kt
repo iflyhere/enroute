@@ -101,6 +101,14 @@ class SettingsStore(context: Context) {
         get() = preferences.getString(KEY_BEZEL, "") ?: ""
         set(value) = preferences.edit().putString(KEY_BEZEL, value).apply()
 
+    /**
+     * Whether a collision alarm buzzes the wrist. Stored as a Boolean with a default
+     * of true: a pilot who has never opened the settings should still be warned.
+     */
+    var alarmVibration: Boolean
+        get() = preferences.getBoolean(KEY_ALARM_VIBRATION, true)
+        set(value) = preferences.edit().putBoolean(KEY_ALARM_VIBRATION, value).apply()
+
     var chartMode: String
         get() = preferences.getString(KEY_CHART_MODE, "") ?: ""
         set(value) = preferences.edit().putString(KEY_CHART_MODE, value).apply()
@@ -125,6 +133,7 @@ class SettingsStore(context: Context) {
         const val KEY_HIDDEN_PAGES = "hiddenPages"
         const val KEY_BEZEL = "bezelAction"
         const val KEY_CHART_MODE = "chartMode"
+        const val KEY_ALARM_VIBRATION = "alarmVibration"
 
         // A page identifier is a short lower-case word, so a comma cannot appear in
         // one and needs no escaping.
