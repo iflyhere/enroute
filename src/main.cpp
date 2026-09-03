@@ -48,6 +48,7 @@
 #endif
 
 #include "DemoRunner.h"
+#include "companion/CompanionServer.h"
 #include "GlobalObject.h"
 #include "GlobalSettings.h"
 #include "Librarian.h"
@@ -238,6 +239,12 @@ auto main(int argc, char *argv[]) -> int
 #endif
     engine->rootContext()->setContextProperty(QStringLiteral("global"), new GlobalObject(engine) );
     engine->load(u"qrc:/qml/main.qml"_s);
+
+    // The approach chart library is a QML singleton, so an engine is the only way to
+    // reach it from C++. Set unconditionally rather than from the QML factory, because
+    // a pilot who enabled the companion once starts the app again without the settings
+    // page -- and therefore without that factory -- ever running.
+    GlobalObject::companionServer()->setQmlEngine(engine);
 #if defined(Q_OS_ANDROID)
     QNativeInterface::QAndroidApplication::hideSplashScreen(1);
 

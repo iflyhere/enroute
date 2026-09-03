@@ -42,7 +42,7 @@ only.
 
 ## Revisions
 
-Six counters carry all cache coherency:
+Seven counters carry all cache coherency:
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -51,6 +51,7 @@ Six counters carry all cache coherency:
 | `navRev` | `quint32` | Incremented on every published navigation frame. Doubles as the `ETag` of the navigation frame. Appears only in that frame, not in the capability document. |
 | `notamRev` | `quint32` | Incremented whenever the NOTAM document's content changes. Derived by comparing successive encodings rather than counted from an event, so it moves only when a client would actually see something different. Appears only in the NOTAM document. |
 | `weatherRev` | `quint32` | Incremented whenever the weather document's content changes, derived the same way as `notamRev`. Appears only in the weather document. |
+| `vacRev` | `quint32` | Incremented whenever the set of approach charts changes, derived the same way as `notamRev`. Appears only in the approach chart document. |
 | `mapRev` | `quint32` | Changes whenever the set of downloaded map files changes. Appears in the capability document, and in every tile URL. A client that sees it move must refetch the style: the URLs in the one it holds no longer resolve, which is what stops its tile cache from outliving the maps it was filled from. |
 
 Every navigation frame repeats `routeRev`. That one field is the whole caching protocol: a client
@@ -322,6 +323,54 @@ does not occur.
 position, and this document carries exactly those. A station missing from the array has no report
 in the app, which is not the same claim as good weather there.
 
+### Approach chart document
+
+Every visual approach chart the app has, manually imported and from a downloaded collection
+alike, with the four corners each one is drawn on. The image bytes are **not** in here; each
+entry is fetched separately from `/enroute/v1/map/vac/<n>`.
+
+```
+{
+  "v": 1,
+  "sid": 2748219411,
+  "vacRev": 2,
+  "available": true,
+  "vac": [
+    { "n": "EDTF",
+      "d": "EDTF (FREIBURG)",
+      "sect": "Germany",
+      "q": [[7.70, 48.10], [7.95, 48.10], [7.95, 47.95], [7.70, 47.95]],
+      "bbox": [7.70, 47.95, 7.95, 48.10] }
+  ]
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `available` | Whether the app could reach its chart library at all. **Not the same claim as an empty `vac` array**: false means the question could not be asked, an empty array means it was asked and there are no charts. A client must be able to tell a pilot which of the two happened. |
+| `vac[].n` | The chart's name in the library, and the last path element of its image URL. |
+| `vac[].d` | The app's own description. Omitted when it adds nothing to the name. |
+| `vac[].sect` | The app's own section heading, e.g. the country. Omitted when empty. |
+| `vac[].q` | The four corners as `[longitude, latitude]`, in the order **top left, top right, bottom right, bottom left**. That is the app's own image-source order and what a renderer's quad expects, so it passes straight through. A manually imported chart is always axis aligned, because its corners come from its file name; a chart from a GeoTIFF can be a true quadrilateral, which is why four corners travel and not a rectangle. |
+| `vac[].bbox` | `[west, south, east, north]`. Derivable from `q`, and sent anyway because it is what the app's own selection rule tests. |
+
+**Which chart to show.** The app's rule is `GeoMaps::VACLibrary::vacs4Point()`, which is plain
+bounding-box containment, boundary included, with the results sorted by name. A client applies that
+same rule to `bbox` and stays in step with the phone without asking. Sorting matters: where two
+charts overlap, two devices that pick differently show a pilot two different approaches.
+
+**Where to draw it.** Above the aviation overlay and below the client's own route and aircraft.
+That is where the app puts it — its chart layer is declared after every aviation layer, and it
+keeps a second copy of the waypoint layer above the chart — so the chart covers the airspaces
+while the route stays visible.
+
+**Draw one at a time.** An image source holds its whole image. A pilot with a country's worth of
+charts installed must not have a watch trying to hold all of them.
+
+The image is served as `image/webp`, which is what the app stores. A chart from a downloaded
+collection has no image file until the app extracts it; the server extracts on first request, so
+the first fetch of such a chart is slower than the rest.
+
 ## The map
 
 A companion device with its own map renderer is served everything that renderer needs, and all of
@@ -384,6 +433,8 @@ Settings.
 | `GET /enroute/v1/nav` | navigation frame, `ETag: W/"<navRev>"`, `304 Not Modified` when `If-None-Match` matches |
 | `GET /enroute/v1/notams` | NOTAM document, `ETag: W/"<notamRev>"`, `304 Not Modified` when `If-None-Match` matches |
 | `GET /enroute/v1/weather` | weather document, `ETag: W/"<weatherRev>"`, `304 Not Modified` when `If-None-Match` matches |
+| `GET /enroute/v1/vacs` | approach chart document, `ETag: W/"<vacRev>"`, `304 Not Modified` when `If-None-Match` matches |
+| `GET /enroute/v1/map/vac/<name>` | the chart image named `<name>`, `image/webp`; `404` if the library has no such chart |
 | `GET /enroute/v1/map/…` | the pilot's own map, see below |
 | `GET /enroute/v1/route.geojson` | the app's own GeoJSON route |
 | `GET /` | a small HTML page that polls `/nav`, for development and for checking the link from a desktop browser |
@@ -400,7 +451,10 @@ is polled far more slowly — **60 seconds is the recommended period** — becau
 NOTAM data is downloaded, which happens a few times a day, and otherwise only as the wall clock
 carries a NOTAM into or out of force. `/enroute/v1/weather` sits between the two at **150 seconds**:
 a METAR is issued about every half hour, but the summary states the observation's age, so a list
-left alone for longer is visibly wrong about how old it is.
+left alone for longer is visibly wrong about how old it is. `/enroute/v1/vacs` is slower
+still at **300 seconds**, because the chart library changes only when the pilot imports or
+removes a chart, which never happens in flight; that poll exists so a client which connected
+before an import still learns about it.
 
 Polling is deliberately preferred over a streamed response: a watch radio wakes for each poll either
 way, a poll is its own reconnect logic, and `QHttpServerResponder`'s lifetime ends when the request

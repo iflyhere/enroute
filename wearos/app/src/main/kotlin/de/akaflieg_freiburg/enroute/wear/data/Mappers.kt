@@ -30,7 +30,9 @@ import de.akaflieg_freiburg.enroute.wear.data.dto.NotamFilterDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NotamGroupDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.RouteDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.TafDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.VacBoardDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.WeatherBoardDto
+import de.akaflieg_freiburg.enroute.wear.domain.ApproachChart
 import de.akaflieg_freiburg.enroute.wear.domain.FlightCategory
 import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
 import de.akaflieg_freiburg.enroute.wear.domain.FlightStatus
@@ -50,6 +52,7 @@ import de.akaflieg_freiburg.enroute.wear.domain.RouteStatus
 import de.akaflieg_freiburg.enroute.wear.domain.RouteWaypoint
 import de.akaflieg_freiburg.enroute.wear.domain.TafReport
 import de.akaflieg_freiburg.enroute.wear.domain.WaypointLeg
+import de.akaflieg_freiburg.enroute.wear.domain.VacBoard
 import de.akaflieg_freiburg.enroute.wear.domain.WaypointType
 import de.akaflieg_freiburg.enroute.wear.domain.WeatherBoard
 import de.akaflieg_freiburg.enroute.wear.domain.WeatherStation
@@ -296,3 +299,29 @@ private fun TafDto.toDomain(): TafReport? {
     if (raw.isBlank()) return null
     return TafReport(raw = raw, issuedEpochSeconds = issued.toEpochSeconds())
 }
+
+fun VacBoardDto.toDomain(): VacBoard = VacBoard(
+    revision = vacRevision,
+    available = available,
+    charts = charts.mapNotNull { dto ->
+        if (dto.name.isBlank()) return@mapNotNull null
+
+        // Four corners or nothing. A chart drawn on three is not a degraded chart,
+        // it is a chart in the wrong place, and on an approach that is worse than no
+        // chart at all.
+        val corners = dto.quad.mapNotNull { corner -> corner.toGeoPoint() }
+        if (corners.size != 4) return@mapNotNull null
+        if (dto.bounds.size != 4) return@mapNotNull null
+
+        ApproachChart(
+            name = dto.name,
+            description = dto.description?.takeIf { text -> text.isNotBlank() },
+            section = dto.section?.takeIf { text -> text.isNotBlank() },
+            quad = corners,
+            west = dto.bounds[0],
+            south = dto.bounds[1],
+            east = dto.bounds[2],
+            north = dto.bounds[3],
+        )
+    },
+)

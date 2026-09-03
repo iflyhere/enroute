@@ -24,6 +24,7 @@ import de.akaflieg_freiburg.enroute.wear.data.dto.HelloDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NavFrameDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NotamBoardDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.RouteDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.VacBoardDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.WeatherBoardDto
 import de.akaflieg_freiburg.enroute.wear.data.parseStyleColour
 import de.akaflieg_freiburg.enroute.wear.data.toDomain
@@ -108,11 +109,13 @@ class HttpNavTransport(
         var navETag: String? = null
         var notamETag: String? = null
         var weatherETag: String? = null
+        var vacETag: String? = null
 
         // Zero, not "now", so the first pass fetches NOTAMs instead of leaving the
         // screen empty for a minute after connecting.
         var notamsFetchedAt = 0L
         var weatherFetchedAt = 0L
+        var vacsFetchedAt = 0L
 
         while (true) {
             try {
@@ -171,6 +174,22 @@ class HttpNavTransport(
                 // states the observation's age, so a list left alone for five minutes
                 // would be visibly wrong about how old it is. A 304 is still the normal
                 // answer, because the phone only rebuilds when the content moves.
+                // The chart library changes when the pilot imports or removes one,
+                // which never happens in flight. This poll exists so a client that
+                // connected before an import still learns about it.
+                if (now - vacsFetchedAt >= VAC_PERIOD_MS) {
+                    vacsFetchedAt = now
+                    val vacs = request(VACS, ifNoneMatch = vacETag)
+                    if (vacs != null) {
+                        vacETag = vacs.etag
+                        emit(
+                            TransportEvent.VacUpdate(
+                                WireJson.json.decodeFromString<VacBoardDto>(vacs.body).toDomain(),
+                            ),
+                        )
+                    }
+                }
+
                 if (now - weatherFetchedAt >= WEATHER_PERIOD_MS) {
                     weatherFetchedAt = now
                     val weather = request(WEATHER, ifNoneMatch = weatherETag)
@@ -258,6 +277,7 @@ class HttpNavTransport(
         const val ROUTE = "/route"
         const val NOTAMS = "/notams"
         const val WEATHER = "/weather"
+        const val VACS = "/vacs"
 
         // The phone rebuilds its NOTAM document every five minutes at the slowest, so
         // a minute here means a client is never more than about a minute behind while
@@ -267,6 +287,8 @@ class HttpNavTransport(
         // Half the phone's own rebuild period, so a change is on screen within about
         // two and a half minutes without polling faster than the data can move.
         const val WEATHER_PERIOD_MS = 150_000L
+
+        const val VAC_PERIOD_MS = 300_000L
         const val CONNECT_TIMEOUT_MS = 3_000
         const val READ_TIMEOUT_MS = 5_000
     }

@@ -50,6 +50,7 @@ import androidx.wear.compose.material3.Text
 import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
 import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
 import de.akaflieg_freiburg.enroute.wear.domain.OwnPosition
+import de.akaflieg_freiburg.enroute.wear.domain.VacBoard
 import de.akaflieg_freiburg.enroute.wear.ui.route.ZoomLevel
 import de.akaflieg_freiburg.enroute.wear.ui.theme.CockpitColors
 import org.maplibre.android.camera.CameraPosition
@@ -58,15 +59,19 @@ import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapLibreMapOptions
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
+import org.maplibre.android.geometry.LatLngQuad
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.android.style.layers.RasterLayer
 import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.sources.GeoJsonSource
+import org.maplibre.android.style.sources.ImageSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
+import java.net.URI
 
 /**
  * The pilot's own map, rendered on the watch.
@@ -79,6 +84,13 @@ import org.maplibre.geojson.Point
  * The route and the aircraft are drawn as layers on top of that style rather than as a
  * Compose overlay. A Compose overlay would have to reproduce the renderer's camera to
  * stay aligned, and it would drift the moment the two disagreed about anything.
+ *
+ * An approach chart is drawn the way the phone draws one: an image source on the four
+ * corners the chart carries, in a raster layer above the aviation overlay and below the
+ * route. That is where the phone puts it -- its own chart layer is declared after every
+ * aviation layer, and it keeps a second copy of the waypoint layer above the chart, so
+ * the chart covers the airspaces while the route stays visible. Which chart is shown
+ * follows the app's own rule, bounding-box containment, applied to the aircraft.
  */
 @Composable
 fun MapLibreScreen(
@@ -87,6 +99,8 @@ fun MapLibreScreen(
     pairingCode: String,
     route: FlightRoute?,
     ownPosition: OwnPosition?,
+    charts: VacBoard?,
+    port: Int,
     zoom: ZoomLevel,
     isActive: Boolean,
     attribution: String,
@@ -148,6 +162,7 @@ fun MapLibreScreen(
                             addOverlayLayers(style)
                             holder.applyRoute(route)
                             holder.applyOwnPosition(ownPosition)
+                            holder.applyChart(charts, ownPosition, host, port)
                             holder.applyCamera(
                                 ownPosition, route, zoom, radiusPixels,
                                 fallbackCentre, fallbackZoom,
@@ -159,6 +174,7 @@ fun MapLibreScreen(
             update = {
                 holder.applyRoute(route)
                 holder.applyOwnPosition(ownPosition)
+                holder.applyChart(charts, ownPosition, host, port)
                 // Only while this page is the one being looked at. Moving the camera
                 // costs a redraw, and a redraw on a watch costs battery for pixels
                 // nobody is seeing.
@@ -295,6 +311,65 @@ private class MapHolder {
     var style: Style? = null
 
     private var lastRouteRevision: Long = -1
+    private var shownChart: String? = null
+
+    /**
+     * Shows the chart covering the aircraft, or none.
+     *
+     * Exactly one chart at a time. Adding every installed chart and toggling
+     * visibility would be less code, but an image source holds its whole image, and a
+     * pilot with a country's worth of charts installed would be asking a watch to keep
+     * all of them in memory at once.
+     *
+     * The image is named by URL rather than fetched here: the renderer's own HTTP
+     * client already carries the pairing code, so it can fetch and scale the chart
+     * itself and this code never owns a bitmap.
+     */
+    fun applyChart(charts: VacBoard?, ownPosition: OwnPosition?, host: String, port: Int) {
+        val currentStyle = style ?: return
+
+        val here = ownPosition?.point
+        val wanted = if (charts == null || here == null) {
+            null
+        } else {
+            charts.coveringSortedByName(here).firstOrNull()
+        }
+
+        if (wanted?.name == shownChart) {
+            return
+        }
+
+        // Layer first, then source: a source still referenced by a layer cannot be
+        // removed, and the renderer logs that rather than throwing, which would leave
+        // a stale chart on screen with no clue why.
+        if (shownChart != null) {
+            currentStyle.removeLayer(CHART_LAYER)
+            currentStyle.removeSource(CHART_SOURCE)
+        }
+        shownChart = wanted?.name
+        if (wanted == null) {
+            return
+        }
+
+        val quad = LatLngQuad(
+            LatLng(wanted.quad[0].latDeg, wanted.quad[0].lonDeg),
+            LatLng(wanted.quad[1].latDeg, wanted.quad[1].lonDeg),
+            LatLng(wanted.quad[2].latDeg, wanted.quad[2].lonDeg),
+            LatLng(wanted.quad[3].latDeg, wanted.quad[3].lonDeg),
+        )
+        val url = "http://" + host + ":" + port + PATH_PREFIX + wanted.imagePath
+        currentStyle.addSource(ImageSource(CHART_SOURCE, quad, URI(url)))
+
+        // Below the route rather than on top of everything: the phone keeps its
+        // waypoint layer above its chart layer for the same reason, and a chart that
+        // hides the aircraft is worse than no chart.
+        currentStyle.addLayerBelow(
+            RasterLayer(CHART_LAYER, CHART_SOURCE).withProperties(
+                PropertyFactory.rasterResampling(Property.RASTER_RESAMPLING_LINEAR),
+            ),
+            ROUTE_LAYER,
+        )
+    }
 
     fun applyRoute(route: FlightRoute?) {
         val currentStyle = style ?: return
@@ -452,6 +527,12 @@ private const val OWNSHIP_SOURCE = "enroute-ownship"
 private const val ROUTE_LAYER = "enroute-route-line"
 private const val WAYPOINT_LAYER = "enroute-waypoint-dots"
 private const val OWNSHIP_LAYER = "enroute-ownship-dot"
+private const val CHART_SOURCE = "enroute-vac"
+private const val CHART_LAYER = "enroute-vac-raster"
+
+// The protocol prefix. Named here because the chart URL is the one URL this file
+// builds itself rather than receiving ready-made.
+private const val PATH_PREFIX = "/enroute/v1"
 
 // Colours as ints, because the renderer's property factory takes Android colours and
 // not Compose ones. Kept in step with CockpitColors by hand, which is a small enough

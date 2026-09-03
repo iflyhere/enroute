@@ -32,6 +32,7 @@
 #include "config.h"
 #include "navigation/Leg.h"
 #include "navigation/Navigator.h"
+#include "geomaps/VACLibrary.h"
 #include "notam/NOTAMProvider.h"
 #include "positioning/PositionProvider.h"
 #include "weather/METAR.h"
@@ -804,6 +805,75 @@ QJsonObject Companion::Snapshot::weather(const Companion::Revisions& revisions,
         }
     }
     document.insert("st"_L1, stations);
+
+    return document;
+}
+
+
+QJsonObject Companion::Snapshot::vacs(const Companion::Revisions& revisions,
+                                      GeoMaps::VACLibrary* library)
+{
+    QJsonObject document;
+    document.insert("v"_L1, Companion::protocolVersion);
+    document.insert("sid"_L1, static_cast<qint64>(revisions.session));
+
+    if (library == nullptr)
+    {
+        // Said explicitly rather than left to an empty array, because "the app has
+        // no charts" and "we could not ask" need different words on a client.
+        document.insert("available"_L1, false);
+        document.insert("vac"_L1, QJsonArray());
+        return document;
+    }
+    document.insert("available"_L1, true);
+
+    QJsonArray charts;
+    const auto all = library->vacs();
+    for (const auto& vac : all)
+    {
+        if (!vac.isValid())
+        {
+            continue;
+        }
+
+        QJsonObject chart;
+        chart.insert("n"_L1, vac.name);
+
+        const auto description = vac.description();
+        if (!description.isEmpty() && description != vac.name)
+        {
+            chart.insert("d"_L1, description);
+        }
+        const auto section = vac.section();
+        if (!section.isEmpty())
+        {
+            chart.insert("sect"_L1, section);
+        }
+
+        // Corner order is top left, top right, bottom right, bottom left -- the
+        // order the app's own image source uses and the order MapLibre's quad
+        // expects, so a client passes it straight through.
+        QJsonArray quad;
+        for (const auto& corner : {vac.topLeft, vac.topRight, vac.bottomRight, vac.bottomLeft})
+        {
+            quad.append(toJSON(corner));
+        }
+        chart.insert("q"_L1, quad);
+
+        // The box as well, although it is derivable from the quad. It is what the
+        // app's own vacs4Point() tests, and spelling it out means a client applies
+        // that rule to the same numbers rather than to its own reconstruction.
+        const auto box = vac.boundingBox();
+        QJsonArray bounds;
+        bounds.append(box.topLeft().longitude());
+        bounds.append(box.bottomRight().latitude());
+        bounds.append(box.bottomRight().longitude());
+        bounds.append(box.topLeft().latitude());
+        chart.insert("bbox"_L1, bounds);
+
+        charts.append(chart);
+    }
+    document.insert("vac"_L1, charts);
 
     return document;
 }
