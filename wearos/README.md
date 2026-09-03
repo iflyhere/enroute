@@ -95,10 +95,20 @@ This also lets the transport be tested with the watch's Wi-Fi switched off, whic
 bugs from Wear OS's Wi-Fi power management. Note that UDP discovery does not traverse `adb reverse`;
 testing that needs a real watch on the same network as the phone.
 
+The mock logs one line per request, which is the quickest way to tell a client that is polling
+happily from one that never connected at all.
+
 Run `node wearos/tools/mock-server.mjs --help` for the fault-injection endpoints. They force each of
 the five route-status values (and an unknown one, to prove a client's fallback), stall the feed to
 exercise stale rendering, emit a frame with every optional key absent, and regenerate the route with
 100 waypoints.
+
+Its NOTAM fixtures are chosen to be awkward rather than tidy, because the happy path is not what
+breaks a client: a permanent NOTAM with no end date, one already marked read, one with no affected
+area, one whose text needs scrolling, and a category this build has never heard of. The default
+four-waypoint route is arranged so that all four of the knowledge states appear at once — NOTAMs
+listed, NOTAMs listed, nothing known, and confirmed empty. `debug/notams?m=cap` then adds the fifth
+case, a group the document's cap emptied, which must never render as "no NOTAMs here".
 
 ## What the emulator can and cannot tell you
 

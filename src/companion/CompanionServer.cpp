@@ -28,6 +28,7 @@
 #include "companion/HttpTransport.h"
 #include "companion/Protocol.h"
 #include "navigation/Navigator.h"
+#include "notam/NOTAMProvider.h"
 #include "positioning/PositionProvider.h"
 
 using namespace Qt::Literals::StringLiterals;
