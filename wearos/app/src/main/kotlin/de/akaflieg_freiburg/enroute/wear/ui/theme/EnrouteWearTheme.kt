@@ -42,7 +42,7 @@ object CockpitColors {
     /** A condition the pilot should notice but that is not an error. */
     val Caution = Color(0xFFFFB300)
 
-    /** Data that is old, or a link that is down. */
+    /** Data that is old, a link that is down, or a restricted area ahead. */
     val Warning = Color(0xFFFF5252)
 
     /** A good state, used sparingly. */
