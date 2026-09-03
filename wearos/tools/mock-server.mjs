@@ -62,6 +62,7 @@ function parseArgs(argv) {
         case 'vunits': out.vunits = value; break;
         case 'code':   out.code = value; break;
         case 'period': out.period = Number(value); break;
+        case 'map':    out.map = value; break;
         default: console.error(`unknown option --${key}`); process.exit(2);
         }
     }
@@ -80,6 +81,13 @@ if (opts.help) {
   --code <nnnnnn> pairing code                       (default 418302)
   --period <ms>   nav frame period                   (default 1000)
   --no-beacon     do not broadcast UDP discovery
+  --map host:port forward every /enroute/v1/map request to a real phone, and copy
+                  its map fields into the capability document
+
+The --map option exists because the map page is the one screen this mock cannot fake:
+it needs real vector tiles, a real style and real aviation data. Pointing it at a phone
+gives a client a moving aircraft on a flown route from here, and the map underneath it
+from there -- which is the combination that is otherwise only testable in an aeroplane.
 
 Fault injection, for exercising a client's unhappy paths:
 
@@ -611,15 +619,64 @@ document.getElementById('o').textContent=r.ok?JSON.stringify(await r.json(),null
 }catch(e){document.getElementById('o').textContent=e}}
 tick();setInterval(tick,1000);</script>`;
 
+// Fields copied from the phone's own capability document, so a client learns that a map
+// is available and where to point its camera. Fetched once, lazily.
+const mapPeer = opts.map ? { host: opts.map.split(':')[0], port: Number(opts.map.split(':')[1] ?? 8973) } : null;
+let mapFields = null;
+
+async function fetchMapFields() {
+    if (!mapPeer || mapFields !== null) { return; }
+    mapFields = {};
+    try {
+        const body = await new Promise((resolve, reject) => {
+            const request = http.request(
+                { host: mapPeer.host, port: mapPeer.port, path: '/enroute/v1/hello',
+                  headers: { Authorization: `Bearer ${opts.code}` } },
+                (response) => {
+                    let text = '';
+                    response.on('data', (chunk) => { text += chunk; });
+                    response.on('end', () => resolve(text));
+                });
+            request.on('error', reject);
+            request.end();
+        });
+        const hello = JSON.parse(body);
+        for (const key of ['mapRev', 'mapAttribution', 'mapCentre']) {
+            if (hello[key] !== undefined) { mapFields[key] = hello[key]; }
+        }
+        console.log('map fields from the phone:', JSON.stringify(mapFields));
+    } catch (error) {
+        console.log('could not reach the map peer:', error.message);
+    }
+}
+
+await fetchMapFields();
+
 const server = http.createServer((req, res) => {
     const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
 
-    // One line per request. Without this a client that never connected looks exactly
-    // like one that is polling happily, which costs real time to work out.
+    // Attached before anything can return, or a forwarded request never shows up in
+    // the log and looks like a request the client never made.
     res.on('finish', () => {
         const from = req.socket.remoteAddress ?? '?';
         console.log(`${req.method} ${url.pathname} -> ${res.statusCode}  ${from}`);
     });
+
+    if (mapPeer && url.pathname.startsWith('/enroute/v1/map')) {
+        const upstream = http.request(
+            { host: mapPeer.host, port: mapPeer.port, path: req.url,
+              method: req.method, headers: req.headers },
+            (response) => {
+                res.writeHead(response.statusCode ?? 502, response.headers);
+                response.pipe(res);
+            });
+        upstream.on('error', (error) => {
+            res.writeHead(502, { 'Content-Type': 'text/plain' });
+            res.end('map peer: ' + error.message);
+        });
+        req.pipe(upstream);
+        return;
+    }
 
     if (req.method !== 'GET') {
         res.writeHead(405, { Allow: 'GET' }).end();
@@ -639,7 +696,7 @@ const server = http.createServer((req, res) => {
     }
 
     if (path === '/enroute/v1/hello') {
-        sendJson(res, helloDocument(), `W/"${state.routeRev}"`);
+        sendJson(res, { ...helloDocument(), ...(mapFields ?? {}) }, `W/"${state.routeRev}"`);
         return;
     }
 

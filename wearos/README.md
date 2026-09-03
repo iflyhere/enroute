@@ -98,6 +98,18 @@ testing that needs a real watch on the same network as the phone.
 The mock logs one line per request, which is the quickest way to tell a client that is polling
 happily from one that never connected at all.
 
+The one screen it cannot fake is the map, which needs real vector tiles, a real style and real
+aviation data. `--map <host>:<port>` forwards every `/enroute/v1/map` request to a phone and copies
+that phone's map fields into the capability document, so a client gets a moving aircraft on a flown
+route from the mock and the map underneath it from the phone:
+
+```bash
+adb -s <serial> reverse tcp:8974 tcp:8974
+node wearos/tools/mock-server.mjs --port 8974 --map 127.0.0.1:8973
+```
+
+That combination is otherwise only testable in an aeroplane.
+
 Run `node wearos/tools/mock-server.mjs --help` for the fault-injection endpoints. They force each of
 the five route-status values (and an unknown one, to prove a client's fallback), stall the feed to
 exercise stale rendering, emit a frame with every optional key absent, and regenerate the route with
