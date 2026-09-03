@@ -23,6 +23,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QRegularExpression>
+#include <QTextDocumentFragment>
 
 #include "GlobalObject.h"
 #include "GlobalSettings.h"
@@ -30,6 +31,7 @@
 #include "dataManagement/DataManager.h"
 #include "dataManagement/Downloadable_SingleFile.h"
 #include "geomaps/GeoMapProvider.h"
+#include "positioning/PositionProvider.h"
 
 using namespace Qt::Literals::StringLiterals;
 
@@ -110,6 +112,13 @@ namespace
         return "application/octet-stream";
     }
 
+    // Close enough to read an aerodrome, for the case where the app knows where the
+    // aircraft is.
+    constexpr double nearZoom = 10.0;
+
+    // Wide enough to see which country was downloaded, for the case where it does not.
+    constexpr double overviewZoom = 6.0;
+
     QVector<QSharedPointer<FileFormats::MBTILES>> openFiles(
         DataManagement::Downloadable_MultiFile* multiFile)
     {
@@ -169,6 +178,129 @@ QString Companion::MapAssets::terrainPath() const
 }
 
 
+QJsonArray Companion::MapAssets::centreHint() const
+{
+    double lon = 0.0;
+    double lat = 0.0;
+    double zoom = 0.0;
+    if (!baseMapCentre(lon, lat, zoom))
+    {
+        return {};
+    }
+    QJsonArray hint;
+    hint.append(lon);
+    hint.append(lat);
+    hint.append(zoom);
+    return hint;
+}
+
+
+QString Companion::MapAssets::attribution() const
+{
+    for (const auto& filePtr : m_baseMap)
+    {
+        if (filePtr.isNull())
+        {
+            continue;
+        }
+        const auto raw = filePtr->metaData().value(u"attribution"_s);
+        if (raw.isEmpty())
+        {
+            continue;
+        }
+        // The MBTiles metadata holds a fragment of HTML with links in it. A watch
+        // renders plain text, and the link is not reachable from there anyway.
+        return QTextDocumentFragment::fromHtml(raw).toPlainText().simplified();
+    }
+    return {};
+}
+
+
+bool Companion::MapAssets::baseMapCentre(double& lon, double& lat, double& zoom) const
+{
+    // Nothing to centre on without a map, so do not even ask where the aircraft is.
+    if (m_baseMap.isEmpty())
+    {
+        return false;
+    }
+
+    // Where the pilot last was, if the app knows. Far more useful than anything
+    // derived from the map files: a client that has no route and no position of its
+    // own then opens where the aircraft is parked instead of in the middle of a
+    // country. It is only a default -- the client moves the camera itself the moment
+    // a real position arrives.
+    const auto lastKnown = GlobalObject::positionProvider()->approximateLastValidCoordinate();
+    if (lastKnown.isValid())
+    {
+        lon = lastKnown.longitude();
+        lat = lastKnown.latitude();
+        zoom = nearZoom;
+        return true;
+    }
+
+    // Otherwise the middle of everything that has been downloaded. Taking the first
+    // file's own centre would be arbitrary: a pilot with Germany and Switzerland
+    // would open over whichever one happened to be listed first.
+    double minLon = 0.0;
+    double minLat = 0.0;
+    double maxLon = 0.0;
+    double maxLat = 0.0;
+    bool any = false;
+
+    for (const auto& filePtr : m_baseMap)
+    {
+        if (filePtr.isNull())
+        {
+            continue;
+        }
+        // "bounds" in an MBTiles file is "minLon,minLat,maxLon,maxLat", and is
+        // optional by the specification.
+        const auto parts = filePtr->metaData().value(u"bounds"_s).split(u',');
+        if (parts.size() < 4)
+        {
+            continue;
+        }
+        bool ok = true;
+        double values[4] = {0.0, 0.0, 0.0, 0.0};
+        for (int i = 0; i < 4; ++i)
+        {
+            bool one = false;
+            values[i] = parts[i].toDouble(&one);
+            ok = ok && one;
+        }
+        if (!ok)
+        {
+            continue;
+        }
+
+        if (!any)
+        {
+            minLon = values[0];
+            minLat = values[1];
+            maxLon = values[2];
+            maxLat = values[3];
+            any = true;
+        }
+        else
+        {
+            minLon = qMin(minLon, values[0]);
+            minLat = qMin(minLat, values[1]);
+            maxLon = qMax(maxLon, values[2]);
+            maxLat = qMax(maxLat, values[3]);
+        }
+    }
+
+    if (!any)
+    {
+        return false;
+    }
+    lon = (minLon + maxLon) / 2.0;
+    lat = (minLat + maxLat) / 2.0;
+    zoom = overviewZoom;
+    return true;
+}
+
+
 QByteArray Companion::MapAssets::styleDocument(const QString& baseUrl) const
 {
     // The same three files and the same three placeholders the app uses for its own
@@ -195,6 +327,25 @@ QByteArray Companion::MapAssets::styleDocument(const QString& baseUrl) const
     data.replace("%URL%", (baseUrl + u"/"_s + baseMapPath()).toUtf8());
     data.replace("%URLT%", (baseUrl + u"/"_s + terrainPath()).toUtf8());
     data.replace("%URL2%", baseUrl.toUtf8());
+
+    // The app's own style has no centre, because its renderer is always told where to
+    // look. A companion device is not, so one is added here when the map files know.
+    double lon = 0.0;
+    double lat = 0.0;
+    double zoom = 0.0;
+    if (baseMapCentre(lon, lat, zoom))
+    {
+        auto document = QJsonDocument::fromJson(data).object();
+        if (!document.isEmpty() && !document.contains(u"center"_s))
+        {
+            QJsonArray centre;
+            centre.append(lon);
+            centre.append(lat);
+            document.insert(u"center"_s, centre);
+            document.insert(u"zoom"_s, zoom);
+            data = QJsonDocument(document).toJson(QJsonDocument::Compact);
+        }
+    }
 
     return data;
 }

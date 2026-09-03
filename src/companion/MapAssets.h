@@ -20,6 +20,7 @@
 #pragma once
 
 #include <QHttpServerResponder>
+#include <QJsonArray>
 #include <QObject>
 #include <QSharedPointer>
 
@@ -116,6 +117,37 @@ namespace Companion
         // setting, and a style document is a few tens of kilobytes fetched once per
         // session.
         [[nodiscard]] QByteArray styleDocument(const QString& baseUrl) const;
+
+        // Where the pilot's downloaded maps actually are, from the MBTiles
+        // metadata. Put into the style so that a client with no route and no
+        // position opens on the map rather than on the Gulf of Guinea, which is
+        // where a style with no centre puts it.
+        [[nodiscard]] bool baseMapCentre(double& lon, double& lat, double& zoom) const;
+
+    public:
+        /*! \brief The attribution the map data itself carries, as plain text
+         *
+         *  A small screen cannot afford the renderer's own attribution widget, but
+         *  the obligation does not go away with it, so the notice travels to the
+         *  client and the client shows it. Taken from the map files rather than
+         *  written down here, so it cannot drift from the data it describes.
+         *
+         *  @returns The notice, or an empty string if no map is available
+         */
+        [[nodiscard]] QString attribution() const;
+
+        /*! \brief Where a client should point its camera before it knows better
+         *
+         *  Sent to the client rather than left in the style document, because the
+         *  Android map renderer ignores a style's own centre and opens at zero
+         *  degrees north, zero east -- where it then requests no tiles at all,
+         *  since no aviation map covers the Gulf of Guinea.
+         *
+         *  @returns Longitude, latitude and zoom, or an empty array if unknown
+         */
+        [[nodiscard]] QJsonArray centreHint() const;
+
+    private:
 
         // A set with no files still gets a valid document. The style always declares
         // its terrain source, but the terrain map is a separate optional download, so

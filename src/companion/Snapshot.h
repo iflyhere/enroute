@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <QJsonArray>
 #include <QJsonObject>
 
 namespace Companion
@@ -87,7 +88,9 @@ namespace Companion
          *  @returns The document described under "Capability document" in
          *  doc/companion-protocol.md
          */
-        [[nodiscard]] QJsonObject hello(const Companion::Revisions& revisions);
+        [[nodiscard]] QJsonObject hello(const Companion::Revisions& revisions,
+                                        const QString& mapAttribution = {},
+                                        const QJsonArray& mapCentre = {});
 
         /*! \brief Route snapshot
          *

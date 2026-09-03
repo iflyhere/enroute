@@ -20,6 +20,7 @@
 package de.akaflieg_freiburg.enroute.wear.transport
 
 import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
+import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
 import de.akaflieg_freiburg.enroute.wear.domain.NavFrame
 import de.akaflieg_freiburg.enroute.wear.domain.NotamBoard
 import kotlinx.coroutines.flow.Flow
@@ -59,6 +60,22 @@ data class PeerInfo(
     val protocolVersion: Int,
     val sessionId: Long,
     val navPeriodMs: Long,
+    /**
+     * Non-zero when the phone can serve a map. Also the cache key for it: when this
+     * moves, the style a client holds names tile URLs that no longer resolve.
+     */
+    val mapRevision: Long = 0,
+    /** Attribution for the map data, to be displayed wherever the map is. */
+    val mapAttribution: String = "",
+    /**
+     * Where to point the camera before a position or a route is known.
+     *
+     * Sent by the phone rather than read out of the style, because the Android map
+     * renderer ignores a style's own centre and opens on the Gulf of Guinea, where
+     * it then requests no tiles at all and shows a blank screen.
+     */
+    val mapCentre: GeoPoint? = null,
+    val mapCentreZoom: Double = 0.0,
 )
 
 enum class FailureReason {
