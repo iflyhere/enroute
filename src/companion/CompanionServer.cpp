@@ -19,6 +19,7 @@
 
 #include <chrono>
 
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QNetworkInterface>
 #include <QRandomGenerator>
@@ -227,7 +228,9 @@ void Companion::CompanionServer::publishRoute()
     m_revisions.route++;
     m_routeDocument = QJsonDocument(Companion::Snapshot::route(m_revisions))
                           .toJson(QJsonDocument::Compact);
-    m_helloDocument = QJsonDocument(Companion::Snapshot::hello(m_revisions))
+    const auto attribution = m_mapAssets.isNull() ? QString() : m_mapAssets->attribution();
+    const auto centre = m_mapAssets.isNull() ? QJsonArray() : m_mapAssets->centreHint();
+    m_helloDocument = QJsonDocument(Companion::Snapshot::hello(m_revisions, attribution, centre))
                           .toJson(QJsonDocument::Compact);
 
     emit routeDocumentChanged();
@@ -329,12 +332,11 @@ void Companion::CompanionServer::updateTransport()
             markRouteDirty();
         });
 
-        // Deferred to the next turn of the event loop, and this is not a detail.
-        // Reading the data manager here is the first thing in the app that
-        // constructs it, and constructing a GlobalObject while another one is being
-        // constructed trips an assertion -- the singletons are only safe to reach
-        // once startup has settled. Nothing needs the map in the first millisecond;
-        // the capability document picks the revision up when the notifier fires.
+        // Deferred to the next turn of the event loop. Reading the data manager
+        // opens an SQLite handle on every downloaded map file, and doing that while
+        // the app is still assembling itself buys nothing: no client can have
+        // connected yet. The capability document picks the revision up when the
+        // notifier fires, a moment later.
         QTimer::singleShot(0, m_mapAssets, [this]()
         {
             m_mapAssets->refresh();

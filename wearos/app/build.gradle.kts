@@ -24,6 +24,14 @@ android {
         versionName = "0.1.0"
 
         resourceConfigurations += listOf("en", "de")
+
+        ndk {
+            // The map renderer ships native code for four architectures and every
+            // Wear OS device sold to date is 32-bit ARM -- the Galaxy Watch 7 reports
+            // "armeabi-v7a,armeabi" and nothing else. Shipping the other three would
+            // treble the size of the APK with code no watch can run.
+            abiFilters += "armeabi-v7a"
+        }
     }
 
     buildTypes {
@@ -89,6 +97,20 @@ dependencies {
     implementation(libs.wear.compose.material3)
     implementation(libs.wear.compose.foundation)
     implementation(libs.wear.compose.navigation)
+
+    // The same renderer the phone app uses, so the watch draws the pilot's own map
+    // rather than an imitation of it. BSD-2-Clause.
+    implementation(libs.maplibre.android)
+
+    // Only to hand the renderer a client that presents the pairing code. The renderer
+    // fetches every tile itself and the sole way to attach a header to those requests
+    // is to give it an OkHttp client, so the alternative would be a credential in the
+    // URL -- which the protocol rules out, because a URL ends up in logs.
+    //
+    // The nav transport still uses java.net on purpose: this arrived with the map, and
+    // a dependency that arrives with one feature should not quietly become the app's
+    // default for everything.
+    implementation(libs.okhttp)
 
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
