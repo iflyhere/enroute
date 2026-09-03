@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,6 +49,7 @@ import de.akaflieg_freiburg.enroute.wear.ui.theme.CockpitColors
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapLibreMapOptions
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.layers.CircleLayer
@@ -104,7 +106,20 @@ fun MapLibreScreen(
                 // exists, and this is the moment that is true.
                 MapLibreSetup.ensure(context, host, pairingCode)
 
-                MapView(context).also { view ->
+                // Rendered at one map pixel per screen pixel instead of at the
+                // screen's own density. The style is the phone's, drawn for a hand-held
+                // display, and at density 2 on a 480 pixel watch a town name fills half
+                // the face. Dropping the ratio shows four times the ground for the same
+                // label size, which is what a map on a wrist is for. The cost is a
+                // softer picture, and on this screen that is the cheaper half of the
+                // trade.
+                val options = MapLibreMapOptions.createFromAttributes(context)
+                    .pixelRatio(MAP_PIXEL_RATIO)
+                    .attributionEnabled(false)
+                    .logoEnabled(false)
+                    .compassEnabled(false)
+
+                MapView(context, options).also { view ->
                     view.onCreate(null)
                     holder.view = view
                     view.getMapAsync { map ->
@@ -153,13 +168,29 @@ fun MapLibreScreen(
                 text = attribution,
                 color = CockpitColors.Muted,
                 fontSize = 9.sp,
-                maxLines = 1,
+                lineHeight = 11.sp,
+                // Two lines, because one ellipsised the third source away -- and an
+                // attribution that drops a source it is crediting is not an
+                // attribution. The padding keeps both lines inside the round bezel.
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(horizontal = 40.dp, vertical = 6.dp),
+                    .padding(horizontal = 26.dp, vertical = 4.dp),
             )
+        }
+    }
+
+    // A pager keeps its neighbouring pages composed, so without this the renderer
+    // keeps drawing while the pilot is looking at the data screen. Pausing it is the
+    // single largest thing this screen does for battery life.
+    LaunchedEffect(isActive) {
+        val view = holder.view ?: return@LaunchedEffect
+        if (isActive) {
+            view.onResume()
+        } else {
+            view.onPause()
         }
     }
 
@@ -298,6 +329,15 @@ private fun configure(map: MapLibreMap) {
         isCompassEnabled = false
         isRotateGesturesEnabled = false
         isTiltGesturesEnabled = false
+
+        // Every gesture off, including pan and pinch. The camera follows the aircraft
+        // and is reset on every frame, so a drag would snap back a second later and
+        // leave the pilot fighting the display. Zoom is the bezel's job, which is the
+        // control you can use without looking.
+        isScrollGesturesEnabled = false
+        isZoomGesturesEnabled = false
+        isDoubleTapGesturesEnabled = false
+        isQuickZoomGesturesEnabled = false
         // The renderer's own logo and info button take a corner of a screen that is
         // 454 pixels across and round, so most of that corner is not even visible.
         // The attribution obligation does not go away with them: the notice the data
@@ -358,6 +398,9 @@ private const val ROUTE_WIDTH_DP = 3.0f
 private const val WAYPOINT_RADIUS_DP = 4.0f
 private const val WAYPOINT_STROKE_DP = 2.0f
 private const val OWNSHIP_RADIUS_DP = 6.0f
+
+// One map pixel per screen pixel. See the note where the options are built.
+private const val MAP_PIXEL_RATIO = 1.0f
 
 private const val DEFAULT_HALF_SPAN_M = 20_000.0
 private const val MIN_HALF_SPAN_M = 1852.0
