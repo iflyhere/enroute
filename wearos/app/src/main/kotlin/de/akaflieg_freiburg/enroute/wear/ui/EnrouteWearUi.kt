@@ -214,6 +214,7 @@ private fun MainPages(
                     zoom = zoom,
                     // Read in the draw phase: the aircraft moves once a second.
                     ownPosition = { uiState.value.frame?.position },
+                    notams = uiState.value.session.notams,
                 )
 
                 PAGE_NOTAM -> NotamScreen(
