@@ -68,6 +68,7 @@ class HttpNavTransport(
         val hello = try {
             request(HELLO)?.let { WireJson.json.decodeFromString<HelloDto>(it.body) }
         } catch (unauthorized: UnauthorizedException) {
+            Log.w(TAG, "hello rejected: " + unauthorized.message)
             emit(TransportEvent.Failed(FailureReason.Unauthorized, unauthorized.message))
             return@flow
         } catch (io: IOException) {

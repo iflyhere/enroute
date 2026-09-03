@@ -21,6 +21,7 @@ package de.akaflieg_freiburg.enroute.wear
 
 import android.content.Context
 import android.net.wifi.WifiManager
+import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -40,6 +41,16 @@ import de.akaflieg_freiburg.enroute.wear.ui.theme.EnrouteWearTheme
 
 class MainActivity : ComponentActivity() {
 
+    private lateinit var settings: SettingsStore
+
+    // A running activity receives onNewIntent rather than onCreate, so without this
+    // an override passed on the command line was silently ignored unless the app had
+    // been stopped first.
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        settings.applyOverrides(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -49,7 +60,7 @@ class MainActivity : ComponentActivity() {
         // app does to be usable in flight.
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        val settings = SettingsStore(this)
+        settings = SettingsStore(this)
         settings.applyOverrides(intent)
 
         val discovery = Discovery(
