@@ -465,7 +465,7 @@ const NOTAM_FIXTURES = [
         n: 'A1234/26', icao: 'EDNY', cat: 'NOTAM', sect: 'Current', traffic: 'IV', read: false,
         txt: 'RWY 06/24 CLSD DUE TO WIP. TWY A AVBL FOR TAXI ONLY BTN APRON 1 AND RWY 06 THR.',
         from: '2026-09-01T06:00:00Z', to: '2026-09-30T16:00:00Z',
-        area: { c: [9.51139, 47.67139], r: 9260 },
+        offset: { east: 0.010, north: 0.004 }, radius: 9260,
     },
     {
         // No "to": a permanent NOTAM. A client that assumes both dates exist
@@ -473,13 +473,13 @@ const NOTAM_FIXTURES = [
         n: 'A0087/26', icao: 'EDNY', cat: 'NOTAM-OBST', sect: 'Current', traffic: 'IV', read: false,
         txt: 'CRANE ERECTED 850M SW ARP, ELEV 1580FT AMSL, LGTD.',
         from: '2026-08-14T00:00:00Z',
-        area: { c: [9.49500, 47.66500], r: 3704 },
+        offset: { east: -0.012, north: -0.006 }, radius: 3704,
     },
     {
         n: 'A0912/26', icao: 'EDNY', cat: 'NOTAM-PJE', sect: 'Marked as read', traffic: 'IV', read: true,
         txt: 'PARACHUTE JUMPING EXERCISE WI 2NM RADIUS OF 474012N 0093021E, SFC-FL130.',
         from: '2026-09-03T07:00:00Z', to: '2026-09-03T17:00:00Z',
-        area: { c: [9.50583, 47.67000], r: 3704 },
+        offset: { east: 0.004, north: -0.014 }, radius: 3704,
     },
     {
         // No area at all, and a text long enough to need scrolling.
@@ -491,14 +491,63 @@ const NOTAM_FIXTURES = [
     },
 ];
 
+// One NOTAM with one region, sized and placed to contain the first two waypoints of the
+// default route and neither of the others. That makes it genuinely shared -- the case a
+// client's deduplication exists for -- while leaving the last waypoint free to stay
+// confirmed empty, so all four knowledge states still appear in one pass.
+const REGIONAL_NOTAM = {
+    n: 'W0100/26', icao: 'EDGG', cat: 'NOTAM-RA', sect: 'Current', traffic: 'IV', read: false,
+    txt: 'RESTRICTED AREA ED-R 137 ACT SFC-FL100 DUE TO MIL EXERCISE.',
+    from: '2026-09-02T06:00:00Z', to: '2026-09-05T18:00:00Z',
+    area: { c: [7.89000, 47.99000], r: 15000 },
+};
+
+/**
+ * Puts a fixture's area near the waypoint it is listed under.
+ *
+ * The real phone can only ever return a NOTAM whose region contains the waypoint --
+ * NOTAMList::restricted() checks exactly that -- so a fixture with a fixed centre far
+ * from the route produces a document the phone could never produce, and a client's
+ * culling then looks broken when it is right.
+ */
+/** Whether a NOTAM's circle contains a waypoint, the way the phone's filter asks. */
+function contains(area, waypoint) {
+    return distanceTo({ lat: area.c[1], lon: area.c[0] }, waypoint) <= area.r;
+}
+
+function at(fixture, waypoint, index) {
+    const { offset, radius, ...rest } = fixture;
+    if (offset === undefined) {
+        return rest;
+    }
+
+    // The number is made distinct per waypoint as well. A NOTAM has exactly one
+    // region, so the same number appearing twice with two different areas is another
+    // document the phone cannot produce -- and a client that deduplicates by number,
+    // which is the correct thing to do, would then look like it was losing data.
+    return {
+        ...rest,
+        n: index === 0 ? rest.n : rest.n.replace('/26', `${index}/26`),
+        area: {
+            c: [
+                Number((waypoint.lon + offset.east).toFixed(5)),
+                Number((waypoint.lat + offset.north).toFixed(5)),
+            ],
+            r: radius,
+        },
+    };
+}
+
 function notamDocument() {
     notamDocument.emitted = 0;
     const groups = state.waypoints.map((waypoint, index) => {
         const group = { wp: index, n: waypoint.n };
 
-        // Every third waypoint has no data, which is what exercises the
-        // "nothing is known" rendering. The first waypoint carries the fixtures.
-        if (state.notamsAbsent || index % 3 === 2) {
+        // The four waypoints of the default route are arranged so that all four
+        // knowledge states appear at once: listed, listed, nothing known, and
+        // confirmed empty. The last one is the state most worth looking at, and it
+        // was unreachable here until it was put in on purpose.
+        if (state.notamsAbsent || index % 4 === 2) {
             group.data = false;
             return group;
         }
@@ -506,7 +555,17 @@ function notamDocument() {
         group.data = true;
         group.retrieved = new Date(state.notamsRetrievedAt).toISOString().replace(/\.\d{3}Z$/, 'Z');
 
-        const forWaypoint = index === 0 ? NOTAM_FIXTURES : NOTAM_FIXTURES.slice(0, 1);
+        const forWaypoint = (index === 0 ? NOTAM_FIXTURES
+            : index % 4 === 3 ? []
+            : NOTAM_FIXTURES.slice(0, 1)).map((fixture) => at(fixture, waypoint, index));
+
+        // Added only where the region actually contains the waypoint, because that is
+        // the test NOTAMList::restricted() applies. Handing a client a NOTAM whose
+        // circle does not contain the waypoint it is listed under would be a document
+        // the phone cannot produce.
+        if (contains(REGIONAL_NOTAM.area, waypoint)) {
+            forWaypoint.push(REGIONAL_NOTAM);
+        }
         const budget = Math.max(0, state.notamCap - notamDocument.emitted);
         const entries = forWaypoint.slice(0, budget);
         notamDocument.emitted += entries.length;

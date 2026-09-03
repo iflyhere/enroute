@@ -30,6 +30,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -46,10 +48,14 @@ import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material3.Text
 import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
 import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
+import de.akaflieg_freiburg.enroute.wear.domain.Notam
+import de.akaflieg_freiburg.enroute.wear.domain.NotamBoard
+import de.akaflieg_freiburg.enroute.wear.domain.NotamCategory
 import de.akaflieg_freiburg.enroute.wear.domain.OwnPosition
 import de.akaflieg_freiburg.enroute.wear.domain.RouteWaypoint
 import de.akaflieg_freiburg.enroute.wear.domain.WaypointType
 import de.akaflieg_freiburg.enroute.wear.ui.theme.CockpitColors
+import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.min
 
@@ -68,6 +74,11 @@ import kotlin.math.min
  * @param ownPosition Read inside the draw lambda on purpose. A position update then
  * invalidates only the draw phase; passing it as a plain parameter would recompose and
  * re-lay-out this whole subtree once a second for identical pixels.
+ *
+ * @param notams Affected areas are outlined, which is the one place where the list and
+ * the map answer the same question together: not "what is there" but "is any of it where
+ * I am going". Only the circles the phone sent are drawn, and the same caveats apply as
+ * on the list -- these are NOTAMs near route waypoints, not an airspace picture.
  */
 @Composable
 fun RouteScreen(
@@ -75,6 +86,7 @@ fun RouteScreen(
     currentLeg: Int?,
     zoom: ZoomLevel,
     ownPosition: () -> OwnPosition?,
+    notams: NotamBoard? = null,
     modifier: Modifier = Modifier,
 ) {
     if (route == null || route.waypoints.isEmpty()) {
@@ -111,15 +123,21 @@ fun RouteScreen(
         // The leg index belongs in the key: it changes a handful of times in a
         // flight, not once a second, so keying on it costs nothing and colouring by
         // progress is what makes the drawing worth looking at.
-        val geometry = remember(route.revision, currentLeg, zoom, widthPx, heightPx) {
+        // The NOTAM revision belongs in the key for the same reason the leg index does:
+        // it moves a few times a flight, so keying on it costs nothing.
+        val geometry = remember(
+            route.revision, currentLeg, zoom, widthPx, heightPx, notams?.revision,
+        ) {
             buildGeometry(
                 route, currentLeg, zoom, widthPx, heightPx,
-                bezelMarginPx, measurer, density.density,
+                bezelMarginPx, measurer, density.density, notams,
             )
         }
 
         Canvas(modifier = Modifier.fillMaxSize().testTag(TAG_CANVAS)) {
             drawRangeRing(geometry)
+            // Under the route, never over it. The route is what the pilot navigates by.
+            geometry.notamAreas.forEach { drawNotamArea(it) }
             drawLegs(geometry)
             geometry.markers.forEach { drawMarker(it) }
             geometry.labels.forEach { drawHaloLabel(it) }
@@ -150,6 +168,8 @@ private class Marker(val at: Offset, val type: WaypointType, val emphasised: Boo
 
 private class Label(val at: Offset, val layout: TextLayoutResult)
 
+private class NotamCircle(val at: Offset, val radiusPx: Float, val colour: Color)
+
 private class Geometry(
     val projection: LocalProjection,
     val flownPath: Path,
@@ -159,6 +179,7 @@ private class Geometry(
     val labels: List<Label>,
     val ringRadiusPx: Float,
     val centreOffset: Offset,
+    val notamAreas: List<NotamCircle>,
 )
 
 /**
@@ -178,6 +199,7 @@ private fun buildGeometry(
     bezelMarginPx: Float,
     measurer: TextMeasurer,
     densityScale: Float,
+    notams: NotamBoard?,
 ): Geometry {
     val centreOffset = Offset(widthPx / 2f, heightPx / 2f)
     val usableRadius = min(widthPx, heightPx) / 2f - bezelMarginPx
@@ -228,6 +250,7 @@ private fun buildGeometry(
 
     return Geometry(
         projection = projection,
+        notamAreas = notamCircles(notams, projection, metresPerPixel, centreOffset, usableRadius),
         flownPath = flownPath,
         activePath = activePath,
         aheadPath = aheadPath,
@@ -235,6 +258,94 @@ private fun buildGeometry(
         labels = labels,
         ringRadiusPx = usableRadius,
         centreOffset = centreOffset,
+    )
+}
+
+/**
+ * Projects the NOTAM areas the phone sent, culled to the ones actually visible.
+ *
+ * Deduplicated by NOTAM number: the phone lists a NOTAM under every waypoint it is near,
+ * so a NOTAM between two close waypoints arrives twice and is one circle.
+ *
+ * A circle is drawn only when its outline can cross the visible disc. A 20 NM area seen
+ * from a 2 NM zoom is an outline far outside the screen, and the pilot is inside it --
+ * drawing it would cost a stroke that renders nothing. The count is capped because a
+ * busy region can produce dozens, and dozens of overlapping rings on a 226 dp disc hide
+ * the route they are drawn around.
+ */
+private fun notamCircles(
+    notams: NotamBoard?,
+    projection: LocalProjection,
+    metresPerPixel: Double,
+    centreOffset: Offset,
+    usableRadius: Float,
+): List<NotamCircle> {
+    if (notams == null) return emptyList()
+
+    val seen = HashSet<String>()
+    val result = ArrayList<NotamCircle>()
+
+    for (group in notams.groups) {
+        for (notam in group.notams) {
+            if (result.size >= MAX_NOTAM_CIRCLES) return result
+            val area = notam.area ?: continue
+            if (!seen.add(notam.number)) continue
+
+            val at = projection.toScreen(area.centre)
+            val radiusPx = (area.radiusM / metresPerPixel).toFloat()
+            if (radiusPx < MIN_NOTAM_CIRCLE_PX) continue
+
+            val distance = hypot(
+                (at.x - centreOffset.x).toDouble(),
+                (at.y - centreOffset.y).toDouble(),
+            ).toFloat()
+            if (!circleMeetsDisc(distance, radiusPx, usableRadius)) continue
+
+            result.add(NotamCircle(at, radiusPx, notamColour(notam)))
+        }
+    }
+    return result
+}
+
+/**
+ * Whether a circle's outline crosses the disc the watch can show.
+ *
+ * Two cases have to come out false and are easy to get wrong: a circle entirely outside
+ * the view, and a circle so much larger than the view that the whole screen is inside
+ * it. Both have an outline nowhere near the visible pixels, and the second one is the
+ * common case -- a 20 NM NOTAM area seen at a 2 NM zoom.
+ *
+ * Internal rather than private so this can be tested without a Compose harness. It is
+ * the only part of drawing the areas that can be quietly wrong.
+ */
+internal fun circleMeetsDisc(
+    distanceFromCentre: Float,
+    radiusPx: Float,
+    discRadiusPx: Float,
+): Boolean = abs(distanceFromCentre - radiusPx) <= discRadiusPx
+
+private fun notamColour(notam: Notam): Color = when {
+    // A NOTAM the pilot has already read is still in force, so it is drawn -- just not
+    // competing for attention with the ones they have not seen.
+    notam.read -> CockpitColors.Muted
+    notam.category == NotamCategory.RestrictedArea -> CockpitColors.Warning
+    notam.category == NotamCategory.ParachuteJumping ||
+        notam.category == NotamCategory.UnmannedAircraft -> CockpitColors.Caution
+    else -> CockpitColors.Muted
+}
+
+/** Dashed, so that no NOTAM outline can be mistaken for a leg of the route. */
+private fun DrawScope.drawNotamArea(circle: NotamCircle) {
+    drawCircle(
+        color = circle.colour,
+        radius = circle.radiusPx,
+        center = circle.at,
+        style = Stroke(
+            width = 1.dp.toPx(),
+            pathEffect = PathEffect.dashPathEffect(
+                floatArrayOf(4.dp.toPx(), 4.dp.toPx()),
+            ),
+        ),
     )
 }
 
@@ -420,6 +531,12 @@ private const val LABEL_GAP_DP = 6f
 private const val LABEL_OFFSET_DP = 10f
 private const val MAX_LABELS = 5
 private const val AUTO_FIT_FRACTION = 0.82f
+
+// Enough overlapping rings to be useful, few enough that the route stays visible.
+private const val MAX_NOTAM_CIRCLES = 24
+
+// Below this an area is a dot, which says less than the list entry already does.
+private const val MIN_NOTAM_CIRCLE_PX = 4f
 
 const val TAG_CANVAS = "route.canvas"
 const val TAG_SCALE = "route.scale"
