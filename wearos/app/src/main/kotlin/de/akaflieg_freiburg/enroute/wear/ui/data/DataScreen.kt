@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material3.Text
 import de.akaflieg_freiburg.enroute.wear.data.ConnectionState
 import de.akaflieg_freiburg.enroute.wear.domain.Measured
+import de.akaflieg_freiburg.enroute.wear.transport.FailureReason
 import de.akaflieg_freiburg.enroute.wear.domain.RouteStatus
 import de.akaflieg_freiburg.enroute.wear.domain.WaypointLeg
 import de.akaflieg_freiburg.enroute.wear.ui.theme.CockpitColors
@@ -85,8 +86,14 @@ fun DataScreen(
             if (frame == null) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = when (state.session.connection) {
-                        is ConnectionState.Retrying -> "No connection"
+                    text = when (val connection = state.session.connection) {
+                        is ConnectionState.Retrying ->
+                            if (connection.reason == FailureReason.Unauthorized) {
+                                "Wrong pairing code"
+                            } else {
+                                "No connection"
+                            }
+
                         ConnectionState.Connecting -> "Connecting"
                         else -> "Not connected"
                     },
