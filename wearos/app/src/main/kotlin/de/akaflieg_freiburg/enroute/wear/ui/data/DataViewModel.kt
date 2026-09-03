@@ -22,8 +22,7 @@ package de.akaflieg_freiburg.enroute.wear.ui.data
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import de.akaflieg_freiburg.enroute.wear.data.NavRepository
-import de.akaflieg_freiburg.enroute.wear.transport.NavTransport
+import de.akaflieg_freiburg.enroute.wear.data.SessionHolder
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -32,19 +31,20 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 
+/**
+ * Presents the session for display.
+ *
+ * The session itself belongs to SessionHolder, which the foreground service owns, so
+ * that it survives this view model and the activity around it. All this class does is
+ * derive how old the data is and hand the result to the screens.
+ */
 class DataViewModel(
-    transportProvider: () -> NavTransport,
     private val nowEpochSeconds: () -> Long = { System.currentTimeMillis() / 1000 },
 ) : ViewModel() {
 
-    private val repository = NavRepository(
-        transportProvider = transportProvider,
-        scope = viewModelScope,
-    )
-
     /**
-     * Ticks once a second so that the displayed age advances even when no frame arrives
-     * -- which is precisely the case where the age matters most.
+     * Ticks once a second so that the displayed age advances even when no frame
+     * arrives -- which is precisely the case where the age matters most.
      *
      * The ticker lives here rather than in a composable so that the clock can be
      * injected in tests, and because SharingStarted.WhileSubscribed stops it when no
@@ -59,7 +59,7 @@ class DataViewModel(
     }
 
     val uiState: StateFlow<DataUiState> =
-        combine(repository.state, ticker()) { session, _ ->
+        combine(SessionHolder.state, ticker()) { session, _ ->
             val age = session.frame?.let { nowEpochSeconds() - it.generatedAtEpochSeconds }
             DataUiState(
                 session = session,
@@ -72,25 +72,14 @@ class DataViewModel(
             initialValue = DataUiState(),
         )
 
-    fun start() = repository.start()
-
-    fun stop() = repository.stop()
-
-    /** Drops the session so that a changed address or code takes effect at once. */
-    fun restart() {
-        repository.stop()
-        repository.start()
-    }
-
     /**
-     * Hand-written wiring instead of a dependency-injection framework. At this size that
-     * is a handful of lines with no annotation processor in the build graph, and a
+     * Hand-written wiring instead of a dependency-injection framework. At this size
+     * that is a handful of lines with no annotation processor in the build graph, and a
      * reviewer who does not use Hilt can still read it.
      */
-    class Factory(private val transportProvider: () -> NavTransport) : ViewModelProvider.Factory {
+    class Factory : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            DataViewModel(transportProvider) as T
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = DataViewModel() as T
     }
 
     private companion object {
