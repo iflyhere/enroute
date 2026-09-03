@@ -22,6 +22,7 @@ package de.akaflieg_freiburg.enroute.wear.data
 import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
 import de.akaflieg_freiburg.enroute.wear.domain.NavFrame
 import de.akaflieg_freiburg.enroute.wear.domain.NotamBoard
+import de.akaflieg_freiburg.enroute.wear.domain.WeatherBoard
 import de.akaflieg_freiburg.enroute.wear.transport.Backoff
 import de.akaflieg_freiburg.enroute.wear.transport.FailureReason
 import de.akaflieg_freiburg.enroute.wear.transport.NavTransport
@@ -64,6 +65,12 @@ data class SessionState(
      * is down -- and a blank list would read as "nothing to report".
      */
     val notams: NotamBoard? = null,
+    /**
+     * Last weather board received, kept across a reconnect for the same reason. A
+     * METAR is valid for an hour and a half, so the last one is still the best
+     * answer available while the link is down; the summary states its age.
+     */
+    val weather: WeatherBoard? = null,
 )
 
 class NavRepository(
@@ -133,6 +140,9 @@ class NavRepository(
 
                 is TransportEvent.NotamUpdate ->
                     current.copy(notams = event.notams)
+
+                is TransportEvent.WeatherUpdate ->
+                    current.copy(weather = event.weather)
 
                 is TransportEvent.Failed ->
                     current.copy(connection = ConnectionState.Retrying(event.reason, 0))

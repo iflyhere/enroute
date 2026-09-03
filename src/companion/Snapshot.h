@@ -22,6 +22,11 @@
 #include <QJsonArray>
 #include <QJsonObject>
 
+namespace Weather
+{
+    class ObserverList;
+} // namespace Weather
+
 namespace Companion
 {
 
@@ -52,6 +57,9 @@ namespace Companion
 
         /*! \brief Incremented whenever the NOTAM document changes */
         quint32 notam {0};
+
+        /*! \brief Incremented whenever the weather document changes */
+        quint32 weather {0};
 
         /*! \brief Changes whenever the set of downloaded map files changes
          *
@@ -144,6 +152,31 @@ namespace Companion
          *  doc/companion-protocol.md, without its notamRev member
          */
         [[nodiscard]] QJsonObject notams(const Companion::Revisions& revisions);
+
+        /*! \brief METAR and TAF for the stations the app knows about
+         *
+         *  Mirrors what the app's own weather page shows, and in the same order:
+         *  Weather::ObserverList keeps its list sorted by distance to the last known
+         *  position, so a client rendering the array as it arrives gets the nearest
+         *  station first without doing any geometry.
+         *
+         *  Both the raw report and the app's own decoded summary travel. The raw text
+         *  because a pilot reads METAR verbatim and it is already short; the summary
+         *  because Weather::METAR::summary() applies the pilot's unit preferences and
+         *  is translated, and a second implementation on a watch would eventually
+         *  disagree with the phone about the same weather.
+         *
+         *  @param revisions Current document revisions
+         *
+         *  @param observers The app's station list. Passed in rather than constructed
+         *  here, because Weather::ObserverList owns one Weather::Observer per station
+         *  and rebuilding it per request would discard that cache on every poll.
+         *
+         *  @returns The document described under "Weather document" in
+         *  doc/companion-protocol.md, without its weatherRev member
+         */
+        [[nodiscard]] QJsonObject weather(const Companion::Revisions& revisions,
+                                          Weather::ObserverList* observers);
 
     } // namespace Snapshot
 

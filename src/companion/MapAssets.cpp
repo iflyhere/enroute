@@ -569,6 +569,30 @@ QByteArray Companion::MapAssets::styleDocument(const QString& baseUrl) const
         return data;
     }
 
+    // A raster-dem source with no files behind it is worse than no source at all. The
+    // fallback TileJSON still has to name a zoom range, the client believes it, and then
+    // asks for the same nonexistent 0/0/0 tile once per hillshade draw -- eleven times in
+    // one measured session, each answered 204. Dropping the source and every layer that
+    // reads it costs nothing, because there is no terrain to shade. Keyed on the source
+    // rather than the layer id, so a change to the style file cannot leave this behind.
+    if (m_terrain.isEmpty())
+    {
+        auto sources = document[u"sources"_s].toObject();
+        sources.remove(u"terrarium"_s);
+        document.insert(u"sources"_s, sources);
+
+        QJsonArray keptLayers;
+        const auto layers = document[u"layers"_s].toArray();
+        for (const auto& layer : layers)
+        {
+            if (layer.toObject()[u"source"_s].toString() != u"terrarium"_s)
+            {
+                keptLayers.append(layer);
+            }
+        }
+        document.insert(u"layers"_s, keptLayers);
+    }
+
     // The aviation overlay. Without it a client renders roads and towns and no
     // airspace, because the app declares the aviation-data source in its style file
     // but draws every layer from it in QML.

@@ -33,6 +33,8 @@
 #include "notam/NOTAMProvider.h"
 #include "dataManagement/DataManager.h"
 #include "positioning/PositionProvider.h"
+#include "weather/ObserverList.h"
+#include "weather/WeatherDataProvider.h"
 
 using namespace Qt::Literals::StringLiterals;
 
@@ -62,6 +64,12 @@ namespace
     // waypointsChanged repeatedly, and a batch of downloads finishing moves
     // lastUpdate once per reply.
     constexpr auto notamCoalescePeriod = std::chrono::seconds(2);
+
+    // Weather is downloaded by the app itself, not by us, so this beat only has to
+    // keep the ages and expiry times in the document honest. A METAR is valid for
+    // an hour and a half; a minute of drift in the age line is not worth a wakeup.
+    constexpr auto weatherPeriod = std::chrono::minutes(5);
+    constexpr auto weatherCoalescePeriod = std::chrono::seconds(2);
 
     constexpr int pairingCodeDigits = 6;
     constexpr quint32 pairingCodeModulus = 1000000;
@@ -96,6 +104,14 @@ Companion::CompanionServer::CompanionServer(QObject* parent)
     m_notamCoalesceTimer.setInterval(notamCoalescePeriod);
     m_notamCoalesceTimer.setSingleShot(true);
     connect(&m_notamCoalesceTimer, &QTimer::timeout, this, &Companion::CompanionServer::publishNotams);
+
+    m_weatherTimer.setInterval(weatherPeriod);
+    m_weatherTimer.setTimerType(Qt::VeryCoarseTimer);
+    connect(&m_weatherTimer, &QTimer::timeout, this, &Companion::CompanionServer::publishWeather);
+
+    m_weatherCoalesceTimer.setInterval(weatherCoalescePeriod);
+    m_weatherCoalesceTimer.setSingleShot(true);
+    connect(&m_weatherCoalesceTimer, &QTimer::timeout, this, &Companion::CompanionServer::publishWeather);
 }
 
 
@@ -276,6 +292,34 @@ void Companion::CompanionServer::markNotamsDirty()
 }
 
 
+void Companion::CompanionServer::publishWeather()
+{
+    auto document = Companion::Snapshot::weather(m_revisions, m_observers);
+
+    const auto fingerprint = QJsonDocument(document).toJson(QJsonDocument::Compact);
+    if (fingerprint == m_weatherFingerprint)
+    {
+        return;
+    }
+    m_weatherFingerprint = fingerprint;
+
+    m_revisions.weather++;
+    document.insert("weatherRev"_L1, static_cast<qint64>(m_revisions.weather));
+    m_weatherDocument = QJsonDocument(document).toJson(QJsonDocument::Compact);
+
+    emit weatherDocumentChanged();
+}
+
+
+void Companion::CompanionServer::markWeatherDirty()
+{
+    if (!m_weatherCoalesceTimer.isActive())
+    {
+        m_weatherCoalesceTimer.start();
+    }
+}
+
+
 void Companion::CompanionServer::updateTransport()
 {
     const auto enabled = GlobalObject::globalSettings()->companionNetworkEnabled();
@@ -299,6 +343,8 @@ void Companion::CompanionServer::updateTransport()
         m_routeTimer.stop();
         m_notamTimer.stop();
         m_notamCoalesceTimer.stop();
+        m_weatherTimer.stop();
+        m_weatherCoalesceTimer.stop();
 
         m_helloDocument.clear();
         m_routeDocument.clear();
@@ -306,6 +352,13 @@ void Companion::CompanionServer::updateTransport()
         m_navDocumentCompact.clear();
         m_notamDocument.clear();
         m_notamFingerprint.clear();
+        m_weatherDocument.clear();
+        m_weatherFingerprint.clear();
+
+        // The station list and its per-station observers exist only while the
+        // feature is on. Leaving them alive would keep bindings into the weather
+        // provider for a user who switched the companion off.
+        delete m_observers;
 
         setErrorString();
         emit serverUrlsChanged();
@@ -365,9 +418,19 @@ void Companion::CompanionServer::updateTransport()
 
     publishNotams();
 
+    // Created here rather than in the constructor: its bindings read
+    // GlobalObject::weatherDataProvider(), and the class contract forbids reaching
+    // for a singleton before deferred initialization.
+    if (m_observers.isNull())
+    {
+        m_observers = new Weather::ObserverList(this);
+    }
+    publishWeather();
+
     m_navTimer.start();
     m_navKeepAliveTimer.start();
     m_notamTimer.start();
+    m_weatherTimer.start();
 
     if (m_httpTransport.isNull())
     {
@@ -424,6 +487,22 @@ void Companion::CompanionServer::attachToDataSources()
     // document a client polls once a minute.
     connect(navigator->flightRoute(), &Navigation::FlightRoute::waypointsChanged,
             this, &Companion::CompanionServer::markNotamsDirty);
+
+    // The reports themselves are bound properties with no notifier signal, so they
+    // are observed the same way the remaining route info is. QNH and sun info do
+    // have signals, and they move independently of the report maps -- QNH follows
+    // the nearest station, which changes as the aircraft moves.
+    auto* const weather = GlobalObject::weatherDataProvider();
+    m_notifiers.push_back(weather->bindableMETARs().addNotifier(
+        [this]() {markWeatherDirty();}));
+    m_notifiers.push_back(weather->bindableTAFs().addNotifier(
+        [this]() {markWeatherDirty();}));
+    connect(weather, &Weather::WeatherDataProvider::QNHInfoChanged,
+            this, &Companion::CompanionServer::markWeatherDirty);
+    connect(weather, &Weather::WeatherDataProvider::sunInfoChanged,
+            this, &Companion::CompanionServer::markWeatherDirty);
+    connect(weather, &Weather::WeatherDataProvider::downloadingChanged,
+            this, &Companion::CompanionServer::markWeatherDirty);
 }
 
 
