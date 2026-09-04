@@ -132,16 +132,14 @@ fun InstrumentScreen(
                     unit = verticalUnit,
                 )
             }
-        }
 
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = showing.title + subtitle(showing),
-                color = CockpitColors.Muted,
-                fontSize = 10.sp,
+            // Below the reading, not beside it. Drawn here rather than as a Compose
+            // overlay because the overlay landed just above the centre, where the
+            // needle passes through it -- and a needle crossing the words that say
+            // what the needle means is the one place this label must not be.
+            centreText(
+                centre, measurer, showing.title + subtitle(showing),
+                10.sp.value, TICK_LABEL, offsetY = radius * 0.56f,
             )
         }
 
