@@ -34,3 +34,6 @@ CMakeLists.txt.user
 generatedSources/.bundle
 generatedSources/rubyStuff
 generatedSources/vendor
+
+# Left behind by aqtinstall when the WSL Android toolchain is set up.
+aqtinstall.log
