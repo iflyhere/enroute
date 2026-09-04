@@ -74,3 +74,44 @@ const val ATTEMPTS_BEFORE_SEARCH = 2
  * forever on a network that will never deliver one is a watch with a flat battery.
  */
 const val SEARCH_WINDOW_MS = 20_000L
+
+/**
+ * A phone's Wi-Fi address as it stated it over Bluetooth.
+ *
+ * @property host the address, without scheme or port
+ * @property port the port it is listening on
+ */
+data class WifiAddress(val host: String, val port: Int)
+
+/**
+ * Reads `http://<address>:<port>` as the phone writes it into its info document.
+ *
+ * Deliberately strict: anything that is not that shape returns null rather than a
+ * half-parsed address, because a wrong address is indistinguishable from a phone that
+ * is switched off and would send the watch retrying somewhere that will never answer.
+ */
+fun parseWifiUrl(url: String): WifiAddress? {
+    val withoutScheme = url.trim().removePrefix("http://").removePrefix("https://")
+    if (withoutScheme.isEmpty() || withoutScheme.contains('/')) {
+        return null
+    }
+    val separator = withoutScheme.lastIndexOf(':')
+    if (separator <= 0 || separator == withoutScheme.length - 1) {
+        return null
+    }
+    val port = withoutScheme.substring(separator + 1).toIntOrNull() ?: return null
+    if (port !in 1..65535) {
+        return null
+    }
+    return WifiAddress(withoutScheme.substring(0, separator), port)
+}
+
+/**
+ * Whether what the phone said over Bluetooth is worth storing.
+ *
+ * Only when it differs from what is stored: writing the same values back would be a
+ * file write on every connection, and it would restart a session that is working. The
+ * same reasoning as [isWorthAdopting] for a discovery beacon, on a different source.
+ */
+fun isHandoverWorthTaking(found: WifiAddress, host: String, port: Int): Boolean =
+    found.host != host || found.port != port

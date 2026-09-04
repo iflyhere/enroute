@@ -30,7 +30,12 @@ android {
             // Wear OS device sold to date is 32-bit ARM -- the Galaxy Watch 7 reports
             // "armeabi-v7a,armeabi" and nothing else. Shipping the other three would
             // treble the size of the APK with code no watch can run.
-            abiFilters += "armeabi-v7a"
+            //
+            // The Wear OS emulator is the exception: its system images are x86_64, so
+            // an ARM-only APK fails to install with INSTALL_FAILED_NO_MATCHING_ABIS.
+            // Build one for it with -PwearAbi=x86_64 rather than adding the ABI here,
+            // so the default stays what the watches can use.
+            abiFilters += (findProperty("wearAbi") as String? ?: "armeabi-v7a")
         }
     }
 

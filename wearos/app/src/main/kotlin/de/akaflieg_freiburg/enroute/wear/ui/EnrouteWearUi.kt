@@ -49,6 +49,7 @@ import de.akaflieg_freiburg.enroute.wear.data.Discovery
 import de.akaflieg_freiburg.enroute.wear.data.DiscoveredPhone
 import de.akaflieg_freiburg.enroute.wear.data.DiscoveryEvent
 import de.akaflieg_freiburg.enroute.wear.data.SettingsStore
+import de.akaflieg_freiburg.enroute.wear.transport.TransportMode
 import de.akaflieg_freiburg.enroute.wear.ui.connect.CodeEntryScreen
 import de.akaflieg_freiburg.enroute.wear.ui.connect.ConnectScreen
 import de.akaflieg_freiburg.enroute.wear.ui.data.DataScreen
@@ -125,6 +126,7 @@ fun EnrouteWearUi(
             uiState = uiState,
             settings = settings,
             onOpenConnect = { screen = Screen.Connect },
+            onRestartSession = onSettingsChanged,
         )
 
         Screen.Connect -> ConnectScreen(
@@ -158,6 +160,7 @@ private fun MainPages(
     uiState: State<DataUiState>,
     settings: SettingsStore,
     onOpenConnect: () -> Unit,
+    onRestartSession: () -> Unit,
 ) {
     val host = settings.host
     val port = settings.port
@@ -170,6 +173,9 @@ private fun MainPages(
     var hidden by remember { mutableStateOf(settings.hiddenPages) }
     var bezelAction by remember { mutableStateOf(BezelAction.byId(settings.bezelAction)) }
     var chartMode by remember { mutableStateOf(ChartMode.byId(settings.chartMode)) }
+    var transportMode by remember {
+        mutableStateOf(TransportMode.byId(settings.transportMode))
+    }
     var alarmVibration by remember { mutableStateOf(settings.alarmVibration) }
 
     // Null means "fit what is drawn". Not persisted: a range a pilot chose two flights
@@ -452,6 +458,7 @@ private fun MainPages(
                     bezelAction = bezelAction,
                     alarmVibration = alarmVibration,
                     chartMode = chartMode,
+                    transportMode = transportMode,
                     attribution = uiState.value.session.peer?.mapAttribution.orEmpty(),
                     peerDescription = peerDescription(uiState.value, host, port),
                     appVersion = APP_VERSION,
@@ -478,6 +485,14 @@ private fun MainPages(
                     onChartMode = { mode ->
                         chartMode = mode
                         settings.chartMode = mode.id
+                    },
+                    onTransportMode = { mode ->
+                        transportMode = mode
+                        settings.transportMode = mode.id
+                        // The service builds a transport per connection attempt, so a
+                        // change would otherwise take effect on the next reconnect.
+                        // The pilot who just changed this is waiting for it now.
+                        onRestartSession()
                     },
                     onOpenConnect = onOpenConnect,
                 )
