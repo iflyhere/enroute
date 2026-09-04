@@ -42,7 +42,7 @@ only.
 
 ## Revisions
 
-Nine counters carry all cache coherency:
+Ten counters carry all cache coherency:
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -53,6 +53,7 @@ Nine counters carry all cache coherency:
 | `weatherRev` | `quint32` | Incremented whenever the weather document's content changes, derived the same way as `notamRev`. Appears only in the weather document. |
 | `vacRev` | `quint32` | Incremented whenever the set of approach charts changes, derived the same way as `notamRev`. Appears only in the approach chart document. |
 | `logRev` | `quint32` | Incremented whenever the flight log document changes, derived the same way as `notamRev`. Appears only in the flight log document. |
+| `nearbyRev` | `quint32` | Incremented whenever the nearby waypoint document changes, derived the same way as `notamRev`. Appears only in that document. |
 | `trafficRev` | `quint32` | Incremented on **every** published traffic frame, unlike the counters above, which move only when their content changes. That is deliberate: a client has to be able to tell "no traffic" from "no data", and the only thing separating them is that frames keep arriving. |
 | `mapRev` | `quint32` | Changes whenever the set of downloaded map files changes. Appears in the capability document, and in every tile URL. A client that sees it move must refetch the style: the URLs in the one it holds no longer resolve, which is what stops its tile cache from outliving the maps it was filled from. |
 
@@ -473,6 +474,44 @@ alert when the level **rises**, and again only if it rises further.
 link drops, unlike the NOTAM and weather documents, which stay useful for hours. Ten-second-old
 traffic shown as current is the one failure this document must not enable.
 
+### Nearby waypoint document
+
+Aerodromes, navaids and waypoints near the aircraft. This is the app's own
+`GeoMapProvider::nearbyWaypoints()` for each of the three types it offers — sorted by
+distance, **twenty of each**, which is the app's limit and not one invented here.
+
+```
+{
+  "v": 1,
+  "sid": 2748219411,
+  "nearbyRev": 21,
+  "positionKnown": true,
+  "near": {
+    "AD": [
+      { "n": "BOCKWIESE", "c": [9.2612, 48.6483], "e": 386,
+        "t": "AD", "cat": "AD-GRASS",
+        "way": "DIST 4,7 nm \u00b7 QUJ 136\u00b0",
+        "dist": 8704, "brg": 136 }
+    ],
+    "NAV": [ ... ],
+    "WP":  [ ... ]
+  }
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `positionKnown` | Whether the app knows where the aircraft is. **Not the same as three empty lists**: "nothing near here" and "we do not know where here is" are different answers, and only one of them lets a pilot stop looking. When false, `near` is absent entirely. |
+| `near` | Keyed by the app's own type codes: `AD` aerodromes, `NAV` navaids, `WP` waypoints. Kept apart rather than merged into one distance-ordered list — a pilot looking for somewhere to land is not helped by three reporting points sitting between them and the nearest aerodrome. |
+| `near[].n` … `cat` | The same waypoint shape the route document uses, so one decoder serves both. |
+| `near[].way` | Distance and bearing as the app words it, with the pilot's own units. |
+| `near[].dist`, `near[].brg` | The same in metres and degrees, because a client that sorts or filters needs a number and `way` is prose. |
+
+**These distances go stale as the aircraft moves**, and that is true of the app's own page as
+well: it computes them when the page opens and never again. The document is rebuilt every
+thirty seconds, so a client polling it once a minute is better informed than a pilot looking
+at the phone.
+
 ## The map
 
 A companion device with its own map renderer is served everything that renderer needs, and all of
@@ -545,6 +584,7 @@ Settings.
 | `GET /enroute/v1/map/vac/<name>` | the chart image named `<name>`, `image/webp`; `404` if the library has no such chart |
 | `GET /enroute/v1/log` | flight log document, `ETag: W/"<logRev>"`, `304 Not Modified` when `If-None-Match` matches |
 | `GET /enroute/v1/traffic` | traffic document, `ETag: W/"<trafficRev>"`. The counter moves every second, so a `304` here means the app stopped publishing, not that nothing changed. |
+| `GET /enroute/v1/nearby` | nearby waypoint document, `ETag: W/"<nearbyRev>"`, `304 Not Modified` when `If-None-Match` matches |
 | `GET /enroute/v1/map/…` | the pilot's own map, see below |
 | `GET /enroute/v1/route.geojson` | the app's own GeoJSON route |
 | `GET /` | a small HTML page that polls `/nav`, for development and for checking the link from a desktop browser |
@@ -568,7 +608,9 @@ before an import still learns about it. `/enroute/v1/log` sits at **30 seconds**
 fast enough for the detector's takeoff banner to feel live without being a feed.
 `/enroute/v1/traffic` is the exception to all of this and is polled **at the navigation
 rate**: it is the other thing on this link worth a second of a pilot's attention, and a
-target that moved two seconds ago is a target drawn in the wrong place.
+target that moved two seconds ago is a target drawn in the wrong place. `/enroute/v1/nearby`
+goes the other way at **60 seconds**, which is still more current than the app's own nearby
+page: that one computes its distances when it opens and never again.
 
 Polling is deliberately preferred over a streamed response: a watch radio wakes for each poll either
 way, a poll is its own reconnect logic, and `QHttpServerResponder`'s lifetime ends when the request
