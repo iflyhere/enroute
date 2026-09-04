@@ -45,6 +45,12 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import de.akaflieg_freiburg.enroute.wear.data.Discovery
+import de.akaflieg_freiburg.enroute.wear.data.DiscoveryEvent
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Keeps the link to the phone alive while the pilot is not looking at the watch.
@@ -72,6 +78,7 @@ class NavSessionService : Service() {
     // Here rather than in a screen: a collision alarm has to reach the pilot whichever
     // page is open, and whether or not the display is on at all.
     private var alert: CollisionAlert? = null
+    private var addressWatch: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     @Suppress("DEPRECATION")
@@ -98,6 +105,7 @@ class NavSessionService : Service() {
         }
 
         startAlarmWatch(settings)
+        startAddressWatch(settings)
 
         // Not sticky: if the system ever kills this, restarting it behind the pilot's
         // back would silently reopen a link they cannot see.
@@ -106,10 +114,67 @@ class NavSessionService : Service() {
 
     override fun onDestroy() {
         scope.cancel()
+        addressWatch = null
         alert = null
         SessionHolder.stop()
         releaseLocks()
         super.onDestroy()
+    }
+
+    /**
+     * Finds the phone again when its address stops answering.
+     *
+     * The address is stored, and a stored address belongs to whichever network it was
+     * learned on. Outside that network the phone has a different one, and without this
+     * the watch retries the old number for as long as the pilot lets it -- which is
+     * exactly what happened on the first test away from the house.
+     *
+     * Only listens in bursts, and only while the link is actually failing. A broadcast
+     * listen wakes the Wi-Fi radio, and Wear OS powers that radio down for good
+     * reasons.
+     */
+    private fun startAddressWatch(settings: SettingsStore) {
+        if (addressWatch?.isActive == true) {
+            return
+        }
+        // The same construction the activity uses: the multicast lock inside needs
+        // the Wi-Fi manager, or the chip filters the beacon before the socket sees it.
+        val discovery = Discovery(getSystemService(Context.WIFI_SERVICE) as? WifiManager)
+        addressWatch = scope.launch {
+            SessionHolder.state
+                .map { state -> shouldSearchForPhone(state.connection) }
+                .distinctUntilChanged()
+                .collect { searching ->
+                    if (!searching) {
+                        return@collect
+                    }
+                    val found = withTimeoutOrNull(SEARCH_WINDOW_MS) {
+                        discovery.events()
+                            .mapNotNull { event ->
+                                (event as? DiscoveryEvent.Found)?.phone
+                            }
+                            .firstOrNull { phone ->
+                                isWorthAdopting(phone, settings.host, settings.port)
+                            }
+                    } ?: return@collect
+
+                    Log.i(TAG, "phone moved to " + found.host + ":" + found.port)
+                    settings.host = found.host
+                    settings.port = found.port
+
+                    // Restarted rather than reconfigured in place: the transport is
+                    // built once per connection attempt from the stored settings, so a
+                    // restart is what makes the new address take effect.
+                    SessionHolder.stop()
+                    SessionHolder.start {
+                        HttpNavTransport(
+                            host = settings.host,
+                            port = settings.port,
+                            pairingCode = settings.pairingCode,
+                        )
+                    }
+                }
+        }
     }
 
     /**
