@@ -73,6 +73,7 @@
 	<file alias="icons/material/ic_wb_sunny.svg">${material-design-icons_SOURCE_DIR}/image/svg/production/ic_wb_sunny_24px.svg</file>
 	<file alias="icons/material/ic_warning.svg">${material-design-icons_SOURCE_DIR}/alert/svg/production/ic_warning_24px.svg</file>
 	<file alias="icons/material/ic_watch.svg">${material-design-icons_SOURCE_DIR}/hardware/svg/production/ic_watch_24px.svg</file>
+	<file alias="icons/material/ic_bluetooth.svg">${material-design-icons_SOURCE_DIR}/device/svg/production/ic_bluetooth_24px.svg</file>
 	<file alias="icons/material/ic_wifi.svg">${material-design-icons_SOURCE_DIR}/notification/svg/production/ic_wifi_24px.svg</file>
 
 	<!-- GUI icons: General -->

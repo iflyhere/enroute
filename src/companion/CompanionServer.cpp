@@ -25,6 +25,7 @@
 #include <QRandomGenerator>
 
 #include "GlobalSettings.h"
+#include "companion/BleTransport.h"
 #include "companion/CompanionServer.h"
 #include "companion/HttpTransport.h"
 #include "companion/MapAssets.h"
@@ -159,6 +160,8 @@ Companion::CompanionServer::CompanionServer(QObject* parent)
 void Companion::CompanionServer::deferredInitialization()
 {
     connect(GlobalObject::globalSettings(), &GlobalSettings::companionNetworkEnabledChanged,
+            this, &Companion::CompanionServer::updateTransport);
+    connect(GlobalObject::globalSettings(), &GlobalSettings::companionBluetoothEnabledChanged,
             this, &Companion::CompanionServer::updateTransport);
 
     updateTransport();
@@ -505,13 +508,21 @@ void Companion::CompanionServer::publishNearby()
 
 void Companion::CompanionServer::updateTransport()
 {
-    const auto enabled = GlobalObject::globalSettings()->companionNetworkEnabled();
+    // Either transport keeps the machinery running. The documents and the timers are
+    // shared, so what decides whether they run is whether anything at all is listening.
+    const auto overWifi = GlobalObject::globalSettings()->companionNetworkEnabled();
+    const auto overBluetooth = GlobalObject::globalSettings()->companionBluetoothEnabled();
+    const auto enabled = overWifi || overBluetooth;
 
     if (!enabled)
     {
         if (!m_httpTransport.isNull())
         {
             delete m_httpTransport;
+        }
+        if (!m_bleTransport.isNull())
+        {
+            delete m_bleTransport;
         }
         // Before detaching, because it holds SQLite handles on every downloaded map
         // file and there is no reason to keep those open for a disabled feature.
@@ -630,12 +641,31 @@ void Companion::CompanionServer::updateTransport()
     m_trafficTimer.start();
     m_nearbyTimer.start();
 
-    if (m_httpTransport.isNull())
+    // Each transport is created only while its own switch is on, and torn down when it
+    // goes off: a listening socket or a Bluetooth advertisement that outlives the
+    // setting that asked for it is a link the pilot cannot see.
+    if (overWifi && m_httpTransport.isNull())
     {
         m_httpTransport = new Companion::HttpTransport(this, this);
         connect(m_httpTransport, &Companion::HttpTransport::errorStringChanged, this,
                 [this]() {setErrorString(m_httpTransport.isNull() ? QString() : m_httpTransport->errorString());});
         m_httpTransport->start();
+    }
+    if (!overWifi && !m_httpTransport.isNull())
+    {
+        delete m_httpTransport;
+    }
+
+    if (overBluetooth && m_bleTransport.isNull())
+    {
+        m_bleTransport = new Companion::BleTransport(this, this);
+        connect(m_bleTransport, &Companion::BleTransport::errorStringChanged, this,
+                [this]() {setErrorString(m_bleTransport.isNull() ? QString() : m_bleTransport->errorString());});
+        m_bleTransport->start();
+    }
+    if (!overBluetooth && !m_bleTransport.isNull())
+    {
+        delete m_bleTransport;
     }
 
     emit serverUrlsChanged();
