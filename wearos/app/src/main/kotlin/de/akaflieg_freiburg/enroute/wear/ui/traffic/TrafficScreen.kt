@@ -81,6 +81,8 @@ fun TrafficScreen(
     ownPosition: GeoPoint?,
     ownTrackDeg: Double?,
     verticalUnit: String,
+    rangeOverrideM: Double?,
+    onRange: (step: Int, currentM: Double) -> Unit,
     listState: ScalingLazyListState,
     modifier: Modifier = Modifier,
 ) {
@@ -115,13 +117,15 @@ fun TrafficScreen(
                 item { WarningBanner(warning, board, ownPosition, ownTrackDeg) }
             }
 
-            if (board.receiving) {
+            if (board.receiving && board.hasDrawable) {
                 item {
                     TrafficRadar(
                         board = board,
                         ownPosition = ownPosition,
                         ownTrackDeg = ownTrackDeg,
                         verticalUnit = verticalUnit,
+                        rangeOverrideM = rangeOverrideM,
+                        onRange = onRange,
                         modifier = Modifier
                             .fillMaxWidth()
                             .aspectRatio(1f),
@@ -130,6 +134,12 @@ fun TrafficScreen(
             }
 
             item { Header(board) }
+
+            if (board.receiving && board.hasDrawable) {
+                item {
+                    Note("Tap the top or bottom of the display to change the range.")
+                }
+            }
 
             board.warning?.let { warning -> item { WarningCard(warning) } }
 
@@ -144,14 +154,25 @@ fun TrafficScreen(
                 item { ErrorRow(error) }
             }
 
-            if (board.receiving && board.targets.isEmpty() && board.withoutBearing == null) {
+            if (board.receiving && !board.hasDrawable) {
                 item {
                     Text(
-                        text = "No traffic reported.",
+                        // Three different things, and the pilot has to be able to
+                        // tell them apart: nothing is out there, something is out
+                        // there but outside the band the phone draws, or nothing is
+                        // listening. The last case is the card above.
+                        text = if (board.targets.isEmpty()) {
+                            "No traffic reported."
+                        } else {
+                            board.targets.size.toString() +
+                                " contacts, none within 20 nm and 5000 ft"
+                        },
                         color = CockpitColors.Good,
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
                     )
                 }
             }
@@ -187,7 +208,13 @@ private fun Header(board: TrafficBoard) {
             fontWeight = FontWeight.Medium,
         )
         Text(
-            text = if (board.receiving) board.targets.size.toString() + " seen" else "no signal",
+            // Drawn out of seen, so the number on the radar and the length of the
+            // list below it never look like a contradiction.
+            text = when {
+                !board.receiving -> "no signal"
+                else -> board.drawable.size.toString() + " of " +
+                    board.targets.size.toString()
+            },
             color = if (board.receiving) CockpitColors.Muted else CockpitColors.Warning,
             fontSize = 12.sp,
         )
@@ -365,6 +392,17 @@ private fun TargetCard(target: TrafficTarget, bearingUnknown: Boolean = false) {
                 fontSize = 11.sp,
             )
         }
+
+        // Said in the list, because the list is the one place that carries contacts
+        // the radar does not draw. Without this the two would appear to contradict
+        // each other.
+        if (!target.relevant) {
+            Text(
+                text = "Not on the display",
+                color = CockpitColors.Muted,
+                fontSize = 10.sp,
+            )
+        }
     }
 }
 
@@ -402,3 +440,14 @@ private const val METRES_PER_NM = 1852.0
 private const val METRES_PER_FOOT = 0.3048
 
 private val CARD_BACKGROUND = Color(0xFF14181C)
+
+@Composable
+private fun Note(text: String) {
+    Text(
+        text = text,
+        color = CockpitColors.Muted,
+        fontSize = 10.sp,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 2.dp),
+    )
+}

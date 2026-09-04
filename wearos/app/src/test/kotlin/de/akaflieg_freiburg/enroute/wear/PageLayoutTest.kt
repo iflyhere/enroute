@@ -45,11 +45,12 @@ class PageLayoutTest {
 
     @Test
     fun `a stored order is honoured`() {
-        val pages = visiblePages(listOf("notam", "data", "map"), emptySet())
-        assertEquals(
-            listOf(WearPage.Notam, WearPage.Data, WearPage.Map),
-            pages.take(3),
-        )
+        // The relative order of the pages the pilot placed, which is the actual
+        // contract. Their absolute positions can move, because a page added in a
+        // later version is inserted among them rather than appended.
+        val stored = listOf("notam", "data", "map")
+        val pages = visiblePages(stored, emptySet())
+        assertEquals(stored, pages.map { page -> page.id }.filter { id -> id in stored })
     }
 
     @Test
@@ -63,9 +64,33 @@ class PageLayoutTest {
     }
 
     @Test
+    fun `a page added later lands beside its neighbour, not on the end`() {
+        // The order this watch actually had: saved before the traffic page existed.
+        // Appending put Traffic after the flight log, where nobody would look for it.
+        val stored = listOf("map", "data", "notam", "weather", "log", "settings")
+        val pages = orderedPages(stored)
+        assertEquals(
+            listOf(
+                WearPage.Map, WearPage.Data, WearPage.Traffic,
+                WearPage.Notam, WearPage.Weather, WearPage.Log, WearPage.Settings,
+            ),
+            pages,
+        )
+    }
+
+    @Test
+    fun `a page added before everything stored goes to the front`() {
+        val pages = orderedPages(listOf("notam", "weather"))
+        assertEquals(WearPage.Data, pages.first())
+    }
+
+    @Test
     fun `an identifier the code no longer knows is dropped`() {
-        val pages = visiblePages(listOf("map", "traffic-from-a-later-version", "data"), emptySet())
-        assertEquals(listOf(WearPage.Map, WearPage.Data), pages.take(2))
+        val pages = visiblePages(listOf("map", "from-a-later-version", "data"), emptySet())
+        assertEquals(
+            listOf("map", "data"),
+            pages.map { page -> page.id }.filter { id -> id == "map" || id == "data" },
+        )
         assertEquals(WearPage.entries.size, pages.size)
     }
 
