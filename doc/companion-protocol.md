@@ -670,12 +670,40 @@ last asked for, and `doc` in the metadata says which. An unknown name is answere
 because a client from a later version asking for something this one does not have is not an
 error worth reporting to a pilot.
 
-**Verified in an emulator, 2026-09-05.** Two Android emulators on one host do see each other over
-BLE, which makes this transport testable without an aircraft. The app's GATT server registers,
-`e5c0a000-…` is accepted by the stack, advertising starts, and a scan from the second emulator
-returns the service UUID. What does *not* survive is the advertised local name: Android sends the
-adapter's own name regardless, so a scan list shows the phone's Bluetooth name rather than
-"Enroute". A client must therefore filter on the service UUID and not on a name.
+**Verified end to end in emulators, 2026-09-05.** Two Android emulators on one host see each other
+over BLE, which makes this transport testable without an aircraft. A Wear OS emulator running the
+companion app scanned, connected, negotiated an MTU of 517, subscribed, read Info and received the
+route document from a phone emulator running this app -- with no IP path between the two. Four
+consecutive clients were served without restarting the phone.
+
+Three things had to be right for that, each of which fails silently when it is not:
+
+- **The advertised local name does not survive.** Android sends the adapter's own name regardless of
+  what is asked for, so a scan list shows the phone's Bluetooth name rather than "Enroute". A client
+  filters on the service UUID and never on a name.
+- **Android closes the GATT server on every disconnect and registers a new one, empty.** The service
+  has to be added again for each client, not once at startup. Without that the phone serves exactly
+  one client per app run and afterwards advertises a service it does not offer: connections succeed,
+  discovery returns only the two services the stack adds itself, and the symptom looks like a broken
+  watch.
+- **Advertising cannot be restarted at the instant of the disconnect.** The stack still holds the
+  previous advertiser and answers `ADVERTISE_FAILED_ALREADY_STARTED`; worse, a failed attempt returns
+  the controller to `UnconnectedState`, which is the same signal that prompted the restart, so an
+  immediate retry becomes a loop that ends with the stack refusing to advertise at all. The restart
+  is deferred by half a second and coalesced.
+
+A client has its own version of the second point: Android caches a peer's service list and returns
+the cached one from a discovery, so a phone whose GATT database changed since the last connection
+stays wrong. A client that connects and finds no companion service should drop that cache once and
+reconnect before reporting the service missing.
+
+**The client must request a larger MTU, and DocMeta is why.** The default ATT MTU of 23 leaves 20
+usable bytes; a DocMeta document is around a hundred. At the default it arrives truncated, fails to
+parse, and the transfer then stalls with nothing reported anywhere -- the client is waiting for a
+document it was never told the name of. Nav frames and DocData are fragmented and survive the
+default; DocMeta is not fragmented and does not. A central therefore asks for the largest MTU it can
+before it subscribes to anything. Measured between two emulators: asking for 517 was granted in
+full.
 
 **Framing.** The usable payload of a notification is the negotiated MTU minus three bytes: 20 bytes
 in the worst case, typically 244 once the central requests a larger MTU. Every Nav and DocData
@@ -686,6 +714,11 @@ Qt does not expose the negotiated MTU in the peripheral role, so the phone fragm
 guaranteed floor rather than the typical case: 19 payload bytes. That is wasteful on a link that
 negotiated more, and it is the only size that is never wrong. `chunk` in the metadata states it,
 so a client never has to assume.
+
+**No pairing code travels over Bluetooth.** Over Wi-Fi the code is what keeps a stranger on the same
+network from reading the aircraft's position. Being connected to this GATT server already means being
+within a few metres of the aircraft, so the phone hands the code *out* in Info rather than asking for
+one. A pilot who only ever flies with Bluetooth therefore types nothing at all.
 
 **What Info is for beyond bootstrapping.** A client that stored the phone's Wi-Fi address will
 find it wrong the first time the network changes -- a stored address belongs to whichever network
