@@ -75,7 +75,12 @@ fun ConnectScreen(
                 // watch has dropped Wi-Fi, which the pilot can act on.
                 Text(
                     text = discoveryError
-                        ?: "Searching. The phone must be on the same Wi-Fi network",
+                        // Names the way out, not just the requirement. Away from a
+                        // shared network there is nothing for this link to run over,
+                        // and the phone's own hotspot is the one thing a pilot can do
+                        // about it without another network to join.
+                        ?: "Searching. Both devices need one Wi-Fi network. " +
+                        "Away from home, switch the phone's hotspot on and join it.",
                     color = if (discoveryError == null) {
                         CockpitColors.Muted
                     } else {
