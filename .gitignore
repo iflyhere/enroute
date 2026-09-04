@@ -37,3 +37,6 @@ generatedSources/vendor
 
 # Personal Claude Code permission grants (machine-specific)
 .claude/settings.local.json
+
+# Left behind by aqtinstall when the WSL Android toolchain is set up.
+aqtinstall.log
