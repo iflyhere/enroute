@@ -146,6 +146,21 @@ public:
     /*! \brief Night mode */
     Q_PROPERTY(bool nightMode READ nightMode WRITE setNightMode BINDABLE bindableNightMode NOTIFY nightModeChanged)
 
+    /*! \brief Publish route and navigation state to companion devices over Wi-Fi */
+    Q_PROPERTY(bool companionNetworkEnabled READ companionNetworkEnabled WRITE setCompanionNetworkEnabled BINDABLE bindableCompanionNetworkEnabled NOTIFY companionNetworkEnabledChanged)
+
+    /*! \brief Publish route and navigation state to companion devices over Bluetooth
+     *
+     *  Independent of the Wi-Fi switch rather than exclusive with it. The two are not
+     *  alternatives: Wi-Fi is the transport that works on a bench with a laptop on the
+     *  same network, Bluetooth is the one that works in an aircraft, and there is no
+     *  reason a pilot may not have both.
+     */
+    Q_PROPERTY(bool companionBluetoothEnabled READ companionBluetoothEnabled WRITE setCompanionBluetoothEnabled BINDABLE bindableCompanionBluetoothEnabled NOTIFY companionBluetoothEnabledChanged)
+
+    /*! \brief Six-digit code that a companion device must present */
+    Q_PROPERTY(QString companionPairingCode READ companionPairingCode WRITE setCompanionPairingCode NOTIFY companionPairingCodeChanged)
+
     /*! \brief Use traffic data receiver for positioning */
     Q_PROPERTY(bool positioningByTrafficDataReceiver READ positioningByTrafficDataReceiver WRITE setPositioningByTrafficDataReceiver BINDABLE bindablePositioningByTrafficDataReceiver)
 
@@ -253,6 +268,36 @@ public:
      *
      * @returns Property night mode
      */
+    /*! \brief Getter function for property of the same name
+     *
+     * @returns Property companionNetworkEnabled
+     */
+    [[nodiscard]] auto companionNetworkEnabled() const -> bool { return m_companionNetworkEnabled.value(); }
+
+    /*! \brief Getter function for property of the same name
+     *
+     * @returns Property companionNetworkEnabled
+     */
+    [[nodiscard]] QBindable<bool> bindableCompanionNetworkEnabled() { return &m_companionNetworkEnabled; }
+
+    /*! \brief Getter function for property of the same name
+     *
+     * @returns Property companionBluetoothEnabled
+     */
+    [[nodiscard]] auto companionBluetoothEnabled() const -> bool { return m_companionBluetoothEnabled.value(); }
+
+    /*! \brief Getter function for property of the same name
+     *
+     * @returns Property companionBluetoothEnabled
+     */
+    [[nodiscard]] QBindable<bool> bindableCompanionBluetoothEnabled() { return &m_companionBluetoothEnabled; }
+
+    /*! \brief Getter function for property of the same name
+     *
+     * @returns Property companionPairingCode
+     */
+    [[nodiscard]] auto companionPairingCode() const -> QString { return m_companionPairingCode; }
+
     [[nodiscard]] auto nightMode() const -> bool { return m_nightMode.value(); }
 
     /*! \brief Getter function for property of the same name
@@ -389,6 +434,24 @@ public:
      *
      * @param newNightMode Property nightMode
      */
+    /*! \brief Setter function for property of the same name
+     *
+     * @param newCompanionNetworkEnabled Property companionNetworkEnabled
+     */
+    void setCompanionNetworkEnabled(bool newCompanionNetworkEnabled);
+
+    /*! \brief Setter function for property of the same name
+     *
+     *  @param newCompanionBluetoothEnabled Property companionBluetoothEnabled
+     */
+    void setCompanionBluetoothEnabled(bool newCompanionBluetoothEnabled);
+
+    /*! \brief Setter function for property of the same name
+     *
+     * @param newCompanionPairingCode Property companionPairingCode
+     */
+    void setCompanionPairingCode(const QString& newCompanionPairingCode);
+
     void setNightMode(bool newNightMode);
 
     /*! \brief Setter function for property of the same name
@@ -470,6 +533,15 @@ signals:
     void lastWhatsNewInMapsHashChanged();
 
     /*! \brief Notifier signal */
+    /*! \brief Notifier signal */
+    void companionNetworkEnabledChanged();
+
+    /*! \brief Notifier signal */
+    void companionBluetoothEnabledChanged();
+
+    /*! \brief Notifier signal */
+    void companionPairingCodeChanged();
+
     void nightModeChanged();
 
     /*! \brief Notifier signal */
@@ -495,6 +567,10 @@ private:
     // Property-backed night mode setting, so that C++ bindings can depend on
     // it. Initialized from m_settings, which is declared above on purpose.
     QProperty<bool> m_nightMode {m_settings.value(QStringLiteral("Map/nightMode"), false).toBool()};
+
+    QProperty<bool> m_companionNetworkEnabled {m_settings.value(QStringLiteral("companion/networkEnabled"), false).toBool()};
+    QProperty<bool> m_companionBluetoothEnabled {m_settings.value(QStringLiteral("companion/bluetoothEnabled"), false).toBool()};
+    QString m_companionPairingCode {m_settings.value(QStringLiteral("companion/pairingCode")).toString()};
 
     QProperty<bool> m_positioningByTrafficDataReceiver;
 };

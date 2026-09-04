@@ -99,6 +99,13 @@ android {
     // Console can symbolicate native crashes. This metadata is not delivered to
     // devices, so it does not affect download or install size.
     buildTypes {
+        debug {
+            // Fork only: install next to the store version instead of replacing it.
+            // Deliberately not QT_ANDROID_PACKAGE_NAME, which also sets the AGP
+            // namespace and would move the generated R class away from the Java
+            // sources that reference it unqualified.
+            applicationIdSuffix '.dev'
+        }
         release {
             ndk {
                 debugSymbolLevel 'FULL'

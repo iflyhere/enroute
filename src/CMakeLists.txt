@@ -32,6 +32,12 @@ set(SOURCES
     ../3rdParty/KDSingleApplication/src/kdsingleapplication_lib.h
     ../3rdParty/KDSingleApplication/src/kdsingleapplication_localsocket_p.h
     ../3rdParty/sunset/src/sunset.h
+    companion/BleTransport.h
+    companion/CompanionServer.h
+    companion/HttpTransport.h
+    companion/MapAssets.h
+    companion/Protocol.h
+    companion/Snapshot.h
     dataManagement/DataManager.h
     dataManagement/Downloadable_Abstract.h
     dataManagement/Downloadable_MultiFile.h
@@ -145,6 +151,11 @@ set(SOURCES
 
     # C++ files
     ../3rdParty/sunset/src/sunset.cpp
+    companion/BleTransport.cpp
+    companion/CompanionServer.cpp
+    companion/HttpTransport.cpp
+    companion/MapAssets.cpp
+    companion/Snapshot.cpp
     dataManagement/DataManager.cpp
     dataManagement/Downloadable_Abstract.cpp
     dataManagement/Downloadable_MultiFile.cpp
@@ -555,6 +566,7 @@ target_include_directories(${PROJECT_NAME}
     ${CMAKE_SOURCE_DIR}/3rdParty/sunset/src
     ${CMAKE_SOURCE_DIR}/3rdParty/GSL/include
     ${CMAKE_SOURCE_DIR}/3rdParty/enrouteOGN/lib
+    companion
     dataManagement
     fileFormats
     flightlog
@@ -655,6 +667,7 @@ qt_add_qml_module(${PROJECT_NAME}
     qml/pages/Positioning.qml
     qml/pages/PressureAltitude.qml
     qml/pages/PrivacyPage.qml
+    qml/pages/CompanionPage.qml
     qml/pages/SettingsPage.qml
     qml/pages/TrafficReceiver.qml
     qml/pages/WaypointLibraryPage.qml
