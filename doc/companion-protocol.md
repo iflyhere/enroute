@@ -670,6 +670,13 @@ last asked for, and `doc` in the metadata says which. An unknown name is answere
 because a client from a later version asking for something this one does not have is not an
 error worth reporting to a pilot.
 
+**Verified in an emulator, 2026-09-05.** Two Android emulators on one host do see each other over
+BLE, which makes this transport testable without an aircraft. The app's GATT server registers,
+`e5c0a000-…` is accepted by the stack, advertising starts, and a scan from the second emulator
+returns the service UUID. What does *not* survive is the advertised local name: Android sends the
+adapter's own name regardless, so a scan list shows the phone's Bluetooth name rather than
+"Enroute". A client must therefore filter on the service UUID and not on a name.
+
 **Framing.** The usable payload of a notification is the negotiated MTU minus three bytes: 20 bytes
 in the worst case, typically 244 once the central requests a larger MTU. Every Nav and DocData
 notification is therefore prefixed with one byte: bit 7 set marks the last fragment, bits 0 to 6
