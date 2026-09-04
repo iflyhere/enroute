@@ -342,3 +342,26 @@ data class TrafficTargetDto(
     @SerialName("trk") val trackDeg: Double? = null,
     @SerialName("unc") val uncertaintyRadiusM: Double? = null,
 )
+
+@Serializable
+data class NearbyBoardDto(
+    @SerialName("v") val version: Int = 0,
+    @SerialName("sid") val sessionId: Long = 0,
+    @SerialName("nearbyRev") val nearbyRevision: Long = 0,
+    @SerialName("positionKnown") val positionKnown: Boolean = false,
+    @SerialName("near") val groups: Map<String, List<NearbyPlaceDto>> = emptyMap(),
+)
+
+@Serializable
+data class NearbyPlaceDto(
+    /** The waypoint shape the route document uses, plus the two members below. */
+    @SerialName("n") val name: String = "",
+    @SerialName("en") val extendedName: String? = null,
+    @SerialName("c") val coordinate: List<Double> = emptyList(),
+    @SerialName("e") val elevationM: Double? = null,
+    @SerialName("t") val type: String? = null,
+    @SerialName("cat") val category: String? = null,
+    @SerialName("way") val way: String? = null,
+    @SerialName("dist") val distanceM: Double? = null,
+    @SerialName("brg") val bearingDeg: Double? = null,
+)

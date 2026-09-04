@@ -20,6 +20,7 @@
 package de.akaflieg_freiburg.enroute.wear.ui.traffic
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,9 +29,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -41,10 +44,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
-import androidx.wear.compose.foundation.lazy.ScalingLazyListState
 import androidx.wear.compose.material3.Text
 import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
 import de.akaflieg_freiburg.enroute.wear.domain.TrafficBoard
@@ -83,9 +85,11 @@ fun TrafficScreen(
     verticalUnit: String,
     rangeOverrideM: Double?,
     onRange: (step: Int, currentM: Double) -> Unit,
-    listState: ScalingLazyListState,
+    scrollState: ScrollState,
     modifier: Modifier = Modifier,
 ) {
+    val configuration = LocalConfiguration.current
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -105,89 +109,78 @@ fun TrafficScreen(
             return@Box
         }
 
-        ScalingLazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
+        Column(
+            modifier = Modifier.fillMaxSize().verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // A banner above the radar rather than a card in the list: when there is
-            // an alarm, this is the first thing on the screen and it names the
-            // direction to look in, the way a traffic instrument does.
+            if (board.receiving && board.hasDrawable) {
+                // Sized to the display rather than to its own width, so that at rest
+                // the picture fills the face and the aircraft is in the middle of it.
+                // A square would leave the own-ship symbol above centre on a screen
+                // that is taller than it is wide.
+                TrafficRadar(
+                    board = board,
+                    ownPosition = ownPosition,
+                    ownTrackDeg = ownTrackDeg,
+                    verticalUnit = verticalUnit,
+                    rangeOverrideM = rangeOverrideM,
+                    onRange = onRange,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(configuration.screenHeightDp.dp),
+                )
+            }
+
             board.warning?.let { warning ->
-                item { WarningBanner(warning, board, ownPosition, ownTrackDeg) }
+                WarningBanner(warning, board, ownPosition, ownTrackDeg)
             }
+
+            Header(board)
 
             if (board.receiving && board.hasDrawable) {
-                item {
-                    TrafficRadar(
-                        board = board,
-                        ownPosition = ownPosition,
-                        ownTrackDeg = ownTrackDeg,
-                        verticalUnit = verticalUnit,
-                        rangeOverrideM = rangeOverrideM,
-                        onRange = onRange,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(1f),
-                    )
-                }
+                Note("Tap the top or bottom of the display to change the range.")
             }
 
-            item { Header(board) }
-
-            if (board.receiving && board.hasDrawable) {
-                item {
-                    Note("Tap the top or bottom of the display to change the range.")
-                }
-            }
-
-            board.warning?.let { warning -> item { WarningCard(warning) } }
+            board.warning?.let { warning -> WarningCard(warning) }
 
             if (!board.receiving) {
-                item { ReceiverSilent(board) }
+                ReceiverSilent(board)
             }
 
-            board.runtimeError?.let { error ->
-                item { ErrorRow(error) }
-            }
-            board.selfTestError?.let { error ->
-                item { ErrorRow(error) }
-            }
+            board.runtimeError?.let { error -> ErrorRow(error) }
+            board.selfTestError?.let { error -> ErrorRow(error) }
 
             if (board.receiving && !board.hasDrawable) {
-                item {
-                    Text(
-                        // Three different things, and the pilot has to be able to
-                        // tell them apart: nothing is out there, something is out
-                        // there but outside the band the phone draws, or nothing is
-                        // listening. The last case is the card above.
-                        text = if (board.targets.isEmpty()) {
-                            "No traffic reported."
-                        } else {
-                            board.targets.size.toString() +
-                                " contacts, none within 20 nm and 5000 ft"
-                        },
-                        color = CockpitColors.Good,
-                        fontSize = 13.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                    )
-                }
+                Text(
+                    // Three different things, and the pilot has to be able to tell
+                    // them apart: nothing is out there, something is out there but
+                    // outside the band the phone draws, or nothing is listening. The
+                    // last case is the card above.
+                    text = if (board.targets.isEmpty()) {
+                        "No traffic reported."
+                    } else {
+                        board.targets.size.toString() +
+                            " contacts, none within 20 nm and 5000 ft"
+                    },
+                    color = CockpitColors.Good,
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                )
             }
 
-            // Keyed by position as well as identity: a receiver may report a target
-            // with no identifier at all, and two of those would collide.
-            board.listed.forEachIndexed { index, target ->
-                item(key = "tfc-" + (target.id ?: "anon") + "-" + index) {
-                    TargetCard(target)
-                }
+            board.listed.forEach { target ->
+                TargetCard(target)
             }
 
             board.withoutBearing?.let { target ->
-                item { TargetCard(target, bearingUnknown = true) }
+                TargetCard(target, bearingUnknown = true)
             }
+
+            // Room to scroll the last card clear of the round bezel.
+            Spacer(modifier = Modifier.height(28.dp))
         }
     }
 }

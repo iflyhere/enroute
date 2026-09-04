@@ -35,6 +35,7 @@
 #include "flightlog/Flight.h"
 #include "flightlog/FlightDetector.h"
 #include "flightlog/FlightLog.h"
+#include "geomaps/GeoMapProvider.h"
 #include "geomaps/VACLibrary.h"
 #include "notam/NOTAMProvider.h"
 #include "positioning/PositionProvider.h"
@@ -1106,6 +1107,58 @@ QJsonObject Companion::Snapshot::traffic(const Companion::Revisions& revisions)
         insertCommon(encoded, distanceOnly);
         document.insert("noBearing"_L1, encoded);
     }
+
+    return document;
+}
+
+
+QJsonObject Companion::Snapshot::nearby(const Companion::Revisions& revisions)
+{
+    const auto aircraft = GlobalObject::navigator()->aircraft();
+    const auto here = Positioning::PositionProvider::lastValidCoordinate();
+
+    QJsonObject document;
+    document.insert("v"_L1, Companion::protocolVersion);
+    document.insert("sid"_L1, static_cast<qint64>(revisions.session));
+
+    if (!here.isValid())
+    {
+        // Said rather than answered with three empty lists: "nothing near here" and
+        // "we do not know where here is" are different, and only one of them means
+        // the pilot can stop looking.
+        document.insert("positionKnown"_L1, false);
+        return document;
+    }
+    document.insert("positionKnown"_L1, true);
+
+    auto* const provider = GlobalObject::geoMapProvider();
+    QJsonObject groups;
+    for (const auto& type : {u"AD"_s, u"NAV"_s, u"WP"_s})
+    {
+        QJsonArray entries;
+        const auto waypoints = provider->nearbyWaypoints(here, type);
+        for (const auto& waypoint : waypoints)
+        {
+            auto entry = toJSON(waypoint);
+
+            // The same line the app puts under a waypoint's name, so the two agree
+            // about the distance including the pilot's unit preference.
+            const auto way = plainText(aircraft.describeWay(here, waypoint.coordinate()));
+            if (!way.isEmpty())
+            {
+                entry.insert("way"_L1, way);
+            }
+
+            // In metres as well, because a client sorting or filtering needs a number
+            // and the line above is prose.
+            entry.insert("dist"_L1, qRound(here.distanceTo(waypoint.coordinate())));
+            entry.insert("brg"_L1, qRound(here.azimuthTo(waypoint.coordinate())));
+
+            entries.append(entry);
+        }
+        groups.insert(type, entries);
+    }
+    document.insert("near"_L1, groups);
 
     return document;
 }
