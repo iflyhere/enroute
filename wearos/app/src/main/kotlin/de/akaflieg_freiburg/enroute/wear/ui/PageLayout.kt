@@ -63,23 +63,41 @@ enum class WearPage(val id: String, val label: String) {
  *
  *  - an identifier the code no longer knows is dropped, so an old preference cannot
  *    crash a new version;
- *  - a page the stored order never mentions is appended in its default position, so a
- *    page added in a new version appears instead of being invisible until the pilot
- *    resets their settings;
+ *  - a page the stored order never mentions is inserted beside the neighbour it has
+ *    in the enum, so a page added in a new version turns up where a pilot would look
+ *    for it rather than on the end;
  *  - a duplicate is kept once;
  *  - and Settings is forced last whatever the stored order says.
  */
 fun orderedPages(order: List<String>): List<WearPage> {
-    val seen = LinkedHashSet<WearPage>()
+    val stored = LinkedHashSet<WearPage>()
     for (id in order) {
-        WearPage.byId(id)?.let { page -> seen.add(page) }
-    }
-    // Pages the stored order does not mention, in their default order.
-    for (page in WearPage.entries) {
-        seen.add(page)
+        WearPage.byId(id)?.let { page -> stored.add(page) }
     }
 
-    val result = seen.toMutableList()
+    val result = stored.toMutableList()
+
+    // A page the stored order never mentions goes back where it belongs rather than on
+    // the end. Measured on a real watch: an order saved before the traffic page
+    // existed put Traffic after the flight log, which is nowhere a pilot would look
+    // for it.
+    //
+    // It is inserted before the first stored page that follows it in this enum. The
+    // other way round -- after the nearest preceding one -- was tried first and is
+    // worse: it moves a new page ahead of a page the pilot deliberately placed,
+    // whereas this keeps every relation the pilot never overrode. Where the pilot has
+    // inverted the default order there is no correct answer, only a consistent one.
+    for (page in WearPage.entries) {
+        if (page in result) {
+            continue
+        }
+        val successor = WearPage.entries
+            .drop(WearPage.entries.indexOf(page) + 1)
+            .firstOrNull { later -> later in result }
+        val at = if (successor == null) result.size else result.indexOf(successor)
+        result.add(at, page)
+    }
+
     result.remove(WearPage.Settings)
     result.add(WearPage.Settings)
     return result

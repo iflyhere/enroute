@@ -50,6 +50,24 @@ data class TrafficBoard(
     val withoutBearing: TrafficTarget?,
 ) {
     /**
+     * The targets a display should draw.
+     *
+     * The phone draws exactly these: Traffic.qml gates its marker on the same flag,
+     * and the app's rule behind it is within 1500 m vertically and 20 NM
+     * horizontally. Drawing more would put an airliner at FL320 on a watch face with
+     * the same weight as a glider five hundred feet above -- and, because the scale
+     * follows the farthest thing drawn, would bury the glider in the centre spot.
+     *
+     * The list below keeps everything, which is where the extra contacts belong: it
+     * has room to say which of them the phone considers relevant.
+     */
+    val drawable: List<TrafficTarget> get() = targets.filter { target -> target.relevant }
+
+    /** Whether the receiver is reporting anything the phone would draw. */
+    val hasDrawable: Boolean
+        get() = drawable.isNotEmpty() || withoutBearing?.relevant == true
+
+    /**
      * Targets ordered for a list, most alarming first and then nearest.
      *
      * This ordering is the watch's own. The phone keeps its targets in a fixed pool

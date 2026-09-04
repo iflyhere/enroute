@@ -58,6 +58,7 @@ import de.akaflieg_freiburg.enroute.wear.ui.notam.NotamScreen
 import de.akaflieg_freiburg.enroute.wear.ui.route.RouteScreen
 import de.akaflieg_freiburg.enroute.wear.ui.settings.SettingsScreen
 import de.akaflieg_freiburg.enroute.wear.ui.traffic.TrafficScreen
+import de.akaflieg_freiburg.enroute.wear.ui.traffic.steppedRangeM
 import de.akaflieg_freiburg.enroute.wear.ui.route.ZoomLevel
 import de.akaflieg_freiburg.enroute.wear.ui.weather.WeatherScreen
 import kotlinx.coroutines.launch
@@ -166,6 +167,10 @@ private fun MainPages(
     var bezelAction by remember { mutableStateOf(BezelAction.byId(settings.bezelAction)) }
     var chartMode by remember { mutableStateOf(ChartMode.byId(settings.chartMode)) }
     var alarmVibration by remember { mutableStateOf(settings.alarmVibration) }
+
+    // Null means "fit what is drawn". Not persisted: a range a pilot chose two flights
+    // ago is not a range they chose for this one.
+    var radarRangeM by remember { mutableStateOf<Double?>(null) }
 
     val pages = visiblePages(order, hidden)
 
@@ -295,6 +300,10 @@ private fun MainPages(
                 detectVerticalDragGestures(
                     onDragStart = { dragAccumulator = 0f },
                 ) { change, dragAmount ->
+                    // Map only. The traffic page has its own range control, on a tap,
+                    // because its list consumes a vertical drag before this handler
+                    // ever sees it -- measured on the watch, where the drag did
+                    // nothing at all.
                     if (pages.getOrNull(pagerState.currentPage) != WearPage.Map) {
                         return@detectVerticalDragGestures
                     }
@@ -368,6 +377,10 @@ private fun MainPages(
                     ownPosition = uiState.value.frame?.position?.point,
                     ownTrackDeg = uiState.value.frame?.position?.trackDeg,
                     verticalUnit = uiState.value.session.peer?.verticalUnit ?: "ft",
+                    rangeOverrideM = radarRangeM,
+                    onRange = { step, currentM ->
+                        radarRangeM = steppedRangeM(currentM, step)
+                    },
                     listState = trafficListState,
                 )
 

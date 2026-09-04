@@ -20,14 +20,17 @@
 package de.akaflieg_freiburg.enroute.wear
 
 import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
+import de.akaflieg_freiburg.enroute.wear.domain.TrafficBoard
 import de.akaflieg_freiburg.enroute.wear.domain.TrafficTarget
 import de.akaflieg_freiburg.enroute.wear.service.shouldBuzz
 import de.akaflieg_freiburg.enroute.wear.ui.traffic.bearingDeg
 import de.akaflieg_freiburg.enroute.wear.ui.traffic.clockPosition
 import de.akaflieg_freiburg.enroute.wear.ui.traffic.distanceM
+import de.akaflieg_freiburg.enroute.wear.ui.traffic.labelledFixes
 import de.akaflieg_freiburg.enroute.wear.ui.traffic.radarFixes
 import de.akaflieg_freiburg.enroute.wear.ui.traffic.radarRangeM
 import de.akaflieg_freiburg.enroute.wear.ui.traffic.relativeAltitudeLabel
+import de.akaflieg_freiburg.enroute.wear.ui.traffic.steppedRangeM
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -132,28 +135,62 @@ class RadarGeometryTest {
     }
 
     @Test
-    fun `an irrelevant far contact does not push the scale out`() {
-        // A twenty-kilometre contact must not shrink the one converging with the
-        // aircraft to a dot on the centre spot.
-        val fixes = radarFixes(
-            listOf(
+    fun `only the traffic the phone draws reaches the display`() {
+        // Measured against a real Open Glider Network feed: nineteen contacts,
+        // including airliners at FL320. The phone gates its own marker on this flag,
+        // and without the same gate the scale went to 50 km and the gliders ended up
+        // on the centre spot.
+        val board = TrafficBoard.EMPTY.copy(
+            targets = listOf(
                 targetAt(freiburg, rangeM = 900.0),
-                targetAt(freiburg, rangeM = 19_000.0).copy(relevant = false),
+                targetAt(freiburg, rangeM = 34_000.0, verticalM = 9200.0)
+                    .copy(relevant = false),
             ),
-            freiburg,
-            0.0,
         )
-        assertEquals(1_000.0, radarRangeM(fixes), 0.001)
+        assertEquals(1, board.drawable.size)
+        assertEquals(900.0, board.drawable[0].horizontalDistanceM!!, 0.001)
+        assertEquals(1_000.0, radarRangeM(radarFixes(board.drawable, freiburg, 0.0)), 0.001)
     }
 
     @Test
-    fun `with nothing relevant the scale still fits what there is`() {
-        val fixes = radarFixes(
-            listOf(targetAt(freiburg, rangeM = 19_000.0).copy(relevant = false)),
-            freiburg,
-            0.0,
+    fun `contacts outside the band are still in the list`() {
+        // The user asked for the list and it carries what the radar does not. Losing
+        // a contact entirely would be a different thing from not drawing it.
+        val board = TrafficBoard.EMPTY.copy(
+            targets = listOf(
+                targetAt(freiburg, rangeM = 900.0),
+                targetAt(freiburg, rangeM = 34_000.0).copy(relevant = false),
+            ),
         )
-        assertEquals(20_000.0, radarRangeM(fixes), 0.001)
+        assertEquals(2, board.listed.size)
+        assertEquals(1, board.drawable.size)
+        assertFalse(board.hasDrawable && board.drawable.size == board.targets.size)
+    }
+
+    @Test
+    fun `a receiver with nothing drawable is not the same as an empty sky`() {
+        val nothingAtAll = TrafficBoard.EMPTY.copy(receiving = true)
+        val allTooFar = TrafficBoard.EMPTY.copy(
+            receiving = true,
+            targets = listOf(targetAt(freiburg, rangeM = 34_000.0).copy(relevant = false)),
+        )
+        assertFalse(nothingAtAll.hasDrawable)
+        assertFalse(allTooFar.hasDrawable)
+        assertTrue(nothingAtAll.targets.isEmpty())
+        assertTrue(allTooFar.targets.isNotEmpty())
+    }
+
+    @Test
+    fun `only the nearest few are labelled`() {
+        val many = (1..10).map { step ->
+            targetAt(freiburg, rangeM = step * 500.0)
+        }
+        val fixes = radarFixes(many, freiburg, 0.0)
+        val labelled = labelledFixes(fixes)
+        assertEquals(6, labelled.size)
+        // And they are the nearest ones, not the first six the receiver happened to
+        // report.
+        assertEquals(3_000.0, labelled.maxOf { fix -> fix.rangeM }, 0.001)
     }
 
     @Test
@@ -161,11 +198,11 @@ class RadarGeometryTest {
         val near = radarFixes(listOf(targetAt(freiburg, rangeM = 400.0)), freiburg, 0.0)
         val mid = radarFixes(listOf(targetAt(freiburg, rangeM = 3000.0)), freiburg, 0.0)
         val far = radarFixes(listOf(targetAt(freiburg, rangeM = 44_000.0)), freiburg, 0.0)
-        assertEquals(1_000.0, radarRangeM(near), 0.001)
+        assertEquals(500.0, radarRangeM(near), 0.001)
         assertEquals(5_000.0, radarRangeM(mid), 0.001)
         assertEquals(50_000.0, radarRangeM(far), 0.001)
         // No targets at all still gives a usable scale rather than zero.
-        assertEquals(1_000.0, radarRangeM(emptyList()), 0.001)
+        assertEquals(500.0, radarRangeM(emptyList()), 0.001)
     }
 
     @Test
@@ -200,5 +237,14 @@ class RadarGeometryTest {
         assertFalse(shouldBuzz(previous = 3, current = 1))
         assertFalse(shouldBuzz(previous = 1, current = 0))
         assertFalse(shouldBuzz(previous = 0, current = 0))
+    }
+
+    @Test
+    fun `the range control steps the ladder and stops at both ends`() {
+        assertEquals(500.0, steppedRangeM(1_000.0, -1), 0.001)
+        assertEquals(2_000.0, steppedRangeM(1_000.0, 1), 0.001)
+        // Pushing past the closest range gives the closest range, not the widest one.
+        assertEquals(500.0, steppedRangeM(500.0, -3), 0.001)
+        assertEquals(50_000.0, steppedRangeM(50_000.0, 3), 0.001)
     }
 }
