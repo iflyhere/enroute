@@ -89,6 +89,11 @@ namespace
     // worth a second of a pilot's attention, and it moves at the same speed.
     constexpr auto trafficPeriod = std::chrono::seconds(1);
 
+    // The app's own nearby page computes its distances once when it opens and never
+    // again, so half a minute here is not a compromise, it is more current than the
+    // phone.
+    constexpr auto nearbyPeriod = std::chrono::seconds(30);
+
     constexpr int pairingCodeDigits = 6;
     constexpr quint32 pairingCodeModulus = 1000000;
 } // namespace
@@ -143,6 +148,11 @@ Companion::CompanionServer::CompanionServer(QObject* parent)
     m_trafficTimer.setInterval(trafficPeriod);
     connect(&m_trafficTimer, &QTimer::timeout,
             this, &Companion::CompanionServer::publishTraffic);
+
+    m_nearbyTimer.setInterval(nearbyPeriod);
+    m_nearbyTimer.setTimerType(Qt::VeryCoarseTimer);
+    connect(&m_nearbyTimer, &QTimer::timeout,
+            this, &Companion::CompanionServer::publishNearby);
 }
 
 
@@ -427,6 +437,7 @@ void Companion::CompanionServer::markVacsDirty()
     publishVacs();
     publishFlightLog();
     publishTraffic();
+    publishNearby();
 }
 
 
@@ -473,6 +484,25 @@ void Companion::CompanionServer::markTrafficDirty()
 }
 
 
+void Companion::CompanionServer::publishNearby()
+{
+    auto document = Companion::Snapshot::nearby(m_revisions);
+
+    const auto fingerprint = QJsonDocument(document).toJson(QJsonDocument::Compact);
+    if (fingerprint == m_nearbyFingerprint)
+    {
+        return;
+    }
+    m_nearbyFingerprint = fingerprint;
+
+    m_revisions.nearby++;
+    document.insert("nearbyRev"_L1, static_cast<qint64>(m_revisions.nearby));
+    m_nearbyDocument = QJsonDocument(document).toJson(QJsonDocument::Compact);
+
+    emit nearbyDocumentChanged();
+}
+
+
 void Companion::CompanionServer::updateTransport()
 {
     const auto enabled = GlobalObject::globalSettings()->companionNetworkEnabled();
@@ -501,6 +531,7 @@ void Companion::CompanionServer::updateTransport()
         m_vacTimer.stop();
         m_logCoalesceTimer.stop();
         m_trafficTimer.stop();
+        m_nearbyTimer.stop();
 
         m_helloDocument.clear();
         m_routeDocument.clear();
@@ -515,6 +546,8 @@ void Companion::CompanionServer::updateTransport()
         m_logDocument.clear();
         m_logFingerprint.clear();
         m_trafficDocument.clear();
+        m_nearbyDocument.clear();
+        m_nearbyFingerprint.clear();
 
         // The station list and its per-station observers exist only while the
         // feature is on. Leaving them alive would keep bindings into the weather
@@ -595,6 +628,7 @@ void Companion::CompanionServer::updateTransport()
     m_weatherTimer.start();
     m_vacTimer.start();
     m_trafficTimer.start();
+    m_nearbyTimer.start();
 
     if (m_httpTransport.isNull())
     {

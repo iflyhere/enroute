@@ -109,6 +109,7 @@ Fault injection, for exercising a client's unhappy paths:
   GET /enroute/v1/debug/traffic?m=silent    no receiver heartbeat
   GET /enroute/v1/debug/traffic?m=empty     receiver present, nothing around
   GET /enroute/v1/debug/traffic?a=2         raise every target to alarm level 2
+  GET /enroute/v1/debug/nearby?m=unknown    report the position as unknown
   GET /enroute/v1/debug/reset               back to normal
 `);
     process.exit(0);
@@ -262,6 +263,8 @@ const state = {
     trafficSilent: false,
     trafficEmpty: false,
     trafficAlarm: 0,
+    nearbyRev: 1,
+    nearbyPositionKnown: true,
     startedAt: Date.now(),
 };
 
@@ -1070,6 +1073,73 @@ function trafficDocument() {
     return document;
 }
 
+// ---------------------------------------------------------------------------
+// Nearby waypoints
+//
+// Built from the route's own waypoints plus a few fixed places, so the distances move
+// as the simulated aircraft flies. The three groups are the three the app offers, and
+// the twenty-per-type limit is the app's.
+
+const NEARBY_EXTRA = [
+    { n: 'EDTF', en: 'EDTF (FREIBURG)', lat: 48.02265, lon: 7.83258, e: 244, t: 'AD', cat: 'AD-GLD' },
+    { n: 'EDTL', en: 'EDTL (LAHR)', lat: 48.36917, lon: 7.82778, e: 156, t: 'AD', cat: 'AD' },
+    { n: 'LFGA', en: 'COLMAR HOUSSEN', lat: 48.11028, lon: 7.35917, e: 191, t: 'AD', cat: 'AD-PAVED' },
+    { n: 'STG', en: 'STUTTGART VOR', lat: 48.68333, lon: 9.21667, t: 'NAV', cat: 'NAV-VOR-DME' },
+    { n: 'KRH', en: 'KARLSRUHE VOR', lat: 48.99361, lon: 8.58500, t: 'NAV', cat: 'NAV-VOR-DME' },
+    { n: 'KIRCHZARTEN', lat: 47.96667, lon: 7.95000, t: 'WP', cat: 'WP' },
+    { n: 'FARRENBERG', lat: 48.41000, lon: 9.06000, t: 'WP', cat: 'WP' },
+    { n: 'HOHENZOLLERN', lat: 48.32300, lon: 8.96800, t: 'WP', cat: 'WP' },
+];
+
+function nearbyDocument() {
+    if (!state.nearbyPositionKnown) {
+        return {
+            v: 1, sid: state.sid, nearbyRev: state.nearbyRev,
+            positionKnown: false,
+        };
+    }
+
+    const flight = flightState();
+    const here = flight ? flight.position : null;
+    if (!here) {
+        return { v: 1, sid: state.sid, nearbyRev: state.nearbyRev, positionKnown: false };
+    }
+
+    const all = NEARBY_EXTRA.concat(state.waypoints);
+    const groups = { AD: [], NAV: [], WP: [] };
+    for (const place of all) {
+        const type = place.t ?? 'WP';
+        if (!groups[type]) { continue; }
+        const there = { lat: place.lat, lon: place.lon };
+        const distance = distanceTo(here, there);
+        const entry = {
+            n: place.n,
+            c: [place.lon, place.lat],
+            t: type,
+            cat: place.cat ?? type,
+            way: 'DIST ' + fmtHDist(distance, opts.units)
+                + ' \u00b7 QUJ ' + Math.round(azimuthTo(here, there)) + '\u00b0',
+            dist: Math.round(distance),
+            brg: Math.round(azimuthTo(here, there)),
+        };
+        if (place.en && place.en !== place.n) { entry.en = place.en; }
+        if (place.e !== undefined) { entry.e = place.e; }
+        groups[type].push(entry);
+    }
+
+    // Nearest first and twenty of each, the way the app sorts and caps it.
+    for (const type of Object.keys(groups)) {
+        groups[type].sort((first, second) => first.dist - second.dist);
+        groups[type] = groups[type].slice(0, 20);
+    }
+
+    return {
+        v: 1, sid: state.sid, nearbyRev: state.nearbyRev,
+        positionKnown: true,
+        near: groups,
+    };
+}
+
 const server = http.createServer((req, res) => {
     const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
 
@@ -1172,6 +1242,13 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    if (path === '/enroute/v1/nearby') {
+        const etag = `W/"${state.nearbyRev}"`;
+        if (req.headers['if-none-match'] === etag) { res.writeHead(304).end(); return; }
+        sendJson(res, nearbyDocument(), etag);
+        return;
+    }
+
     if (path === '/enroute/v1/log') {
         const etag = `W/"${state.logRev}"`;
         if (req.headers['if-none-match'] === etag) { res.writeHead(304).end(); return; }
@@ -1249,6 +1326,13 @@ const server = http.createServer((req, res) => {
         state.trafficSilent = mode === 'silent';
         state.trafficEmpty = mode === 'empty';
         state.trafficAlarm = Number(url.searchParams.get('a') ?? 0) || 0;
+        res.writeHead(204).end();
+        return;
+    }
+
+    if (path === '/enroute/v1/debug/nearby') {
+        state.nearbyPositionKnown = url.searchParams.get('m') !== 'unknown';
+        state.nearbyRev++;
         res.writeHead(204).end();
         return;
     }

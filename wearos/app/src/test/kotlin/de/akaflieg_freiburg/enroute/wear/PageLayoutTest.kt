@@ -71,8 +71,11 @@ class PageLayoutTest {
         val pages = orderedPages(stored)
         assertEquals(
             listOf(
-                WearPage.Map, WearPage.Data, WearPage.Traffic,
-                WearPage.Notam, WearPage.Weather, WearPage.Log, WearPage.Settings,
+                WearPage.Map, WearPage.Data,
+                // Instruments and Traffic come before Notam in the enum, so they go
+                // in front of it rather than on the end.
+                WearPage.Instruments, WearPage.Traffic, WearPage.Notam,
+                WearPage.Nearby, WearPage.Weather, WearPage.Log, WearPage.Settings,
             ),
             pages,
         )
@@ -135,7 +138,7 @@ class PageLayoutTest {
         // make a page jump two places the next time a hidden neighbour came back.
         val all = orderedPages(emptyList())
         val moved = movePage(all, WearPage.Traffic, -1)
-        assertEquals(listOf("data", "traffic", "map"), moved.take(3))
+        assertEquals(listOf("data", "map", "traffic", "instruments"), moved.take(4))
     }
 
     @Test
@@ -158,7 +161,10 @@ class PageLayoutTest {
         val pages = visiblePages(emptyList(), emptySet())
         val moved = movePage(pages, WearPage.Data, 1)
         assertEquals(
-            listOf("map", "data", "traffic", "notam", "weather", "log", "settings"),
+            listOf(
+                "map", "data", "instruments", "traffic",
+                "notam", "nearby", "weather", "log", "settings",
+            ),
             moved,
         )
     }
@@ -184,8 +190,11 @@ class PageLayoutTest {
         val stored = movePage(pages, WearPage.Weather, -1)
         val again = visiblePages(stored, emptySet())
         assertEquals(
-            listOf(WearPage.Data, WearPage.Map, WearPage.Traffic, WearPage.Weather),
-            again.take(4),
+            listOf(
+                WearPage.Data, WearPage.Map, WearPage.Instruments,
+                WearPage.Traffic, WearPage.Notam, WearPage.Weather, WearPage.Nearby,
+            ),
+            again.take(7),
         )
     }
 

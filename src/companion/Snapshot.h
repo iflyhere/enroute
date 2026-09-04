@@ -72,6 +72,9 @@ namespace Companion
         /*! \brief Incremented whenever the flight log document changes */
         quint32 log {0};
 
+        /*! \brief Incremented whenever the nearby waypoint document changes */
+        quint32 nearby {0};
+
         /*! \brief Incremented for every published traffic frame
          *
          *  Unlike the other counters this one is not derived from a comparison. A
@@ -263,6 +266,26 @@ namespace Companion
          *  doc/companion-protocol.md
          */
         [[nodiscard]] QJsonObject traffic(const Companion::Revisions& revisions);
+
+        /*! \brief Aerodromes, navaids and waypoints near the aircraft
+         *
+         *  The app's own nearby list, which is
+         *  GeoMaps::GeoMapProvider::nearbyWaypoints() for each of the three types it
+         *  offers: sorted by distance, twenty of each. The twenty is the app's own
+         *  limit, not one invented here.
+         *
+         *  Each entry carries the bearing and distance line the app writes under a
+         *  waypoint's name. Those go stale as the aircraft moves, which is true of
+         *  the app's own page as well -- it computes them once when the page opens
+         *  and never again -- so a client polling this slowly is no worse informed
+         *  than a pilot looking at the phone.
+         *
+         *  @param revisions Current document revisions
+         *
+         *  @returns The document described under "Nearby waypoint document" in
+         *  doc/companion-protocol.md, without its nearbyRev member
+         */
+        [[nodiscard]] QJsonObject nearby(const Companion::Revisions& revisions);
 
     } // namespace Snapshot
 
