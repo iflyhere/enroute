@@ -22,6 +22,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLowEnergyAdvertisingData>
+#include <QTimer>
 #include <QLowEnergyAdvertisingParameters>
 #include <QLowEnergyCharacteristicData>
 #include <QLowEnergyDescriptorData>
@@ -84,6 +85,20 @@ Companion::BleTransport::BleTransport(Companion::CompanionServer* server, QObjec
     // mode this class is written to avoid.
     m_bluetoothPermission.setCommunicationModes(
         QBluetoothPermission::Access | QBluetoothPermission::Advertise);
+
+    // Half a second, measured against the emulator's stack: immediately fails with
+    // ALREADY_STARTED because the advertiser that was just connected to has not been
+    // torn down yet. Long enough for that, short enough that a watch reconnecting
+    // after walking out of range and back does not notice the gap.
+    m_advertisingTimer.setSingleShot(true);
+    m_advertisingTimer.setInterval(500);
+    connect(&m_advertisingTimer, &QTimer::timeout, this, [this]()
+    {
+        // In this order, and both every time: a fresh GATT server needs the service
+        // adding to it, and there is no point being findable without one.
+        publishService();
+        beginAdvertising();
+    });
 }
 
 
@@ -127,14 +142,11 @@ void Companion::BleTransport::start()
     connect(m_controller, &QLowEnergyController::errorOccurred,
             this, &Companion::BleTransport::onControllerError);
 
-    m_service = m_controller->addService(serviceDefinition(), m_controller);
+    publishService();
     if (m_service.isNull())
     {
-        setErrorString(tr("The Bluetooth service could not be published."));
         return;
     }
-    connect(m_service, &QLowEnergyService::characteristicChanged,
-            this, &Companion::BleTransport::onCharacteristicWritten);
 
     if (!m_server.isNull())
     {
@@ -166,6 +178,7 @@ void Companion::BleTransport::stop()
     {
         return;
     }
+    m_advertisingTimer.stop();
     m_controller->stopAdvertising();
     m_controller->disconnectFromDevice();
     delete m_controller;
@@ -237,6 +250,12 @@ void Companion::BleTransport::beginAdvertising()
     {
         return;
     }
+    if (m_controller->state() == QLowEnergyController::AdvertisingState)
+    {
+        // Already on the air. Asking again is answered with ALREADY_STARTED, and a
+        // failure here is what drives the retry loop this guard exists to stop.
+        return;
+    }
 
     // Thirty-one bytes, and a 128-bit UUID takes eighteen of them, so the UUID goes in
     // the scan response where there is room. A client filters on it and that is what
@@ -259,6 +278,39 @@ void Companion::BleTransport::beginAdvertising()
 }
 
 
+void Companion::BleTransport::publishService()
+{
+    if (m_controller.isNull())
+    {
+        return;
+    }
+
+    // The previous one belongs to a GATT server that the backend has already closed,
+    // so it is of no use to anybody. Deleting a QPointer that Qt has already cleared
+    // is a no-op, which is the case after a disconnect.
+    delete m_service.data();
+
+    m_service = m_controller->addService(serviceDefinition(), m_controller);
+    if (m_service.isNull())
+    {
+        setErrorString(tr("The Bluetooth service could not be published."));
+        return;
+    }
+    connect(m_service, &QLowEnergyService::characteristicChanged,
+            this, &Companion::BleTransport::onCharacteristicWritten);
+}
+
+
+void Companion::BleTransport::scheduleAdvertising()
+{
+    if (m_advertisingTimer.isActive())
+    {
+        return;
+    }
+    m_advertisingTimer.start();
+}
+
+
 void Companion::BleTransport::onStateChanged(QLowEnergyController::ControllerState state)
 {
     const auto wasConnected = m_connected;
@@ -278,7 +330,7 @@ void Companion::BleTransport::onStateChanged(QLowEnergyController::ControllerSta
         m_prepared.clear();
         m_preparedName.clear();
         m_preparedFragments = 0;
-        beginAdvertising();
+        scheduleAdvertising();
     }
 
     if (m_connected && !m_service.isNull())

@@ -21,6 +21,7 @@
 
 #include <QBluetoothPermission>
 #include <QLowEnergyController>
+#include <QTimer>
 #include <QLowEnergyServiceData>
 #include <QPointer>
 
@@ -124,6 +125,28 @@ namespace Companion
         // response, or the advertisement is rejected outright.
         void beginAdvertising();
 
+        // Registers the service with the Bluetooth stack and keeps m_service pointing
+        // at it.
+        //
+        // Called again for every client rather than once at startup, because Qt's
+        // Android backend closes the GATT server and registers a new one whenever a
+        // client disconnects, and the new one has no services in it. Without this the
+        // phone accepts exactly one client per app run and afterwards advertises a
+        // service that is not there -- which looks like a broken watch and is not.
+        void publishService();
+
+        // Asks for advertising to begin again shortly, and only once however many
+        // times it is called.
+        //
+        // Android stops advertising when a central connects and does not resume, so
+        // the phone has to ask again or it accepts exactly one connection per app run.
+        // Asking at the instant of the disconnect fails with ALREADY_STARTED, because
+        // the stack still holds the advertiser that was just torn down -- and a failed
+        // attempt returns the controller to UnconnectedState, which is the same signal
+        // that prompted this, so an immediate retry becomes a loop that ends with the
+        // stack refusing to advertise at all. Deferred and coalesced for both reasons.
+        void scheduleAdvertising();
+
         // The capability document plus the Wi-Fi address and pairing code, so a client
         // can move to the faster transport, or recover an address that changed,
         // without the pilot typing anything.
@@ -152,6 +175,11 @@ namespace Companion
 
         QString m_errorString;
         bool m_connected {false};
+
+        // Coalesces the restart above. A member rather than a local single-shot so
+        // that stopping the transport cancels a restart that is already pending --
+        // otherwise switching the feature off would advertise once more afterwards.
+        QTimer m_advertisingTimer;
 
         quint32 m_lastNavRevision {0};
 
