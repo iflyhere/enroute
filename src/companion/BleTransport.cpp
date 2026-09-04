@@ -238,9 +238,15 @@ void Companion::BleTransport::beginAdvertising()
         return;
     }
 
-    // Thirty-one bytes, and a 128-bit UUID takes eighteen of them. The name goes here
-    // because a pilot picking the phone out of a scan list needs to read something;
-    // the UUID goes in the scan response, where there is room.
+    // Thirty-one bytes, and a 128-bit UUID takes eighteen of them, so the UUID goes in
+    // the scan response where there is room. A client filters on it and that is what
+    // makes the phone findable.
+    //
+    // The local name asked for here does not reach the air on Android: measured in an
+    // emulator, the advertisement carried the adapter's own name and not this one, so
+    // a scan list shows the phone's Bluetooth name. That is arguably the better label
+    // anyway -- a pilot recognises their own phone -- and it is set here so that a
+    // platform which does honour it says something useful.
     QLowEnergyAdvertisingData advertising;
     advertising.setDiscoverability(QLowEnergyAdvertisingData::DiscoverabilityGeneral);
     advertising.setLocalName(u"Enroute"_s);
