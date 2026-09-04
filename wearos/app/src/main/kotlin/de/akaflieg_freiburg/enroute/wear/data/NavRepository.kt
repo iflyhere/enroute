@@ -22,6 +22,7 @@ package de.akaflieg_freiburg.enroute.wear.data
 import de.akaflieg_freiburg.enroute.wear.domain.FlightLogBoard
 import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
 import de.akaflieg_freiburg.enroute.wear.domain.NavFrame
+import de.akaflieg_freiburg.enroute.wear.domain.NearbyBoard
 import de.akaflieg_freiburg.enroute.wear.domain.NotamBoard
 import de.akaflieg_freiburg.enroute.wear.domain.TrafficBoard
 import de.akaflieg_freiburg.enroute.wear.domain.VacBoard
@@ -47,6 +48,16 @@ sealed interface ConnectionState {
     data object Connecting : ConnectionState
     data object Connected : ConnectionState
     data class Retrying(val reason: FailureReason, val attempt: Int) : ConnectionState
+
+    /**
+     * The phone refused the pairing code.
+     *
+     * Terminal on purpose. Nothing about a wrong code changes by waiting, so retrying
+     * it on a timer only hammers the phone with rejections and keeps the one message
+     * the pilot needs to read flickering in and out of view. Entering a code restarts
+     * the session, which is how this state is left.
+     */
+    data object Rejected : ConnectionState
 }
 
 /**
@@ -59,6 +70,14 @@ sealed interface ConnectionState {
  */
 data class SessionState(
     val connection: ConnectionState = ConnectionState.Idle,
+    /**
+     * Why the link last failed, kept until a frame actually arrives.
+     *
+     * Held separately from [connection] because the connection state legitimately
+     * passes through Connecting on every retry, and a display that followed it alone
+     * alternated between "Connecting" and the real reason once per backoff period.
+     */
+    val lastFailure: FailureReason? = null,
     val peer: PeerInfo? = null,
     val frame: NavFrame? = null,
     val route: FlightRoute? = null,
@@ -90,6 +109,8 @@ data class SessionState(
      * screen must not have.
      */
     val traffic: TrafficBoard? = null,
+    /** What is around the aircraft, as last reported. */
+    val nearby: NearbyBoard? = null,
 )
 
 class NavRepository(
@@ -123,6 +144,14 @@ class NavRepository(
                         reduce(event)
                     }
 
+                // A refused code is not a transient failure. Stop, and let a new code
+                // restart the session; MainActivity restarts the service whenever the
+                // pilot changes one.
+                if (lastReason == FailureReason.Unauthorized) {
+                    _state.update { it.copy(connection = ConnectionState.Rejected) }
+                    return@launch
+                }
+
                 // Reset only when data actually arrived. A peer that accepts a
                 // connection and immediately closes it must not spin.
                 if (receivedFrame) backoff.reset()
@@ -151,8 +180,14 @@ class NavRepository(
                 is TransportEvent.Connected ->
                     current.copy(connection = ConnectionState.Connected, peer = event.peer)
 
+                // A frame is the only thing that clears the last failure: a socket
+                // that opens and says nothing is not a working link.
                 is TransportEvent.Nav ->
-                    current.copy(connection = ConnectionState.Connected, frame = event.frame)
+                    current.copy(
+                        connection = ConnectionState.Connected,
+                        frame = event.frame,
+                        lastFailure = null,
+                    )
 
                 is TransportEvent.RouteUpdate ->
                     current.copy(route = event.route)
@@ -172,12 +207,16 @@ class NavRepository(
                 is TransportEvent.TrafficUpdate ->
                     current.copy(traffic = event.traffic)
 
+                is TransportEvent.NearbyUpdate ->
+                    current.copy(nearby = event.nearby)
+
                 // Traffic is dropped here and nowhere else. Every other board stays,
                 // because its content is still the best answer available; a traffic
                 // picture from before the link dropped is not an answer at all.
                 is TransportEvent.Failed ->
                     current.copy(
                         connection = ConnectionState.Retrying(event.reason, 0),
+                        lastFailure = event.reason,
                         traffic = null,
                     )
             }

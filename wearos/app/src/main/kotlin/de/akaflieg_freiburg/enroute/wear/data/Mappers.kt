@@ -24,6 +24,8 @@ import de.akaflieg_freiburg.enroute.wear.data.dto.FormattedDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.MetarDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NavFrameDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NavLegDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.NearbyBoardDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.NearbyPlaceDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NotamAreaDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NotamBoardDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NotamDto
@@ -46,6 +48,8 @@ import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
 import de.akaflieg_freiburg.enroute.wear.domain.Measured
 import de.akaflieg_freiburg.enroute.wear.domain.MetarReport
 import de.akaflieg_freiburg.enroute.wear.domain.NavFrame
+import de.akaflieg_freiburg.enroute.wear.domain.NearbyBoard
+import de.akaflieg_freiburg.enroute.wear.domain.NearbyPlace
 import de.akaflieg_freiburg.enroute.wear.domain.Notam
 import de.akaflieg_freiburg.enroute.wear.domain.NotamArea
 import de.akaflieg_freiburg.enroute.wear.domain.NotamBoard
@@ -394,4 +398,25 @@ private fun TrafficTargetDto.toDomain(): TrafficTarget = TrafficTarget(
     point = coordinate.toGeoPoint(),
     trackDeg = trackDeg,
     uncertaintyRadiusM = uncertaintyRadiusM,
+)
+
+fun NearbyBoardDto.toDomain(): NearbyBoard = NearbyBoard(
+    revision = nearbyRevision,
+    positionKnown = positionKnown,
+    // Kept in wire order, which is the app's: nearest first.
+    aerodromes = groups["AD"].orEmpty().map { dto -> dto.toDomain() },
+    navaids = groups["NAV"].orEmpty().map { dto -> dto.toDomain() },
+    waypoints = groups["WP"].orEmpty().map { dto -> dto.toDomain() },
+)
+
+private fun NearbyPlaceDto.toDomain(): NearbyPlace = NearbyPlace(
+    name = name,
+    extendedName = extendedName?.takeIf { text -> text.isNotBlank() },
+    point = coordinate.toGeoPoint(),
+    type = WaypointType.fromWire(type),
+    category = category?.takeIf { text -> text.isNotBlank() },
+    elevationM = elevationM,
+    way = way?.takeIf { text -> text.isNotBlank() },
+    distanceM = distanceM,
+    bearingDeg = bearingDeg,
 )

@@ -23,6 +23,7 @@ import de.akaflieg_freiburg.enroute.wear.data.WireJson
 import de.akaflieg_freiburg.enroute.wear.data.dto.FlightLogDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.HelloDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NavFrameDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.NearbyBoardDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NotamBoardDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.RouteDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.TrafficBoardDto
@@ -114,6 +115,7 @@ class HttpNavTransport(
         var vacETag: String? = null
         var logETag: String? = null
         var trafficETag: String? = null
+        var nearbyETag: String? = null
 
         // Zero, not "now", so the first pass fetches NOTAMs instead of leaving the
         // screen empty for a minute after connecting.
@@ -121,6 +123,7 @@ class HttpNavTransport(
         var weatherFetchedAt = 0L
         var vacsFetchedAt = 0L
         var logFetchedAt = 0L
+        var nearbyFetchedAt = 0L
 
         while (true) {
             try {
@@ -195,6 +198,23 @@ class HttpNavTransport(
                     )
                 }
 
+                // The nearby list moves with the aircraft, but the phone's own page
+                // computes its distances once when it opens and never again, so a
+                // minute here is more current than the phone is.
+                if (now - nearbyFetchedAt >= NEARBY_PERIOD_MS) {
+                    nearbyFetchedAt = now
+                    val nearby = request(NEARBY, ifNoneMatch = nearbyETag)
+                    if (nearby != null) {
+                        nearbyETag = nearby.etag
+                        emit(
+                            TransportEvent.NearbyUpdate(
+                                WireJson.json.decodeFromString<NearbyBoardDto>(nearby.body)
+                                    .toDomain(),
+                            ),
+                        )
+                    }
+                }
+
                 // The logbook gains an entry when a flight ends, and the detector's
                 // state moves a handful of times per flight. Thirty seconds is fast
                 // enough for a takeoff banner to feel live without being a feed.
@@ -267,6 +287,7 @@ class HttpNavTransport(
             ?.let { GeoPoint(latDeg = it[1], lonDeg = it[0]) },
         mapCentreZoom = hello.mapCentre.getOrElse(2) { 0.0 },
         verticalUnit = hello.units.verticalDistance,
+        horizontalUnit = hello.units.horizontalDistance,
         mapLabelColour = parseStyleColour(hello.mapOverlay?.label),
         mapHaloColour = parseStyleColour(hello.mapOverlay?.halo),
     )
@@ -318,6 +339,7 @@ class HttpNavTransport(
         const val VACS = "/vacs"
         const val LOG = "/log"
         const val TRAFFIC = "/traffic"
+        const val NEARBY = "/nearby"
 
         // The phone rebuilds its NOTAM document every five minutes at the slowest, so
         // a minute here means a client is never more than about a minute behind while
@@ -331,6 +353,8 @@ class HttpNavTransport(
         const val VAC_PERIOD_MS = 300_000L
 
         const val LOG_PERIOD_MS = 30_000L
+
+        const val NEARBY_PERIOD_MS = 60_000L
         const val CONNECT_TIMEOUT_MS = 3_000
         const val READ_TIMEOUT_MS = 5_000
     }

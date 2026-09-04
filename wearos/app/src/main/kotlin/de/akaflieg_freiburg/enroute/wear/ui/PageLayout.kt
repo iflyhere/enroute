@@ -29,8 +29,10 @@ package de.akaflieg_freiburg.enroute.wear.ui
 enum class WearPage(val id: String, val label: String) {
     Data("data", "Data"),
     Map("map", "Map"),
+    Instruments("instruments", "Instruments"),
     Traffic("traffic", "Traffic"),
     Notam("notam", "NOTAM"),
+    Nearby("nearby", "Nearby"),
     Weather("weather", "Weather"),
     Log("log", "Log"),
 

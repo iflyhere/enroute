@@ -26,6 +26,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
@@ -53,7 +54,10 @@ import de.akaflieg_freiburg.enroute.wear.ui.connect.ConnectScreen
 import de.akaflieg_freiburg.enroute.wear.ui.data.DataScreen
 import de.akaflieg_freiburg.enroute.wear.ui.data.DataUiState
 import de.akaflieg_freiburg.enroute.wear.ui.map.MapLibreScreen
+import de.akaflieg_freiburg.enroute.wear.ui.instruments.Instrument
+import de.akaflieg_freiburg.enroute.wear.ui.instruments.InstrumentScreen
 import de.akaflieg_freiburg.enroute.wear.ui.log.FlightLogScreen
+import de.akaflieg_freiburg.enroute.wear.ui.nearby.NearbyScreen
 import de.akaflieg_freiburg.enroute.wear.ui.notam.NotamScreen
 import de.akaflieg_freiburg.enroute.wear.ui.route.RouteScreen
 import de.akaflieg_freiburg.enroute.wear.ui.settings.SettingsScreen
@@ -172,6 +176,10 @@ private fun MainPages(
     // ago is not a range they chose for this one.
     var radarRangeM by remember { mutableStateOf<Double?>(null) }
 
+    // Which of the three round instruments is on the face. Not persisted: it is a
+    // glance, not a preference.
+    var instrument by remember { mutableStateOf(Instrument.Altimeter) }
+
     val pages = visiblePages(order, hidden)
 
     // Every page, so the settings list can offer a hidden one back. The pager
@@ -187,7 +195,11 @@ private fun MainPages(
     // then which of them holds focus decides what the bezel does -- a race with no good
     // outcome. One focusable, one handler, dispatch by page.
     val notamListState = rememberScalingLazyListState()
-    val trafficListState = rememberScalingLazyListState()
+    // A plain scroll state, because the traffic page is a Column: the radar has
+    // to be sized to the viewport to sit centred, which a scaling lazy column
+    // squeezes.
+    val trafficScrollState = rememberScrollState()
+    val nearbyListState = rememberScalingLazyListState()
     val weatherListState = rememberScalingLazyListState()
     val logListState = rememberScalingLazyListState()
     val settingsListState = rememberScalingLazyListState()
@@ -265,9 +277,18 @@ private fun MainPages(
                     }
 
                     WearPage.Traffic -> {
-                        trafficListState.dispatchRawDelta(event.verticalScrollPixels)
+                        trafficScrollState.dispatchRawDelta(event.verticalScrollPixels)
                         true
                     }
+
+                    WearPage.Nearby -> {
+                        nearbyListState.dispatchRawDelta(event.verticalScrollPixels)
+                        true
+                    }
+
+                    // The instrument face does not scroll. Handled so the bezel does
+                    // not fall through to whatever the system would do with it.
+                    WearPage.Instruments -> true
 
                     WearPage.Weather -> {
                         weatherListState.dispatchRawDelta(event.verticalScrollPixels)
@@ -381,7 +402,20 @@ private fun MainPages(
                     onRange = { step, currentM ->
                         radarRangeM = steppedRangeM(currentM, step)
                     },
-                    listState = trafficListState,
+                    scrollState = trafficScrollState,
+                )
+
+                WearPage.Instruments -> InstrumentScreen(
+                    frame = uiState.value.frame,
+                    showing = instrument,
+                    verticalUnit = uiState.value.session.peer?.verticalUnit ?: "ft",
+                    horizontalUnit = uiState.value.session.peer?.horizontalUnit ?: "nm",
+                    onCycle = { instrument = instrument.next() },
+                )
+
+                WearPage.Nearby -> NearbyScreen(
+                    board = uiState.value.session.nearby,
+                    listState = nearbyListState,
                 )
 
                 WearPage.Notam -> NotamScreen(

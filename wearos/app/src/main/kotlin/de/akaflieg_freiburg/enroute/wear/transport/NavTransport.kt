@@ -23,6 +23,7 @@ import de.akaflieg_freiburg.enroute.wear.domain.FlightLogBoard
 import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
 import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
 import de.akaflieg_freiburg.enroute.wear.domain.NavFrame
+import de.akaflieg_freiburg.enroute.wear.domain.NearbyBoard
 import de.akaflieg_freiburg.enroute.wear.domain.NotamBoard
 import de.akaflieg_freiburg.enroute.wear.domain.TrafficBoard
 import de.akaflieg_freiburg.enroute.wear.domain.VacBoard
@@ -60,6 +61,7 @@ sealed interface TransportEvent {
     data class VacUpdate(val vacs: VacBoard) : TransportEvent
     data class FlightLogUpdate(val log: FlightLogBoard) : TransportEvent
     data class TrafficUpdate(val traffic: TrafficBoard) : TransportEvent
+    data class NearbyUpdate(val nearby: NearbyBoard) : TransportEvent
     data class Failed(val reason: FailureReason, val detail: String? = null) : TransportEvent
 }
 
@@ -100,6 +102,15 @@ data class PeerInfo(
      * because the phone composes no separation line of its own.
      */
     val verticalUnit: String = "ft",
+
+    /**
+     * The pilot's own unit for a distance, "nm", "km" or "mil".
+     *
+     * The speed dial's scale follows it, which is the mapping the app itself makes:
+     * `Aircraft::horizontalSpeedToString` reads the distance preference and gives
+     * knots, km/h or mph accordingly.
+     */
+    val horizontalUnit: String = "nm",
 
     val mapLabelColour: Long? = null,
     val mapHaloColour: Long? = null,

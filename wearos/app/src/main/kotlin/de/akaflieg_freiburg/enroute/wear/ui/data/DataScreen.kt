@@ -86,22 +86,28 @@ fun DataScreen(
 
             if (frame == null) {
                 Spacer(Modifier.height(8.dp))
+                // Driven by the last failure rather than by the live connection
+                // state. The state passes through Connecting on every retry, and
+                // following it made this line alternate once per backoff period --
+                // which is what a pilot saw as a flicker every ten seconds.
                 Text(
-                    text = when (val connection = state.session.connection) {
-                        is ConnectionState.Retrying ->
-                            if (connection.reason == FailureReason.Unauthorized) {
-                                "Wrong pairing code"
-                            } else {
-                                "No connection"
-                            }
-
-                        ConnectionState.Connecting -> "Connecting"
-                        else -> "Not connected"
-                    },
+                    text = connectionMessage(
+                        state.session.connection,
+                        state.session.lastFailure,
+                    ),
                     color = CockpitColors.Muted,
                     fontSize = 15.sp,
                     modifier = Modifier.testTag(TAG_EMPTY),
                 )
+                if (state.session.connection == ConnectionState.Rejected) {
+                    Text(
+                        // The one state the pilot has to act on, so it says how.
+                        text = "Long press to re-pair",
+                        color = CockpitColors.Muted,
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
                 return@Column
             }
 
@@ -195,6 +201,8 @@ private fun LinkRow(state: DataUiState) {
                 modifier = Modifier.testTag(TAG_AGE),
             )
         }
+        // Not shown for Rejected: nothing is being retried there, and saying so
+        // would be the app claiming to work on a problem only the pilot can fix.
         if (state.session.connection is ConnectionState.Retrying) {
             Text(
                 text = "  reconnecting",
@@ -385,3 +393,19 @@ const val TAG_BANNER = "banner"
 const val TAG_AGE = "age"
 const val TAG_RECONNECT = "reconnect"
 const val TAG_EMPTY = "empty"
+
+/**
+ * What to say while there is no navigation frame.
+ *
+ * A free function so the one rule that caused a visible defect can be tested: the
+ * message must not change while the link is merely retrying, because the connection
+ * state legitimately passes through Connecting on every attempt.
+ */
+fun connectionMessage(connection: ConnectionState, lastFailure: FailureReason?): String = when {
+    connection == ConnectionState.Rejected -> "Wrong pairing code"
+    lastFailure == FailureReason.Unauthorized -> "Wrong pairing code"
+    lastFailure != null -> "No connection"
+    connection == ConnectionState.Connecting -> "Connecting"
+    connection == ConnectionState.Idle -> "Not connected"
+    else -> "Waiting for data"
+}

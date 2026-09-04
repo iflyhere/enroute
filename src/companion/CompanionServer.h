@@ -184,6 +184,9 @@ namespace Companion
         /*! \brief Encoded traffic document, or empty while the feature is off */
         [[nodiscard]] QByteArray trafficDocument() const {return m_trafficDocument;}
 
+        /*! \brief Encoded nearby waypoint document, or empty while off */
+        [[nodiscard]] QByteArray nearbyDocument() const {return m_nearbyDocument;}
+
         /*! \brief Hands over the QML engine
          *
          *  GeoMaps::VACLibrary is a QML singleton, so an engine is the only way to
@@ -262,6 +265,9 @@ namespace Companion
         /*! \brief Emitted after trafficDocument() has been updated */
         void trafficDocumentChanged();
 
+        /*! \brief Emitted after nearbyDocument() has been updated */
+        void nearbyDocumentChanged();
+
 
     private slots:
         // Marks the navigation frame as needing re-encoding. Cheap on purpose: the
@@ -306,6 +312,8 @@ namespace Companion
 
         void markTrafficDirty();
 
+        void publishNearby();
+
         // Creates or destroys the transport in response to the settings.
         void updateTransport();
 
@@ -331,6 +339,7 @@ namespace Companion
         QByteArray m_vacDocument;
         QByteArray m_logDocument;
         QByteArray m_trafficDocument;
+        QByteArray m_nearbyDocument;
 
         // The NOTAM document with its revision member left out, kept so that a
         // rebuild can tell whether anything changed. An exact comparison and not
@@ -340,6 +349,7 @@ namespace Companion
         QByteArray m_weatherFingerprint;
         QByteArray m_vacFingerprint;
         QByteArray m_logFingerprint;
+        QByteArray m_nearbyFingerprint;
 
         bool m_navDirty {false};
 
@@ -374,6 +384,11 @@ namespace Companion
         // each of those would be a frame nobody reads. One per second matches the
         // navigation frame, which is the rate a client polls at anyway.
         QTimer m_trafficTimer;
+
+        // The nearby list moves with the aircraft, so it is rebuilt on a beat rather
+        // than on change: every position update would otherwise change every distance
+        // line in it and republish sixty waypoints once a second.
+        QTimer m_nearbyTimer;
 
         // The app's own station list, sorted by distance. Owned here rather than
         // created per request, because it caches one Weather::Observer per station
