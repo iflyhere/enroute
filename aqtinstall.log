@@ -1,0 +1,124 @@
+2026-09-04 19:42:08,932 - aqt.main - INFO - installer 131111463591936 aqtinstall(aqt) v3.3.0 on Python 3.10.12 [CPython GCC 11.4.0]
+2026-09-04 19:44:18,740 - aqt.main - INFO - installer 137678897434624 aqtinstall(aqt) v3.3.0 on Python 3.10.12 [CPython GCC 11.4.0]
+2026-09-04 19:44:18,742 - aqt.main - INFO - installer 137678897434624 Found installed linux-desktop Qt at /opt/Qt/6.9.3/gcc_64
+2026-09-04 19:44:18,745 - aqt.helper - DEBUG - helper 137678897434624 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/Updates.xml.sha256
+2026-09-04 19:44:19,309 - aqt.helper - DEBUG - helper 137678897434624 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/extensions/qtwebengine/693/x86_64/Updates.xml.sha256
+2026-09-04 19:44:19,559 - aqt.helper - DEBUG - helper 137678897434624 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/extensions/qtwebengine/693/x86_64/Updates.xml.sha256
+2026-09-04 19:44:19,819 - aqt.helper - DEBUG - helper 137678897434624 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/extensions/qtwebengine/693/x86_64/Updates.xml.sha256
+2026-09-04 19:44:20,072 - aqt.helper - DEBUG - helper 137678897434624 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/extensions/qtwebengine/693/x86_64/Updates.xml.sha256
+2026-09-04 19:44:20,333 - aqt.helper - DEBUG - helper 137678897434624 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/extensions/qtwebengine/693/x86_64/Updates.xml.sha256
+2026-09-04 19:44:20,578 - aqt.helper - DEBUG - helper 137678897434624 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/extensions/qtpdf/693/x86_64/Updates.xml.sha256
+2026-09-04 19:44:20,825 - aqt.helper - DEBUG - helper 137678897434624 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/extensions/qtpdf/693/x86_64/Updates.xml.sha256
+2026-09-04 19:44:21,075 - aqt.helper - DEBUG - helper 137678897434624 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/extensions/qtpdf/693/x86_64/Updates.xml.sha256
+2026-09-04 19:44:21,318 - aqt.helper - DEBUG - helper 137678897434624 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/extensions/qtpdf/693/x86_64/Updates.xml.sha256
+2026-09-04 19:44:21,571 - aqt.helper - DEBUG - helper 137678897434624 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/extensions/qtpdf/693/x86_64/Updates.xml.sha256
+2026-09-04 19:44:22,147 - aqt.helper - DEBUG - helper 130801713471488 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qt5compat.android_arm64_v8a/6.9.3-0-202509261208qt5compat-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z.sha256
+ha256
+6
+2026-09-04 19:44:22,427 - aqt.helper - INFO - helper 130801713471488 Downloading qt5compat...
+
+.
+2026-09-04 19:44:22,427 - aqt.helper - INFO - helper 134727698272256 Downloading qtpositioning...
+2026-09-04 19:44:22,428 - aqt.installer - DEBUG - installer 137708442648576 Download URL: https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtlocation.android_arm64_v8a/6.9.3-0-202509261208qtlocation-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:22,428 - aqt.installer - DEBUG - installer 136627204382720 Download URL: https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qthttpserver.android_arm64_v8a/6.9.3-0-202509261208qthttpserver-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:22,429 - aqt.installer - DEBUG - installer 134727698272256 Download URL: https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtpositioning.android_arm64_v8a/6.9.3-0-202509261208qtpositioning-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:22,429 - aqt.installer - DEBUG - installer 130801713471488 Download URL: https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qt5compat.android_arm64_v8a/6.9.3-0-202509261208qt5compat-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:22,683 - aqt.helper - DEBUG - helper 136627204382720 Asked to redirect(302) to: https://ftp.fau.de/qtproject/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qthttpserver.android_arm64_v8a/6.9.3-0-202509261208qthttpserver-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:22,685 - aqt.helper - INFO - helper 137708442648576 Redirected: ftp.fau.de
+2026-09-04 19:44:22,693 - aqt.helper - DEBUG - helper 134727698272256 Asked to redirect(302) to: https://ftp.fau.de/qtproject/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtpositioning.android_arm64_v8a/6.9.3-0-202509261208qtpositioning-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:22,695 - aqt.helper - INFO - helper 130801713471488 Redirected: ftp.fau.de
+2026-09-04 19:44:23,055 - aqt.installer - INFO - installer 136627204382720 Finished installation of qthttpserver-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z in 0.93104912
+2026-09-04 19:44:23,143 - aqt.helper - DEBUG - helper 136627204382720 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtimageformats.android_arm64_v8a/6.9.3-0-202509261208qtimageformats-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z.sha256
+2026-09-04 19:44:23,200 - aqt.installer - INFO - installer 134727698272256 Finished installation of qtpositioning-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z in 1.07280585
+2026-09-04 19:44:23,246 - aqt.installer - INFO - installer 137708442648576 Finished installation of qtlocation-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z in 1.11862254
+2026-09-04 19:44:23,286 - aqt.helper - DEBUG - helper 134727698272256 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtsensors.android_arm64_v8a/6.9.3-0-202509261208qtsensors-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z.sha256
+2026-09-04 19:44:23,316 - aqt.helper - DEBUG - helper 137708442648576 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtmultimedia.android_arm64_v8a/6.9.3-0-202509261208qtmultimedia-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z.sha256
+2026-09-04 19:44:23,353 - aqt.installer - INFO - installer 130801713471488 Finished installation of qt5compat-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z in 1.22960752
+2026-09-04 19:44:23,413 - aqt.helper - DEBUG - helper 130801713471488 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtconnectivity.android_arm64_v8a/6.9.3-0-202509261208qtconnectivity-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z.sha256
+2026-09-04 19:44:23,424 - aqt.helper - INFO - helper 136627204382720 Downloading qtimageformats...
+2026-09-04 19:44:23,427 - aqt.installer - DEBUG - installer 136627204382720 Download URL: https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtimageformats.android_arm64_v8a/6.9.3-0-202509261208qtimageformats-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:23,596 - aqt.helper - INFO - helper 137708442648576 Downloading qtmultimedia...
+2026-09-04 19:44:23,600 - aqt.installer - DEBUG - installer 137708442648576 Download URL: https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtmultimedia.android_arm64_v8a/6.9.3-0-202509261208qtmultimedia-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:23,675 - aqt.helper - INFO - helper 134727698272256 Downloading qtsensors...
+y...
+2026-09-04 19:44:23,675 - aqt.installer - DEBUG - installer 130801713471488 Download URL: https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtconnectivity.android_arm64_v8a/6.9.3-0-202509261208qtconnectivity-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:23,677 - aqt.installer - DEBUG - installer 134727698272256 Download URL: https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtsensors.android_arm64_v8a/6.9.3-0-202509261208qtsensors-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:23,685 - aqt.helper - DEBUG - helper 136627204382720 Asked to redirect(302) to: https://ftp.fau.de/qtproject/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtimageformats.android_arm64_v8a/6.9.3-0-202509261208qtimageformats-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:23,687 - aqt.helper - INFO - helper 136627204382720 Redirected: ftp.fau.de
+2026-09-04 19:44:23,866 - aqt.helper - DEBUG - helper 137708442648576 Asked to redirect(302) to: https://ftp.fau.de/qtproject/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtmultimedia.android_arm64_v8a/6.9.3-0-202509261208qtmultimedia-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:23,868 - aqt.helper - INFO - helper 137708442648576 Redirected: ftp.fau.de
+2026-09-04 19:44:23,944 - aqt.helper - DEBUG - helper 130801713471488 Asked to redirect(302) to: https://ftp.fau.de/qtproject/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtconnectivity.android_arm64_v8a/6.9.3-0-202509261208qtconnectivity-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:23,945 - aqt.helper - INFO - helper 130801713471488 Redirected: ftp.fau.de
+2026-09-04 19:44:23,997 - aqt.installer - INFO - installer 136627204382720 Finished installation of qtimageformats-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z in 0.88370479
+2026-09-04 19:44:24,028 - aqt.helper - DEBUG - helper 136627204382720 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtserialport.android_arm64_v8a/6.9.3-0-202509261208qtserialport-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z.sha256
+2026-09-04 19:44:24,048 - aqt.helper - DEBUG - helper 134727698272256 Asked to redirect(302) to: https://ftp.fau.de/qtproject/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtsensors.android_arm64_v8a/6.9.3-0-202509261208qtsensors-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:24,049 - aqt.helper - INFO - helper 134727698272256 Redirected: ftp.fau.de
+2026-09-04 19:44:24,290 - aqt.installer - INFO - installer 130801713471488 Finished installation of qtconnectivity-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z in 0.90033500
+2026-09-04 19:44:24,326 - aqt.helper - DEBUG - helper 130801713471488 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtspeech.android_arm64_v8a/6.9.3-0-202509261208qtspeech-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z.sha256
+2026-09-04 19:44:24,377 - aqt.helper - INFO - helper 136627204382720 Downloading qtserialport...
+2026-09-04 19:44:24,379 - aqt.installer - DEBUG - installer 136627204382720 Download URL: https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtserialport.android_arm64_v8a/6.9.3-0-202509261208qtserialport-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:24,500 - aqt.installer - INFO - installer 134727698272256 Finished installation of qtsensors-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z in 1.25831526
+2026-09-04 19:44:24,528 - aqt.helper - DEBUG - helper 134727698272256 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtwebview.android_arm64_v8a/6.9.3-0-202509261208qtwebview-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z.sha256
+2026-09-04 19:44:24,706 - aqt.helper - INFO - helper 130801713471488 Downloading qtspeech...
+2026-09-04 19:44:24,708 - aqt.installer - DEBUG - installer 130801713471488 Download URL: https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtspeech.android_arm64_v8a/6.9.3-0-202509261208qtspeech-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:24,740 - aqt.helper - DEBUG - helper 136627204382720 Asked to redirect(302) to: https://ftp.fau.de/qtproject/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtserialport.android_arm64_v8a/6.9.3-0-202509261208qtserialport-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:24,742 - aqt.helper - INFO - helper 136627204382720 Redirected: ftp.fau.de
+2026-09-04 19:44:24,814 - aqt.helper - INFO - helper 134727698272256 Downloading qtwebview...
+2026-09-04 19:44:24,815 - aqt.installer - DEBUG - installer 134727698272256 Download URL: https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtwebview.android_arm64_v8a/6.9.3-0-202509261208qtwebview-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:24,957 - aqt.installer - INFO - installer 136627204382720 Finished installation of qtserialport-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z in 0.94930710
+2026-09-04 19:44:24,966 - aqt.helper - DEBUG - helper 130801713471488 Asked to redirect(302) to: https://ftp.fau.de/qtproject/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtspeech.android_arm64_v8a/6.9.3-0-202509261208qtspeech-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:24,968 - aqt.helper - INFO - helper 130801713471488 Redirected: ftp.fau.de
+2026-09-04 19:44:24,995 - aqt.helper - DEBUG - helper 136627204382720 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtshadertools.android_arm64_v8a/6.9.3-0-202509261208qtshadertools-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z.sha256
+2026-09-04 19:44:25,071 - aqt.helper - DEBUG - helper 134727698272256 Asked to redirect(302) to: https://ftp.fau.de/qtproject/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtwebview.android_arm64_v8a/6.9.3-0-202509261208qtwebview-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:25,072 - aqt.helper - INFO - helper 134727698272256 Redirected: ftp.fau.de
+2026-09-04 19:44:25,200 - aqt.installer - INFO - installer 130801713471488 Finished installation of qtspeech-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z in 0.89639321
+2026-09-04 19:44:25,232 - aqt.helper - DEBUG - helper 130801713471488 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtwebsockets.android_arm64_v8a/6.9.3-0-202509261208qtwebsockets-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z.sha256
+2026-09-04 19:44:25,239 - aqt.helper - INFO - helper 136627204382720 Downloading qtshadertools...
+2026-09-04 19:44:25,240 - aqt.installer - DEBUG - installer 136627204382720 Download URL: https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtshadertools.android_arm64_v8a/6.9.3-0-202509261208qtshadertools-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:25,368 - aqt.installer - INFO - installer 134727698272256 Finished installation of qtwebview-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z in 0.85782238
+2026-09-04 19:44:25,403 - aqt.helper - DEBUG - helper 134727698272256 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.android_arm64_v8a/6.9.3-0-202509261208qtbase-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z.sha256
+2026-09-04 19:44:25,495 - aqt.helper - INFO - helper 130801713471488 Downloading qtwebsockets...
+2026-09-04 19:44:25,497 - aqt.installer - DEBUG - installer 130801713471488 Download URL: https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtwebsockets.android_arm64_v8a/6.9.3-0-202509261208qtwebsockets-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:25,620 - aqt.helper - DEBUG - helper 136627204382720 Asked to redirect(302) to: https://ftp.fau.de/qtproject/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtshadertools.android_arm64_v8a/6.9.3-0-202509261208qtshadertools-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:25,621 - aqt.helper - INFO - helper 136627204382720 Redirected: ftp.fau.de
+2026-09-04 19:44:25,744 - aqt.helper - DEBUG - helper 130801713471488 Asked to redirect(302) to: https://ftp.fau.de/qtproject/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.addons.qtwebsockets.android_arm64_v8a/6.9.3-0-202509261208qtwebsockets-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:25,746 - aqt.helper - INFO - helper 130801713471488 Redirected: ftp.fau.de
+2026-09-04 19:44:25,771 - aqt.helper - INFO - helper 134727698272256 Downloading qtbase...
+2026-09-04 19:44:25,775 - aqt.installer - DEBUG - installer 134727698272256 Download URL: https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.android_arm64_v8a/6.9.3-0-202509261208qtbase-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:25,977 - aqt.installer - INFO - installer 130801713471488 Finished installation of qtwebsockets-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z in 0.76675451
+2026-09-04 19:44:26,033 - aqt.installer - INFO - installer 136627204382720 Finished installation of qtshadertools-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z in 1.05759012
+2026-09-04 19:44:26,052 - aqt.helper - DEBUG - helper 134727698272256 Asked to redirect(302) to: https://ftp.fau.de/qtproject/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.android_arm64_v8a/6.9.3-0-202509261208qtbase-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:26,055 - aqt.helper - INFO - helper 134727698272256 Redirected: ftp.fau.de
+2026-09-04 19:44:26,073 - aqt.helper - DEBUG - helper 130801713471488 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.android_arm64_v8a/6.9.3-0-202509261208qtsvg-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z.sha256
+2026-09-04 19:44:26,111 - aqt.helper - DEBUG - helper 136627204382720 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.android_arm64_v8a/6.9.3-0-202509261208qttools-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z.sha256
+2026-09-04 19:44:26,305 - aqt.installer - INFO - installer 137708442648576 Finished installation of qtmultimedia-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z in 3.01507796
+2026-09-04 19:44:26,392 - aqt.helper - INFO - helper 136627204382720 Downloading qttools...
+2026-09-04 19:44:26,394 - aqt.installer - DEBUG - installer 136627204382720 Download URL: https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.android_arm64_v8a/6.9.3-0-202509261208qttools-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:26,492 - aqt.helper - INFO - helper 130801713471488 Downloading qtsvg...
+2026-09-04 19:44:26,495 - aqt.installer - DEBUG - installer 130801713471488 Download URL: https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.android_arm64_v8a/6.9.3-0-202509261208qtsvg-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:26,799 - aqt.helper - DEBUG - helper 136627204382720 Asked to redirect(302) to: https://ftp.fau.de/qtproject/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.android_arm64_v8a/6.9.3-0-202509261208qttools-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:26,800 - aqt.helper - INFO - helper 136627204382720 Redirected: ftp.fau.de
+2026-09-04 19:44:26,893 - aqt.helper - DEBUG - helper 130801713471488 Asked to redirect(302) to: https://ftp.fau.de/qtproject/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.android_arm64_v8a/6.9.3-0-202509261208qtsvg-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:26,894 - aqt.helper - INFO - helper 130801713471488 Redirected: ftp.fau.de
+2026-09-04 19:44:27,195 - aqt.installer - INFO - installer 130801713471488 Finished installation of qtsvg-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z in 1.17162618
+2026-09-04 19:44:27,229 - aqt.helper - DEBUG - helper 130801713471488 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.android_arm64_v8a/6.9.3-0-202509261208qtdeclarative-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z.sha256
+2026-09-04 19:44:27,480 - aqt.helper - INFO - helper 130801713471488 Downloading qtdeclarative...
+2026-09-04 19:44:27,482 - aqt.installer - DEBUG - installer 130801713471488 Download URL: https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.android_arm64_v8a/6.9.3-0-202509261208qtdeclarative-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:27,530 - aqt.installer - INFO - installer 136627204382720 Finished installation of qttools-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z in 1.44643336
+2026-09-04 19:44:27,557 - aqt.helper - DEBUG - helper 136627204382720 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.android_arm64_v8a/6.9.3-0-202509261208qttranslations-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z.sha256
+2026-09-04 19:44:27,756 - aqt.helper - DEBUG - helper 130801713471488 Asked to redirect(302) to: https://ftp.fau.de/qtproject/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.android_arm64_v8a/6.9.3-0-202509261208qtdeclarative-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:27,757 - aqt.helper - INFO - helper 130801713471488 Redirected: ftp.fau.de
+2026-09-04 19:44:27,816 - aqt.helper - INFO - helper 136627204382720 Downloading qttranslations...
+2026-09-04 19:44:27,818 - aqt.installer - DEBUG - installer 136627204382720 Download URL: https://download.qt.io/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.android_arm64_v8a/6.9.3-0-202509261208qttranslations-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:28,160 - aqt.helper - DEBUG - helper 136627204382720 Asked to redirect(302) to: https://ftp.fau.de/qtproject/online/qtsdkrepository/all_os/android/qt6_693/qt6_693_arm64_v8a/qt.qt6.693.android_arm64_v8a/6.9.3-0-202509261208qttranslations-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z
+2026-09-04 19:44:28,162 - aqt.helper - INFO - helper 136627204382720 Redirected: ftp.fau.de
+2026-09-04 19:44:29,221 - aqt.installer - INFO - installer 136627204382720 Finished installation of qttranslations-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z in 1.68223469
+2026-09-04 19:44:29,455 - aqt.installer - INFO - installer 134727698272256 Finished installation of qtbase-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z in 4.07322519
+2026-09-04 19:44:33,201 - aqt.installer - INFO - installer 130801713471488 Finished installation of qtdeclarative-MacOS-MacOS_13-Clang-Android-Android_ANY-ARM64.7z in 5.99299687
+2026-09-04 19:44:33,324 - aqt.updater - INFO - updater 137678897434624 Patching /opt/Qt/6.9.3/android_arm64_v8a/bin/qmake
+2026-09-04 19:44:33,326 - aqt.updater - INFO - updater 137678897434624 Patching /opt/Qt/6.9.3/android_arm64_v8a/bin/qtpaths
+2026-09-04 19:44:33,328 - aqt.updater - INFO - updater 137678897434624 Patching /opt/Qt/6.9.3/android_arm64_v8a/bin/qmake6
+2026-09-04 19:44:33,330 - aqt.updater - INFO - updater 137678897434624 Patching /opt/Qt/6.9.3/android_arm64_v8a/bin/qtpaths6
+2026-09-04 19:44:33,331 - aqt.updater - INFO - updater 137678897434624 Patching /opt/Qt/6.9.3/android_arm64_v8a/bin/target_qt.conf
+2026-09-04 19:44:33,334 - aqt.main - INFO - installer 137678897434624 Finished installation
+2026-09-04 19:44:33,335 - aqt.main - INFO - installer 137678897434624 Time elapsed: 14.59652332 second
