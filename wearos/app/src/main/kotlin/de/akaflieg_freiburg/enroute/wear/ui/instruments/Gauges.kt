@@ -38,6 +38,8 @@ enum class Instrument(val id: String, val title: String) {
     ;
 
     fun next(): Instrument = entries[(ordinal + 1) % entries.size]
+
+    fun previous(): Instrument = entries[(ordinal + entries.size - 1) % entries.size]
 }
 
 /**

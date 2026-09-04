@@ -94,6 +94,26 @@ class FreshnessTest {
         // A watch clock behind the phone clock would otherwise render a negative age.
         assertEquals("0:00", formatAge(-5))
     }
+    @Test
+    fun `a refused pairing code reads as disconnected, not as live`() {
+        // Rejected was added as a state of its own after this function was written,
+        // and matching Retrying alone left the indicator claiming a live link over a
+        // dead one.
+        val held = SessionState(
+            connection = ConnectionState.Rejected,
+            frame = frame,
+        )
+        assertEquals(Freshness.Disconnected, freshnessOf(held, ageSeconds = 1))
+    }
+
+    @Test
+    fun `a connected link with a fresh frame is live`() {
+        val live = SessionState(
+            connection = ConnectionState.Connected,
+            frame = frame,
+        )
+        assertEquals(Freshness.Live, freshnessOf(live, ageSeconds = 1))
+    }
 }
 
 class BackoffTest {
@@ -123,4 +143,5 @@ class BackoffTest {
         assertEquals(0, b.attempt)
         assertTrue(b.nextMs() <= 1_200)
     }
+
 }

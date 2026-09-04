@@ -286,9 +286,22 @@ private fun MainPages(
                         true
                     }
 
-                    // The instrument face does not scroll. Handled so the bezel does
-                    // not fall through to whatever the system would do with it.
-                    WearPage.Instruments -> true
+                    // The instrument face does not scroll, so in content mode the
+                    // bezel does what the tap does: move to the next instrument. A
+                    // rotary control that visibly does nothing reads as a broken
+                    // bezel rather than as a page with nothing to scroll.
+                    WearPage.Instruments -> {
+                        rotaryAccumulator += event.verticalScrollPixels
+                        while (rotaryAccumulator >= ROTARY_THRESHOLD) {
+                            rotaryAccumulator -= ROTARY_THRESHOLD
+                            instrument = instrument.next()
+                        }
+                        while (rotaryAccumulator <= -ROTARY_THRESHOLD) {
+                            rotaryAccumulator += ROTARY_THRESHOLD
+                            instrument = instrument.previous()
+                        }
+                        true
+                    }
 
                     WearPage.Weather -> {
                         weatherListState.dispatchRawDelta(event.verticalScrollPixels)

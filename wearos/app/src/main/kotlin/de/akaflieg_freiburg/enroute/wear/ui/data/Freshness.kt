@@ -62,7 +62,12 @@ object FreshnessThresholds {
 
 fun freshnessOf(session: SessionState, ageSeconds: Long?): Freshness = when {
     session.frame == null -> Freshness.NoData
-    session.connection is ConnectionState.Retrying -> Freshness.Disconnected
+    // Anything that is not Connected, rather than Retrying alone. Enumerating the
+    // failure states meant a refused pairing code -- which is a state of its own, and
+    // terminal -- left the indicator claiming a live link over a dead one. Past the
+    // frame check above there is always a frame, so a state other than Connected can
+    // only mean the link went away underneath it.
+    session.connection != ConnectionState.Connected -> Freshness.Disconnected
     ageSeconds == null -> Freshness.NoData
     ageSeconds < FreshnessThresholds.STALE_SECONDS -> Freshness.Live
     ageSeconds < FreshnessThresholds.OLD_SECONDS -> Freshness.Stale

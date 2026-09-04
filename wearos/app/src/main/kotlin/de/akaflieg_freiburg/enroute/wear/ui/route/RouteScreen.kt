@@ -47,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material3.Text
 import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
-import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
 import de.akaflieg_freiburg.enroute.wear.domain.Notam
 import de.akaflieg_freiburg.enroute.wear.domain.NotamBoard
 import de.akaflieg_freiburg.enroute.wear.domain.NotamCategory
