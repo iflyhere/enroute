@@ -111,23 +111,45 @@ fun radarFixes(
 }
 
 /**
- * The outer ring's range, in metres.
+ * The ranges the outer ring can take, in metres.
  *
- * Chosen from a fixed ladder rather than fitted to the farthest target, so the rings
- * mean the same thing from one second to the next. A display whose scale slides around
- * cannot be read at a glance, which is the only way it is ever read.
+ * A fixed ladder rather than a fitted scale, so the rings mean the same thing from one
+ * second to the next: a display whose scale slides around cannot be read at a glance,
+ * which is the only way it is ever read. The small steps are there because that is
+ * where a traffic instrument spends its time -- FLARM's own displays offer 0.5 and
+ * 1 km, and a contact inside those is the one being decided about.
+ */
+val RADAR_RANGE_LADDER_M: List<Double> =
+    listOf(500.0, 1_000.0, 2_000.0, 5_000.0, 10_000.0, 20_000.0, 50_000.0)
+
+/**
+ * The next range up or down the ladder.
  *
- * The smallest step is 1 km: closer than that, a target is not a dot on a display any
- * more, it is something to look out of the window for.
+ * Clamped at both ends rather than wrapping: a pilot pushing past the closest range
+ * wants the closest range, not the widest one.
+ */
+fun steppedRangeM(currentM: Double, delta: Int): Double {
+    val at = RADAR_RANGE_LADDER_M.indexOfFirst { step -> step >= currentM }
+        .let { index -> if (index < 0) RADAR_RANGE_LADDER_M.lastIndex else index }
+    return RADAR_RANGE_LADDER_M[(at + delta).coerceIn(0, RADAR_RANGE_LADDER_M.lastIndex)]
+}
+
+/**
+ * The outer ring's range when the pilot has not chosen one.
+ *
+ * Fits the farthest thing that will actually be drawn. Correct, and not always
+ * useful -- the app calls a contact at 20 NM relevant, which puts the scale at 50 km
+ * and a glider at 3 km almost on the centre spot. That is what the manual range is
+ * for; this is only the starting point.
  */
 fun radarRangeM(fixes: List<RadarFix>): Double {
-    // Driven by the targets the phone calls relevant, when it calls any of them that.
-    // A contact twenty kilometres away would otherwise push the scale out until the
-    // one converging with the aircraft is a dot on the centre spot -- the display
-    // would be technically complete and practically useless.
-    val considered = fixes.filter { fix -> fix.target.relevant }.ifEmpty { fixes }
-    val farthest = considered.maxOfOrNull { fix -> fix.rangeM } ?: 0.0
-    return RANGE_LADDER_M.firstOrNull { step -> farthest <= step } ?: RANGE_LADDER_M.last()
+    // No filtering here any more: the caller passes what the phone would draw, and
+    // an earlier version that fell back to every contact when none were relevant
+    // produced exactly the picture this is meant to prevent -- a 50 km scale set by
+    // an airliner, with the gliders on the centre spot.
+    val farthest = fixes.maxOfOrNull { fix -> fix.rangeM } ?: 0.0
+    return RADAR_RANGE_LADDER_M.firstOrNull { step -> farthest <= step }
+        ?: RADAR_RANGE_LADDER_M.last()
 }
 
 /**
@@ -165,8 +187,6 @@ fun relativeAltitudeLabel(verticalM: Double?, unit: String): String? {
 
 private fun signed(value: Int): String = if (value > 0) "+$value" else value.toString()
 
-private val RANGE_LADDER_M = listOf(1_000.0, 2_000.0, 5_000.0, 10_000.0, 20_000.0, 50_000.0)
-
 private const val EARTH_RADIUS_M = 6_371_000.0
 private const val METRES_PER_FOOT = 0.3048
 
@@ -184,3 +204,17 @@ fun mostAlarming(fixes: List<RadarFix>): RadarFix? = fixes
         compareByDescending<RadarFix> { fix -> fix.target.alarmLevel }
             .thenBy { fix -> fix.rangeM },
     )
+
+/**
+ * The fixes worth labelling.
+ *
+ * Every label would be correct and the display would be unreadable: in a busy area
+ * the phone calls a dozen contacts relevant, and a dozen height labels on a 454 pixel
+ * disc overlap into a smear. The nearest few are the ones a pilot is deciding about,
+ * so those are labelled and the rest stay as bare dots -- still drawn, still counted,
+ * and named in the list underneath.
+ */
+fun labelledFixes(fixes: List<RadarFix>): Set<RadarFix> =
+    fixes.sortedBy { fix -> fix.rangeM }.take(MAX_LABELS).toSet()
+
+private const val MAX_LABELS = 6

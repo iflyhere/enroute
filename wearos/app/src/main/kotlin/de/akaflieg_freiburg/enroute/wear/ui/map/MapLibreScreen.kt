@@ -388,7 +388,10 @@ private class MapHolder {
         val dots = mutableListOf<Feature>()
         val tracks = mutableListOf<Feature>()
 
-        traffic?.targets.orEmpty().forEach { target ->
+        // The phone's own map gates its traffic marker on this same flag
+        // (Traffic.qml), so drawing more here would put contacts on the watch that
+        // the pilot does not see on the phone.
+        traffic?.drawable.orEmpty().forEach { target ->
             val point = target.point ?: return@forEach
             val colour = target.colour
                 ?.let { value -> String.format("#%06X", (value and 0xFFFFFFL)) }

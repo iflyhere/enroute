@@ -24,13 +24,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -64,14 +67,37 @@ fun TrafficRadar(
     ownPosition: GeoPoint?,
     ownTrackDeg: Double?,
     verticalUnit: String,
+    /** The range the pilot chose, or null to fit whatever is being drawn. */
+    rangeOverrideM: Double?,
+    /**
+     * Called with the step and the range currently on screen.
+     *
+     * The current range travels with the step because the first tap has to move from
+     * what the pilot is looking at. An earlier version stepped from a fixed default
+     * instead, so one tap took a display showing 50 km straight to 1 km.
+     */
+    onRange: (step: Int, currentM: Double) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val measurer = rememberTextMeasurer()
-    val fixes = radarFixes(board.targets, ownPosition, ownTrackDeg)
-    val rangeM = radarRangeM(fixes)
+    // What the phone would draw, and nothing else. See TrafficBoard.drawable.
+    val fixes = radarFixes(board.drawable, ownPosition, ownTrackDeg)
+    val rangeM = rangeOverrideM ?: radarRangeM(fixes)
+    val labelled = labelledFixes(fixes.filter { fix -> fix.rangeM <= rangeM })
     val trackUp = ownTrackDeg != null
 
-    Box(modifier = modifier) {
+    Box(
+        modifier = modifier.pointerInput(Unit) {
+            // A tap rather than a drag. The drag is what every traffic instrument
+            // uses for this, and it is also what the list under this radar consumes
+            // before the pager's gesture handler can see it -- so on this page it
+            // never fired. Upper half widens, lower half narrows, the same direction
+            // the map's zoom gesture has.
+            detectTapGestures { at ->
+                onRange(if (at.y < size.height / 2f) 1 else -1, rangeM)
+            }
+        },
+    ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val centre = Offset(size.width / 2f, size.height / 2f)
             // Room outside the outer ring for the labels, and for the round bezel.
@@ -86,15 +112,48 @@ fun TrafficRadar(
                 }
             }
 
-            board.withoutBearing?.horizontalDistanceM?.let { range ->
-                drawUnknownBearingRing(centre, radius, range, rangeM)
-            }
+            // Gated on relevance like the rest, because the phone gates its own
+            // version of this ring the same way.
+            board.withoutBearing
+                ?.takeIf { target -> target.relevant }
+                ?.horizontalDistanceM
+                ?.let { range -> drawUnknownBearingRing(centre, radius, range, rangeM) }
 
-            fixes.forEach { fix ->
-                drawTarget(fix, centre, radius, rangeM, measurer, verticalUnit)
+            // Anything past the chosen range is left off rather than pinned to the
+            // outer ring. Pinning was the earlier behaviour and it lies about where a
+            // contact is; with a manual range the pilot has said which piece of sky
+            // they are looking at, and the list underneath still holds the rest.
+            // Rectangles of the labels already drawn. A label that would land on one
+            // of them is left off: six labels on clustered targets still overlap into
+            // something unreadable, and an unreadable number is worse than a bare dot
+            // whose name is in the list below.
+            val placed = mutableListOf<Rect>()
+            fixes.filter { fix -> fix.rangeM <= rangeM }.forEach { fix ->
+                drawTarget(
+                    fix, centre, radius, rangeM, measurer, verticalUnit,
+                    withLabel = fix in labelled,
+                    placed = placed,
+                )
             }
 
             drawOwnShip(centre)
+
+            // Whether the scale is following the traffic or was chosen. Without it a
+            // pilot cannot tell a quiet sky from a range they narrowed earlier.
+            // "fixed" rather than the range itself: the outer ring is already
+            // labelled with it, and the same number twice on a 454 pixel disc reads
+            // as two different things.
+            val mode = measurer.measure(
+                if (rangeOverrideM == null) "auto" else "fixed",
+                TextStyle(color = RING_LABEL, fontSize = 10.sp),
+            )
+            drawText(
+                textLayoutResult = mode,
+                topLeft = Offset(
+                    centre.x - mode.size.width / 2f,
+                    centre.y + radius - mode.size.height,
+                ),
+            )
         }
     }
 }
@@ -151,7 +210,7 @@ private fun DrawScope.drawWarningSector(centre: Offset, radius: Float, bearingDe
         val path = Path().apply {
             moveTo(centre.x, centre.y)
             arcTo(
-                rect = androidx.compose.ui.geometry.Rect(
+                rect = Rect(
                     left = centre.x - radius,
                     top = centre.y - radius,
                     right = centre.x + radius,
@@ -198,10 +257,9 @@ private fun DrawScope.drawTarget(
     rangeM: Double,
     measurer: TextMeasurer,
     verticalUnit: String,
+    withLabel: Boolean,
+    placed: MutableList<Rect>,
 ) {
-    // Anything beyond the outer ring is pinned to it rather than dropped. The range
-    // ladder makes that rare, and a target clipped off the display is a target the
-    // pilot does not know about.
     val fraction = (fix.rangeM / rangeM).coerceIn(0.0, 1.0).toFloat()
     val angle = Math.toRadians(fix.screenBearingDeg - 90.0)
     val at = Offset(
@@ -235,12 +293,33 @@ private fun DrawScope.drawTarget(
         )
     }
 
+    if (!withLabel) {
+        return
+    }
     relativeAltitudeLabel(fix.target.verticalDistanceM, verticalUnit)?.let { label ->
         val measured = measurer.measure(label, TextStyle(color = colour, fontSize = 10.sp))
-        drawText(
-            textLayoutResult = measured,
-            topLeft = Offset(at.x + TARGET_RADIUS_PX + 3f, at.y - measured.size.height / 2f),
+        // On whichever side of the dot has room. A target near three o'clock is at
+        // the right edge of a round display, and its label ran off the screen.
+        val toTheRight = at.x + TARGET_RADIUS_PX + 3f
+        val topLeft = if (toTheRight + measured.size.width <= size.width) {
+            Offset(toTheRight, at.y - measured.size.height / 2f)
+        } else {
+            Offset(
+                (at.x - TARGET_RADIUS_PX - 3f - measured.size.width).coerceAtLeast(0f),
+                at.y - measured.size.height / 2f,
+            )
+        }
+        val box = Rect(
+            left = topLeft.x,
+            top = topLeft.y,
+            right = topLeft.x + measured.size.width,
+            bottom = topLeft.y + measured.size.height,
         )
+        if (placed.any { other -> other.overlaps(box) }) {
+            return
+        }
+        placed.add(box)
+        drawText(textLayoutResult = measured, topLeft = topLeft)
     }
 }
 

@@ -458,7 +458,7 @@ What the pilot's traffic receiver is reporting, plus the receiver's own state.
 | `tfc[].t` | Aircraft type, as the enum name: `Glider`, `Aircraft`, `Jet`, `Copter`, `Balloon`, `Drone`, `Paraglider`, `Skydiver`, `TowPlane`, `StaticObstacle`, `Airship`, `HangGlider` or `unknown`. |
 | `tfc[].hd`, `tfc[].vd` | Horizontal distance in metres, and height difference in metres — positive above the aircraft. SI rather than formatted, unlike everything else on this link, because the app composes no separation line of its own to copy. A client formats these itself. |
 | `tfc[].d` | The app's own composed line about the target. |
-| `tfc[].rel` | The app's own relevance flag. Not a suggestion to hide anything: it is what the app itself would emphasise. |
+| `tfc[].rel` | The app's own relevance flag: within 1500 m vertically and 20 NM horizontally. **A client that draws traffic should draw exactly these.** The app's own map does — `Traffic.qml` gates its marker on this flag — and a client drawing more will put an airliner at FL320 on the same display as a glider five hundred feet above, and let it set the scale. Measured against a live Open Glider Network feed: 19 contacts, of which 3 were outside the band and one of those drove a watch's range rings to 50 km. |
 | `tfc[].c` | `[longitude, latitude]`, the **extrapolated** position — the one the app draws, so that two screens do not show the same aircraft in two places. |
 | `tfc[].trk` | Extrapolated true track in degrees. |
 | `tfc[].unc` | Position uncertainty radius in metres. |
