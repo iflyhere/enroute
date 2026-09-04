@@ -1105,7 +1105,14 @@ function nearbyDocument() {
         return { v: 1, sid: state.sid, nearbyRev: state.nearbyRev, positionKnown: false };
     }
 
-    const all = NEARBY_EXTRA.concat(state.waypoints);
+    // Deduplicated by name: the fixtures and the flown route share aerodromes, and
+    // two identical cards look like a bug in the client rather than in the fixture.
+    const seen = new Set();
+    const all = NEARBY_EXTRA.concat(state.waypoints).filter((place) => {
+        if (seen.has(place.n)) { return false; }
+        seen.add(place.n);
+        return true;
+    });
     const groups = { AD: [], NAV: [], WP: [] };
     for (const place of all) {
         const type = place.t ?? 'WP';
