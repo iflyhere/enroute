@@ -47,6 +47,17 @@ data class HelloDto(
     @SerialName("mapOverlay") val mapOverlay: OverlayColoursDto? = null,
     @SerialName("navPeriodMs") val navPeriodMs: Long = 1000,
     @SerialName("units") val units: UnitsDto = UnitsDto(),
+    /**
+     * Where the phone can be reached over Wi-Fi, as `http://<address>:<port>`.
+     *
+     * Sent only over Bluetooth, where it is the whole point of the info document: it
+     * is how a link that costs nothing to establish hands over to the one that is
+     * faster, and how an address that went stale with a network change is recovered
+     * without the pilot typing it.
+     */
+    @SerialName("ip") val wifiUrl: String = "",
+    /** The pairing code, sent over Bluetooth only. Absent over Wi-Fi, which needs it. */
+    @SerialName("code") val pairingCode: String = "",
 )
 
 @Serializable
@@ -364,4 +375,21 @@ data class NearbyPlaceDto(
     @SerialName("way") val way: String? = null,
     @SerialName("dist") val distanceM: Double? = null,
     @SerialName("brg") val bearingDeg: Double? = null,
+)
+
+/**
+ * What the phone announces before sending a document over Bluetooth.
+ *
+ * Parsed rather than scraped: it is JSON, and a regular expression over JSON is a bug
+ * waiting for a field to move.
+ */
+@Serializable
+data class DocMetaDto(
+    @SerialName("doc") val document: String = "",
+    @SerialName("len") val compressedBytes: Long = 0,
+    @SerialName("enc") val encoding: String = "",
+    /** First four bytes of the SHA-1 of the *uncompressed* document, hex. */
+    @SerialName("hash") val hash: String? = null,
+    @SerialName("chunk") val payloadBytes: Int = 0,
+    @SerialName("frags") val fragments: Int = 0,
 )

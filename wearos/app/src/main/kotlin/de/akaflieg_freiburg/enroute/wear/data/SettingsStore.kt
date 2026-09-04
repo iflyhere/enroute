@@ -22,6 +22,7 @@ package de.akaflieg_freiburg.enroute.wear.data
 import android.content.Context
 import android.content.Intent
 import de.akaflieg_freiburg.enroute.wear.Config
+import de.akaflieg_freiburg.enroute.wear.transport.TransportMode
 
 /**
  * Where to reach the phone, and the pairing code to present.
@@ -50,17 +51,22 @@ class SettingsStore(context: Context) {
             .apply()
 
     /**
-     * Whether a phone has ever been chosen, by discovery, by hand or from a launch
-     * intent.
+     * Whether there is enough here to try to reach a phone.
      *
-     * Its own stored flag rather than "host differs from the default", which was the
-     * previous test and was wrong in the one configuration this app is developed in:
-     * the default host is 127.0.0.1, so pointing the watch at the mock server through
-     * adb reverse looked exactly like never having configured anything, and the session
-     * never started.
+     * A stored flag rather than "host differs from the default", which was the previous
+     * test and was wrong in the one configuration this app is developed in: the default
+     * host is 127.0.0.1, so pointing the watch at the mock server through adb reverse
+     * looked exactly like never having configured anything, and the session never
+     * started.
+     *
+     * Bluetooth needs no address at all -- the client finds the phone by service UUID --
+     * so choosing that link is itself enough. Without this the app parked on the
+     * connection screen waiting for an address that the Bluetooth transport would never
+     * use.
      */
     val isConfigured: Boolean
-        get() = preferences.getBoolean(KEY_CONFIGURED, false)
+        get() = preferences.getBoolean(KEY_CONFIGURED, false) ||
+            transportMode == TransportMode.Bluetooth.id
 
     var port: Int
         get() = preferences.getInt(KEY_PORT, Config.DEFAULT_PORT)
@@ -109,6 +115,17 @@ class SettingsStore(context: Context) {
         get() = preferences.getBoolean(KEY_ALARM_VIBRATION, true)
         set(value) = preferences.edit().putBoolean(KEY_ALARM_VIBRATION, value).apply()
 
+    /**
+     * Which link to the phone: "auto", "wifi" or "ble".
+     *
+     * Automatic by default, and automatic alternates rather than choosing once: a
+     * pilot who walks out of Wi-Fi range should not have to change a setting, and one
+     * who walks back in should get the faster link again.
+     */
+    var transportMode: String
+        get() = preferences.getString(KEY_TRANSPORT, "") ?: ""
+        set(value) = preferences.edit().putString(KEY_TRANSPORT, value).apply()
+
     var chartMode: String
         get() = preferences.getString(KEY_CHART_MODE, "") ?: ""
         set(value) = preferences.edit().putString(KEY_CHART_MODE, value).apply()
@@ -121,6 +138,11 @@ class SettingsStore(context: Context) {
         if (overriddenPort > 0) {
             port = overriddenPort
         }
+        // Overriding the link is what makes the Bluetooth transport testable without
+        // touching the screen: an emulator takes no taps from a script, and forcing
+        // one link rather than the alternating default is what makes a failure
+        // attributable.
+        intent?.getStringExtra("transport")?.let { transportMode = it }
     }
 
     private companion object {
@@ -133,6 +155,7 @@ class SettingsStore(context: Context) {
         const val KEY_HIDDEN_PAGES = "hiddenPages"
         const val KEY_BEZEL = "bezelAction"
         const val KEY_CHART_MODE = "chartMode"
+        const val KEY_TRANSPORT = "transportMode"
         const val KEY_ALARM_VIBRATION = "alarmVibration"
 
         // A page identifier is a short lower-case word, so a comma cannot appear in

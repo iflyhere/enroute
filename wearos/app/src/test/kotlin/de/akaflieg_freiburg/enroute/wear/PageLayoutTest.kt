@@ -21,11 +21,13 @@ package de.akaflieg_freiburg.enroute.wear
 
 import de.akaflieg_freiburg.enroute.wear.ui.BezelAction
 import de.akaflieg_freiburg.enroute.wear.ui.ChartMode
+import de.akaflieg_freiburg.enroute.wear.transport.TransportMode
 import de.akaflieg_freiburg.enroute.wear.ui.WearPage
 import de.akaflieg_freiburg.enroute.wear.ui.movePage
 import de.akaflieg_freiburg.enroute.wear.ui.orderedPages
 import de.akaflieg_freiburg.enroute.wear.ui.visiblePages
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -205,5 +207,36 @@ class PageLayoutTest {
         assertEquals(BezelAction.Content, BezelAction.byId("content"))
         assertEquals(ChartMode.Automatic, ChartMode.byId(null))
         assertEquals(ChartMode.Off, ChartMode.byId("off"))
+    }
+
+    @Test
+    fun `automatic tries Wi-Fi first and then alternates`() {
+        val mode = TransportMode.Automatic
+        // Wi-Fi first: on a network it connects on the first attempt instead of after
+        // a Bluetooth timeout, and it is the faster link when both work.
+        assertFalse(mode.usesBluetooth(0))
+        assertTrue(mode.usesBluetooth(1))
+        assertFalse(mode.usesBluetooth(2))
+        assertTrue(mode.usesBluetooth(3))
+    }
+
+    @Test
+    fun `a chosen link is used on every attempt`() {
+        // The point of choosing: a pilot who knows there is no network should not have
+        // every other attempt wasted on Wi-Fi, and one who wants Wi-Fi only should
+        // never see a Bluetooth permission dialog.
+        (0..5).forEach { attempt ->
+            assertFalse(TransportMode.WiFi.usesBluetooth(attempt))
+            assertTrue(TransportMode.Bluetooth.usesBluetooth(attempt))
+        }
+    }
+
+    @Test
+    fun `an unknown or absent stored link falls back to automatic`() {
+        assertEquals(TransportMode.Automatic, TransportMode.byId(null))
+        assertEquals(TransportMode.Automatic, TransportMode.byId(""))
+        assertEquals(TransportMode.Automatic, TransportMode.byId("nfc"))
+        assertEquals(TransportMode.Bluetooth, TransportMode.byId("ble"))
+        assertEquals(TransportMode.WiFi, TransportMode.byId("wifi"))
     }
 }

@@ -41,6 +41,7 @@ import de.akaflieg_freiburg.enroute.wear.data.Discovery
 import de.akaflieg_freiburg.enroute.wear.data.SettingsStore
 import de.akaflieg_freiburg.enroute.wear.service.NavSessionService
 import de.akaflieg_freiburg.enroute.wear.ui.EnrouteWearUi
+import de.akaflieg_freiburg.enroute.wear.transport.TransportMode
 import de.akaflieg_freiburg.enroute.wear.ui.data.DataViewModel
 import de.akaflieg_freiburg.enroute.wear.ui.theme.EnrouteWearTheme
 
@@ -53,6 +54,13 @@ class MainActivity : ComponentActivity() {
     // runs but its notification is invisible, which is worse than asking.
     private val requestNotifications =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    // Scanning for the phone and connecting to it are two separate runtime
+    // permissions from API 31 on, and a refused one fails the scan silently -- no
+    // exception, no callback, simply no results. Asked for together because a client
+    // that may scan but not connect is of no use.
+    private val requestBluetooth =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { }
 
     // A running activity receives onNewIntent rather than onCreate, so without this
     // an override passed on the command line was silently ignored unless the app had
@@ -82,9 +90,38 @@ class MainActivity : ComponentActivity() {
             requestNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
 
+        requestBluetoothIfNeeded()
+
         val discovery = Discovery(getSystemService(Context.WIFI_SERVICE) as? WifiManager)
 
         setContent { EnrouteWearApp(settings, discovery) }
+    }
+
+    /**
+     * Asks for the Bluetooth permissions, but only when the Bluetooth transport may
+     * actually be used.
+     *
+     * A pilot who has chosen Wi-Fi is not asked, because a permission dialog for
+     * something the app will not do is how people learn to dismiss them. Below API 31
+     * the permissions are install-time and there is nothing to ask.
+     */
+    private fun requestBluetoothIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            return
+        }
+        if (TransportMode.byId(settings.transportMode) == TransportMode.WiFi) {
+            return
+        }
+        val wanted = listOf(
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_CONNECT,
+        ).filter { permission ->
+            ContextCompat.checkSelfPermission(this, permission) !=
+                PackageManager.PERMISSION_GRANTED
+        }
+        if (wanted.isNotEmpty()) {
+            requestBluetooth.launch(wanted.toTypedArray())
+        }
     }
 }
 

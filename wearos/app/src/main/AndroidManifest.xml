@@ -3,9 +3,9 @@
 
     <uses-feature android:name="android.hardware.type.watch" android:required="true"/>
 
-    <!-- Stage 1 of the companion protocol is HTTP on the local network. Bluetooth
-         permissions arrive with the Bluetooth transport; no location permission is
-         needed on the watch, because the position comes from the phone. -->
+    <!-- The companion protocol travels over HTTP on the local network or over
+         Bluetooth. No location permission either way: the watch does not read a
+         position, it receives the aircraft's from the phone. -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
@@ -18,6 +18,14 @@
     <!-- The collision alarm buzzes the wrist. The screen is the one place a
          pilot is not looking when it matters. -->
     <uses-permission android:name="android.permission.VIBRATE"/>
+
+    <!-- The Bluetooth transport, which is the one that works away from a Wi-Fi
+         network. neverForLocation keeps the scan out of the location permission
+         group: this app has no business with the wearer's location, it reads the
+         aircraft's from the phone. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"/>
 
     <application
         android:allowBackup="false"

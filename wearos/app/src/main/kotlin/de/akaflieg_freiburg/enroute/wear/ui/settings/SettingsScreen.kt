@@ -47,6 +47,7 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyListState
 import androidx.wear.compose.material3.Text
 import de.akaflieg_freiburg.enroute.wear.ui.BezelAction
 import de.akaflieg_freiburg.enroute.wear.ui.ChartMode
+import de.akaflieg_freiburg.enroute.wear.transport.TransportMode
 import de.akaflieg_freiburg.enroute.wear.ui.WearPage
 import de.akaflieg_freiburg.enroute.wear.ui.theme.CockpitColors
 
@@ -70,6 +71,7 @@ fun SettingsScreen(
     bezelAction: BezelAction,
     alarmVibration: Boolean,
     chartMode: ChartMode,
+    transportMode: TransportMode,
     attribution: String,
     peerDescription: String,
     appVersion: String,
@@ -79,6 +81,7 @@ fun SettingsScreen(
     onBezelAction: (BezelAction) -> Unit,
     onAlarmVibration: (Boolean) -> Unit,
     onChartMode: (ChartMode) -> Unit,
+    onTransportMode: (TransportMode) -> Unit,
     onOpenConnect: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -161,6 +164,22 @@ fun SettingsScreen(
                         onToggle = { onToggleHidden(page) },
                     )
                 }
+            }
+
+            item { SectionTitle("Link") }
+            item {
+                ChoiceRow(
+                    options = TransportMode.entries.map { mode -> mode.label },
+                    selected = TransportMode.entries.indexOf(transportMode),
+                    onSelect = { index -> onTransportMode(TransportMode.entries[index]) },
+                )
+            }
+            item {
+                Note(
+                    "Wi-Fi needs both devices on one network and is much faster. " +
+                        "Bluetooth needs no network at all, which is what there is in " +
+                        "most aircraft. Automatic tries both.",
+                )
             }
 
             item { SectionTitle("Phone") }

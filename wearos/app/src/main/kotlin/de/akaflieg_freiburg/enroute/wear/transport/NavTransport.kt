@@ -71,6 +71,16 @@ data class PeerInfo(
     val sessionId: Long,
     val navPeriodMs: Long,
     /**
+     * Where the phone says it can be reached over Wi-Fi, or empty.
+     *
+     * Only the Bluetooth transport fills this in. It is how the slower link hands over
+     * to the faster one, and how an address stored on a network the aircraft has left
+     * gets corrected.
+     */
+    val wifiUrl: String = "",
+    /** The pairing code as the phone stated it, or empty. Bluetooth only. */
+    val pairingCode: String = "",
+    /**
      * Non-zero when the phone can serve a map. Also the cache key for it: when this
      * moves, the style a client holds names tile URLs that no longer resolve.
      */

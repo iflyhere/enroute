@@ -51,6 +51,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.withTimeoutOrNull
+import de.akaflieg_freiburg.enroute.wear.transport.NavTransport
+import de.akaflieg_freiburg.enroute.wear.transport.ble.BleNavTransport
+import de.akaflieg_freiburg.enroute.wear.transport.TransportMode
 
 /**
  * Keeps the link to the phone alive while the pilot is not looking at the watch.
@@ -79,6 +82,7 @@ class NavSessionService : Service() {
     // page is open, and whether or not the display is on at all.
     private var alert: CollisionAlert? = null
     private var addressWatch: Job? = null
+    private var handoverWatch: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     @Suppress("DEPRECATION")
@@ -96,16 +100,11 @@ class NavSessionService : Service() {
         acquireLocks()
 
         val settings = SettingsStore(this)
-        SessionHolder.start {
-            HttpNavTransport(
-                host = settings.host,
-                port = settings.port,
-                pairingCode = settings.pairingCode,
-            )
-        }
+        SessionHolder.start(transportProviderFor(settings))
 
         startAlarmWatch(settings)
         startAddressWatch(settings)
+        startHandoverWatch(settings)
 
         // Not sticky: if the system ever kills this, restarting it behind the pilot's
         // back would silently reopen a link they cannot see.
@@ -115,10 +114,79 @@ class NavSessionService : Service() {
     override fun onDestroy() {
         scope.cancel()
         addressWatch = null
+        handoverWatch = null
         alert = null
         SessionHolder.stop()
         releaseLocks()
         super.onDestroy()
+    }
+
+    /**
+     * Builds the transport for each connection attempt.
+     *
+     * Called once per attempt by the repository, which is what makes "automatic" mean
+     * something: it hands out Wi-Fi and Bluetooth in turn, so a link that cannot be
+     * made one way is tried the other without the pilot touching a setting. Wi-Fi goes
+     * first because it is much faster and carries whole documents rather than windows
+     * of fragments.
+     */
+    private fun transportProviderFor(settings: SettingsStore): () -> NavTransport {
+        var attempt = 0
+        return {
+            val wifi = {
+                HttpNavTransport(
+                    host = settings.host,
+                    port = settings.port,
+                    pairingCode = settings.pairingCode,
+                )
+            }
+            val bluetooth = { BleNavTransport(this) }
+            // Read per attempt rather than captured: a pilot who changes the setting
+            // gets the new link on the next try even without a restart.
+            val mode = TransportMode.byId(settings.transportMode)
+            val chosen = if (mode.usesBluetooth(attempt)) bluetooth() else wifi()
+            attempt += 1
+            chosen
+        }
+    }
+
+    /**
+     * Takes the Wi-Fi address and the pairing code the phone states over Bluetooth.
+     *
+     * A watch that has only ever connected over Bluetooth knows no address, so the
+     * automatic mode's Wi-Fi attempt would go to whatever the settings happened to hold
+     * and fail every time. This is where that address comes from, and where an address
+     * that went stale with a change of network is corrected -- neither needs the pilot
+     * to type anything.
+     *
+     * Deliberately not restarting the session: the Bluetooth link that just delivered
+     * this is working, and the faster one gets its turn on the next attempt anyway.
+     */
+    private fun startHandoverWatch(settings: SettingsStore) {
+        if (handoverWatch?.isActive == true) {
+            return
+        }
+        handoverWatch = scope.launch {
+            SessionHolder.state
+                .mapNotNull { state -> state.peer }
+                .distinctUntilChanged()
+                .collect { peer ->
+                    peer.pairingCode
+                        .takeIf { code -> code.isNotBlank() && code != settings.pairingCode }
+                        ?.let { code ->
+                            Log.i(TAG, "took the pairing code from the phone")
+                            settings.pairingCode = code
+                        }
+
+                    val address = parseWifiUrl(peer.wifiUrl) ?: return@collect
+                    if (!isHandoverWorthTaking(address, settings.host, settings.port)) {
+                        return@collect
+                    }
+                    Log.i(TAG, "the phone is on Wi-Fi at " + address.host + ":" + address.port)
+                    settings.host = address.host
+                    settings.port = address.port
+                }
+        }
     }
 
     /**
@@ -166,13 +234,7 @@ class NavSessionService : Service() {
                     // built once per connection attempt from the stored settings, so a
                     // restart is what makes the new address take effect.
                     SessionHolder.stop()
-                    SessionHolder.start {
-                        HttpNavTransport(
-                            host = settings.host,
-                            port = settings.port,
-                            pairingCode = settings.pairingCode,
-                        )
-                    }
+                    SessionHolder.start(transportProviderFor(settings))
                 }
         }
     }
