@@ -37,6 +37,7 @@ namespace GeoMaps
 namespace Companion
 {
 
+    class BleTransport;
     class HttpTransport;
     class MapAssets;
 
@@ -409,6 +410,7 @@ namespace Companion
         std::vector<QPropertyNotifier> m_notifiers;
 
         QPointer<Companion::HttpTransport> m_httpTransport;
+        QPointer<Companion::BleTransport> m_bleTransport;
         QPointer<Companion::MapAssets> m_mapAssets;
 
         QString m_errorString;

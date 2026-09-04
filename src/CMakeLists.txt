@@ -32,6 +32,7 @@ set(SOURCES
     ../3rdParty/KDSingleApplication/src/kdsingleapplication_lib.h
     ../3rdParty/KDSingleApplication/src/kdsingleapplication_localsocket_p.h
     ../3rdParty/sunset/src/sunset.h
+    companion/BleTransport.h
     companion/CompanionServer.h
     companion/HttpTransport.h
     companion/MapAssets.h
@@ -150,6 +151,7 @@ set(SOURCES
 
     # C++ files
     ../3rdParty/sunset/src/sunset.cpp
+    companion/BleTransport.cpp
     companion/CompanionServer.cpp
     companion/HttpTransport.cpp
     companion/MapAssets.cpp

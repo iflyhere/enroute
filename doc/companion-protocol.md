@@ -657,15 +657,33 @@ are carried, so a client shares its parser between transports.
 |---|---|---|---|
 | `e5c0a000-9b6f-4a1e-8d3c-1f7a2b6d4e10` | service | | |
 | `e5c0a001-...` | Info | read | the capability document, plus `ip` and `code`, so that Bluetooth can bootstrap the Wi-Fi transport without typing |
+
 | `e5c0a002-...` | Nav | read, notify | navigation frame with `fmt` suppressed |
-| `e5c0a003-...` | RouteMeta | read, notify | `{"routeRev":7,"len":2104,"enc":"zlib","hash":"a91c33f2","chunk":240}` |
-| `e5c0a004-...` | RouteData | notify | route document, compressed and chunked |
+| `e5c0a003-...` | DocMeta | read, notify | `{"doc":"route","len":2104,"enc":"zlib","hash":"a91c33f2","chunk":19,"frags":111}` |
+| `e5c0a004-...` | DocData | notify | the requested document, compressed and chunked |
 | `e5c0a005-...` | Control | write | `{"get":"route","from":0}` or `{"rate":2000}` |
 
+`get` takes **any** of the document names this protocol serves — `route`, `notams`, `weather`,
+`vacs`, `log`, `traffic`, `nearby` — not only the route. The two characteristics were named
+RouteMeta and RouteData when the route was the only large document; they carry whichever one was
+last asked for, and `doc` in the metadata says which. An unknown name is answered with silence,
+because a client from a later version asking for something this one does not have is not an
+error worth reporting to a pilot.
+
 **Framing.** The usable payload of a notification is the negotiated MTU minus three bytes: 20 bytes
-in the worst case, typically 244 once the central requests a larger MTU. Every Nav and RouteData
+in the worst case, typically 244 once the central requests a larger MTU. Every Nav and DocData
 notification is therefore prefixed with one byte: bit 7 set marks the last fragment, bits 0 to 6
 carry the fragment index modulo 128. A single-fragment frame begins with `0x80`.
+
+Qt does not expose the negotiated MTU in the peripheral role, so the phone fragments to the
+guaranteed floor rather than the typical case: 19 payload bytes. That is wasteful on a link that
+negotiated more, and it is the only size that is never wrong. `chunk` in the metadata states it,
+so a client never has to assume.
+
+**What Info is for beyond bootstrapping.** A client that stored the phone's Wi-Fi address will
+find it wrong the first time the network changes -- a stored address belongs to whichever network
+it was learned on. Reading Info over Bluetooth recovers the current one without the pilot typing
+anything, which is the difference between a link that repairs itself and one that needs a menu.
 
 **Route compression.** The route document is compressed with `qCompress()`, advertised as
 `"enc": "zlib"`. Note that this is **not** gzip: `qCompress()` emits a four-byte big-endian
@@ -674,8 +692,16 @@ the remainder. `hash` is the first four bytes of the SHA-1 of the *uncompressed*
 encoded; on a mismatch the client re-requests from fragment zero.
 
 **Flow control.** Writing a hundred notifications in a loop overflows the Android Bluetooth queue.
-The client writes `{"get":"route","from":N}` to Control; the phone sends at most eight fragments and
-then waits for the next request.
+The client writes `{"get":"<name>","from":N}` to Control; the phone sends at most eight fragments and
+then waits for the next request. A `from` of zero re-reads and re-compresses the document; any other
+value continues the transfer already prepared, so a document cannot change halfway through one.
+
+A navigation frame is fragmented the same way but sent in full rather than in windows: the compact
+frame is a few hundred bytes, and a window would cost a round trip per frame at one hertz.
+
+`{"rate":N}` is accepted and deliberately not obeyed. The publish rate belongs to the app and is
+shared with every other client; a client that could set it would be told it had slowed the link
+down when it had not.
 
 **Rate.** Nav notifications follow the same cadence as HTTP, but only while a client has actually
 subscribed, and drop to one every four seconds while `flightStatus` is `ground`. A client may

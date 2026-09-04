@@ -223,6 +223,19 @@ void GlobalSettings::setCompanionNetworkEnabled(bool newCompanionNetworkEnabled)
 }
 
 
+void GlobalSettings::setCompanionBluetoothEnabled(bool newCompanionBluetoothEnabled)
+{
+    if (newCompanionBluetoothEnabled == companionBluetoothEnabled())
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/bluetoothEnabled"), newCompanionBluetoothEnabled);
+    m_companionBluetoothEnabled = newCompanionBluetoothEnabled;
+    emit companionBluetoothEnabledChanged();
+}
+
+
 void GlobalSettings::setCompanionPairingCode(const QString& newCompanionPairingCode)
 {
     if (newCompanionPairingCode == m_companionPairingCode)
