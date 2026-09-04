@@ -70,7 +70,15 @@ Page {
                 Layout.margins: companionPage.font.pixelSize
                 wrapMode: Text.Wrap
                 textFormat: Text.StyledText
-                text: qsTr("Enroute Flight Navigation can publish your flight route and your current position to a companion device on the same Wi-Fi network, such as a smartwatch. The companion device needs to know the pairing code shown below.")
+                text: qsTr("Enroute Flight Navigation can publish your flight route and your current position to a companion device, such as a smartwatch. The companion device needs to know the pairing code shown below.")
+            }
+
+            Label {
+                Layout.fillWidth: true
+                Layout.margins: companionPage.font.pixelSize
+                wrapMode: Text.Wrap
+                textFormat: Text.StyledText
+                text: qsTr("Wi-Fi needs both devices on one network, which is convenient at home and unreliable in an aircraft: a smartwatch powers its Wi-Fi radio down whenever a Bluetooth link is available. Bluetooth needs no network at all.")
             }
 
             WordWrappingSwitchDelegate {
@@ -102,6 +110,46 @@ Page {
                         GlobalSettings.companionNetworkEnabled = false
                     }
                 }
+            }
+
+            WordWrappingSwitchDelegate {
+                id: bluetoothSwitch
+
+                Layout.fillWidth: true
+                text: qsTr("Publish over Bluetooth")
+                icon.source: "/icons/material/ic_bluetooth.svg"
+
+                // The same assignment-and-onToggled idiom as the switch above, and for
+                // the same reason: a binding on checked breaks the moment the control
+                // is toggled.
+                Component.onCompleted: {
+                    bluetoothSwitch.checked = GlobalSettings.companionBluetoothEnabled
+                }
+
+                onToggled: {
+                    PlatformAdaptor.vibrateBrief()
+                    if (bluetoothSwitch.checked) {
+                        // Asked separately from the Wi-Fi switch. Consenting to publish
+                        // on a home network is not consenting to advertise to whatever
+                        // is within Bluetooth range of the cockpit.
+                        bluetoothWarning.open()
+                    } else {
+                        GlobalSettings.companionBluetoothEnabled = false
+                    }
+                }
+            }
+
+            Label {
+                Layout.fillWidth: true
+                Layout.margins: companionPage.font.pixelSize
+                wrapMode: Text.Wrap
+                textFormat: Text.StyledText
+                visible: GlobalSettings.companionBluetoothEnabled && (CompanionServer.errorString !== "")
+                color: "red"
+                // Never silent. A Bluetooth stack that refuses to advertise looks
+                // exactly like a watch that cannot find the phone, and the pilot would
+                // have no way to tell the two apart.
+                text: CompanionServer.errorString
             }
 
             Label {
@@ -198,6 +246,36 @@ Page {
         onRejected: {
             PlatformAdaptor.vibrateBrief()
             networkSwitch.checked = false
+        }
+    }
+
+    CenteringDialog {
+        id: bluetoothWarning
+
+        modal: true
+        title: qsTr("Publish over Bluetooth?")
+        standardButtons: Dialog.Ok|Dialog.Cancel
+
+        Label {
+            width: bluetoothWarning.availableWidth
+            wrapMode: Text.Wrap
+            textFormat: Text.StyledText
+            // Says what is different from the Wi-Fi case rather than repeating it. A
+            // network has a boundary a pilot can reason about; Bluetooth range is
+            // whoever is nearby, which is a different thing to agree to.
+            text: "<p>" + qsTr("Once enabled, this device advertises itself to anything within Bluetooth range. A companion device that knows your pairing code can then read your flight route and your current position.") + "</p>"
+                  + "<p>" + qsTr("Unlike Wi-Fi, this works without any network, which is what makes it useful in flight.") + "</p>"
+        }
+
+        onAccepted: {
+            PlatformAdaptor.vibrateBrief()
+            GlobalSettings.companionBluetoothEnabled = true
+            bluetoothSwitch.checked = true
+        }
+
+        onRejected: {
+            PlatformAdaptor.vibrateBrief()
+            bluetoothSwitch.checked = false
         }
     }
 }
