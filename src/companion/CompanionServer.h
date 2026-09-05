@@ -317,6 +317,11 @@ namespace Companion
         // than by a timer: nothing here moves on its own.
         void publishPrefs();
 
+        // Starts or stops the Android foreground service that keeps this publishing
+        // while the app is not on screen. A no-op everywhere else, because nowhere else
+        // suspends an application for being in the background.
+        void updateBackgroundService(bool wanted);
+
         void markFlightLogDirty();
 
         // Unlike the other publishers this one does not compare before publishing.
@@ -353,6 +358,10 @@ namespace Companion
         QByteArray m_vacDocument;
         QByteArray m_logDocument;
         QByteArray m_prefsDocument;
+
+        // Whether the Android foreground service is up. Tracked because starting one
+        // that is already running posts its notification again, which a pilot sees.
+        bool m_backgroundServiceRunning {false};
         QByteArray m_trafficDocument;
         QByteArray m_nearbyDocument;
 
