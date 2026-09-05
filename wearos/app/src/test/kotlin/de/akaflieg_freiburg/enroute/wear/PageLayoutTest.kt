@@ -24,6 +24,7 @@ import de.akaflieg_freiburg.enroute.wear.ui.ChartMode
 import de.akaflieg_freiburg.enroute.wear.transport.TransportMode
 import de.akaflieg_freiburg.enroute.wear.ui.WearPage
 import de.akaflieg_freiburg.enroute.wear.ui.movePage
+import de.akaflieg_freiburg.enroute.wear.ui.rotarySteps
 import de.akaflieg_freiburg.enroute.wear.ui.orderedPages
 import de.akaflieg_freiburg.enroute.wear.ui.visiblePages
 import org.junit.Assert.assertEquals
@@ -238,5 +239,56 @@ class PageLayoutTest {
         assertEquals(TransportMode.Automatic, TransportMode.byId("nfc"))
         assertEquals(TransportMode.Bluetooth, TransportMode.byId("ble"))
         assertEquals(TransportMode.WiFi, TransportMode.byId("wifi"))
+    }
+
+    @Test
+    fun `one bezel event is not a page`() {
+        // Measured on a Galaxy Watch 7: every event carries exactly 136 pixels. At the
+        // page threshold that is a quarter of a step, so a sleeve brushing the rim
+        // cannot take the screen a pilot is reading.
+        val (steps, carry) = rotarySteps(136f, 500f)
+        assertEquals(0, steps)
+        assertEquals(136f, carry, 0.01f)
+    }
+
+    @Test
+    fun `four events make one page and keep the change`() {
+        var accumulated = 0f
+        var total = 0
+        repeat(4) {
+            val (steps, carry) = rotarySteps(accumulated + 136f, 500f)
+            total += steps
+            accumulated = carry
+        }
+        assertEquals(1, total)
+        // The remainder is carried, not discarded: 4 x 136 is 544, so 44 pixels of the
+        // turn belong to the next page and throwing them away would make a slow turn
+        // travel further than a fast one over the same angle.
+        assertEquals(44f, accumulated, 0.01f)
+    }
+
+    @Test
+    fun `turning the other way steps back`() {
+        val (steps, carry) = rotarySteps(-1100f, 500f)
+        assertEquals(-2, steps)
+        assertEquals(-100f, carry, 0.01f)
+    }
+
+    @Test
+    fun `a fast turn earns every step it travelled`() {
+        // The bug this replaces: each event cleared the threshold on its own and asked
+        // for a step, and only the pager's animation lag stopped a burst from moving
+        // four pages. Deterministic now -- 2000 pixels is four pages, whatever the
+        // events were split into.
+        assertEquals(4, rotarySteps(2000f, 500f).first)
+        assertEquals(0, rotarySteps(499f, 500f).first)
+    }
+
+    @Test
+    fun `a threshold of zero cannot spin forever`() {
+        // Guards the while loops: a zero or negative threshold would never be reached
+        // by subtraction, and the gesture would hang the frame it arrived on.
+        assertEquals(0 to 0f, rotarySteps(1000f, 0f))
+        assertEquals(0 to 0f, rotarySteps(1000f, -10f))
     }
 }
