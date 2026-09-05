@@ -314,6 +314,15 @@ class NavSessionService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
+        // So the session can be ended without opening the app, which is where a pilot
+        // who has just landed will look first.
+        val stop = PendingIntent.getService(
+            this,
+            1,
+            Intent(this, NavSessionService::class.java).setAction(ACTION_STOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.session_notification_title))
             .setContentText(getString(R.string.session_notification_text))
@@ -322,6 +331,7 @@ class NavSessionService : Service() {
             .setOngoing(true)
             .setSilent(true)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .addAction(R.drawable.ic_session, getString(R.string.session_stop), stop)
             .build()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {

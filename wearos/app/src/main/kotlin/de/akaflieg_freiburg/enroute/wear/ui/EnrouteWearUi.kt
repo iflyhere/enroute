@@ -45,6 +45,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.focusable
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import de.akaflieg_freiburg.enroute.wear.data.SessionHolder
+import de.akaflieg_freiburg.enroute.wear.service.NavSessionService
 import de.akaflieg_freiburg.enroute.wear.data.Discovery
 import de.akaflieg_freiburg.enroute.wear.data.DiscoveredPhone
 import de.akaflieg_freiburg.enroute.wear.data.DiscoveryEvent
@@ -162,6 +166,13 @@ private fun MainPages(
     onOpenConnect: () -> Unit,
     onRestartSession: () -> Unit,
 ) {
+    val context = LocalContext.current
+
+    // Whether the service is up, so the settings row can say which way it will go. The
+    // session outlives this screen on purpose, so this is the only place that can show
+    // it and the only place that can end it.
+    val sessionRunning by SessionHolder.running.collectAsStateWithLifecycle()
+
     val host = settings.host
     val port = settings.port
     val pairingCode = settings.pairingCode
@@ -178,10 +189,14 @@ private fun MainPages(
     }
     var alarmVibration by remember { mutableStateOf(settings.alarmVibration) }
 
-    // Re-read whenever the phone's preferences have been taken. The service writes them
-    // into the store, and the store is a file the screen otherwise reads exactly once,
-    // so without this a change made on the phone would not appear until a restart.
-    LaunchedEffect(uiState.value.session.prefs?.revision) {
+    // Re-read whenever the phone's preferences change. The service writes them into the
+    // store, and the store is a file the screen otherwise reads exactly once, so without
+    // this a change made on the phone would not appear until a restart.
+    //
+    // Keyed on the whole document, not on its revision: the revision counts up from one
+    // within a phone session, so a restarted phone sends "revision 1" again and keying
+    // on that number alone would miss every change it had made in between.
+    LaunchedEffect(uiState.value.session.prefs) {
         order = settings.pageOrder
         hidden = settings.hiddenPages
         bezelAction = BezelAction.byId(settings.bezelAction)
@@ -527,6 +542,14 @@ private fun MainPages(
                         onRestartSession()
                     },
                     onOpenConnect = onOpenConnect,
+                    sessionRunning = sessionRunning,
+                    onToggleSession = {
+                        if (sessionRunning) {
+                            NavSessionService.stop(context)
+                        } else {
+                            NavSessionService.start(context)
+                        }
+                    },
                 )
 
                 null -> Unit
