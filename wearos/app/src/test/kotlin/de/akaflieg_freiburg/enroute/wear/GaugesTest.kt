@@ -28,7 +28,9 @@ import de.akaflieg_freiburg.enroute.wear.ui.instruments.dialAngleDeg
 import de.akaflieg_freiburg.enroute.wear.ui.instruments.isUsable
 import de.akaflieg_freiburg.enroute.wear.ui.instruments.roundedVerticalSpeed
 import de.akaflieg_freiburg.enroute.wear.ui.instruments.spanAngleDeg
+import de.akaflieg_freiburg.enroute.wear.ui.instruments.varioAngleDeg
 import de.akaflieg_freiburg.enroute.wear.ui.instruments.speedFullScale
+import de.akaflieg_freiburg.enroute.wear.ui.instruments.speedTickStep
 import de.akaflieg_freiburg.enroute.wear.ui.instruments.speedUnitFor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -70,11 +72,27 @@ class GaugesTest {
 
     @Test
     fun `the speed scale steps and follows the unit`() {
-        assertEquals(60.0, speedFullScale(40.0, "kn"), 0.001)
+        // The bottom rung is well above a cruise, not just above a standstill: a glider
+        // at sixty knots on a sixty-knot dial reads against the stop, where the needle
+        // says nothing the number did not.
+        assertEquals(120.0, speedFullScale(40.0, "kn"), 0.001)
         assertEquals(120.0, speedFullScale(80.0, "kn"), 0.001)
-        assertEquals(120.0, speedFullScale(90.0, "kmh"), 0.001)
+        assertEquals(200.0, speedFullScale(90.0, "kmh"), 0.001)
         // Past the top of the ladder the dial stays at the top rather than vanishing.
         assertEquals(300.0, speedFullScale(999.0, "kn"), 0.001)
+    }
+
+    @Test
+    fun `a speed dial is marked in round numbers`() {
+        // Instruments are marked in tens. A face reading 6, 12, 18 is a chart axis.
+        assertEquals(20.0, speedTickStep(120.0), 0.001)
+        assertEquals(20.0, speedTickStep(200.0), 0.001)
+        assertEquals(50.0, speedTickStep(300.0), 0.001)
+        assertEquals(50.0, speedTickStep(500.0), 0.001)
+        // And never so many that the numbers crowd each other on a wrist.
+        listOf(120.0, 200.0, 300.0, 500.0).forEach { scale ->
+            assertTrue(scale / speedTickStep(scale) <= 10.0)
+        }
     }
 
     @Test
@@ -141,5 +159,51 @@ class GaugesTest {
     fun `before anything has happened it says so plainly`() {
         assertEquals("Not connected", connectionMessage(ConnectionState.Idle, null))
         assertEquals("Connecting", connectionMessage(ConnectionState.Connecting, null))
+    }
+
+    @Test
+    fun `the vario reads zero at nine o'clock`() {
+        // Measured against the instrument it is modelled on: zero is on the left, not at
+        // the top. Angles here run clockwise from twelve, so nine o'clock is 270.
+        assertEquals(270.0, varioAngleDeg(0.0, 5.0), 0.01)
+    }
+
+    @Test
+    fun `climb goes clockwise over the top and sink under the bottom`() {
+        // Half scale up is straight at twelve o'clock and half scale down at six --
+        // which is exactly where the 10 sits on the instrument this is modelled on,
+        // top and bottom, with 20 out at three o'clock where the two halves meet.
+        assertEquals(360.0, varioAngleDeg(2.5, 5.0), 0.01)
+        assertEquals(180.0, varioAngleDeg(-2.5, 5.0), 0.01)
+    }
+
+    @Test
+    fun `both ends of the scale meet at three o'clock`() {
+        // 450 and 90 are the same direction. Full climb and full sink arrive at the same
+        // place from opposite ways round, exactly as on the real instrument.
+        assertEquals(450.0, varioAngleDeg(5.0, 5.0), 0.01)
+        assertEquals(90.0, varioAngleDeg(-5.0, 5.0), 0.01)
+    }
+
+    @Test
+    fun `a vario needle never wraps past the pegs`() {
+        // A needle that ran off the top and reappeared at the bottom would read a strong
+        // climb as a strong sink, which is the one mistake this instrument must not make.
+        assertEquals(varioAngleDeg(5.0, 5.0), varioAngleDeg(50.0, 5.0), 0.01)
+        assertEquals(varioAngleDeg(-5.0, 5.0), varioAngleDeg(-50.0, 5.0), 0.01)
+    }
+
+    @Test
+    fun `a vario with no scale does not divide by zero`() {
+        assertEquals(270.0, varioAngleDeg(3.0, 0.0), 0.01)
+    }
+
+    @Test
+    fun `the altimeter's two hands turn at ten to one`() {
+        // The long hand once round the thousand, the short hand once round ten thousand.
+        // At 1500 feet the long hand is at six o'clock and the short one is a sixth of
+        // the way from one to two.
+        assertEquals(180.0, dialAngleDeg(1500.0, 1_000.0), 0.01)
+        assertEquals(54.0, dialAngleDeg(1500.0, 10_000.0), 0.01)
     }
 }
