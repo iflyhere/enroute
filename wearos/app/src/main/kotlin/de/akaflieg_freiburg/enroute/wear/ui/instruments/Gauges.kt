@@ -87,13 +87,29 @@ fun spanAngleDeg(
  * it is exceeded.
  */
 fun speedFullScale(currentSpeed: Double, unit: String): Double {
+    // The first rung is deliberately well above a cruise, not just above a standstill.
+    // A glider cruises at fifty to eighty knots; on a sixty-knot dial that needle lives
+    // against the stop, where a dial says nothing a number would not have said. Mid-face
+    // is where a reading belongs.
     val ladder = if (unit == "kmh") {
-        listOf(120.0, 200.0, 300.0, 500.0)
+        listOf(200.0, 300.0, 500.0)
     } else {
-        listOf(60.0, 120.0, 200.0, 300.0)
+        listOf(120.0, 200.0, 300.0)
     }
     return ladder.firstOrNull { step -> currentSpeed <= step * 0.95 } ?: ladder.last()
 }
+
+/**
+ * How far apart the numbers on a speed dial are.
+ *
+ * A round step, because instruments are marked in tens and a dial reading 6, 12, 18 is a
+ * chart axis rather than an instrument. Chosen so the face carries ten numbers at most,
+ * which is as many as a wrist can be read at a glance.
+ */
+fun speedTickStep(fullScale: Double): Double =
+    listOf(10.0, 20.0, 25.0, 50.0, 100.0)
+        .firstOrNull { step -> fullScale / step <= 10.0 }
+        ?: (fullScale / 6.0)
 
 /**
  * A vertical speed rounded to what the source can actually support.
