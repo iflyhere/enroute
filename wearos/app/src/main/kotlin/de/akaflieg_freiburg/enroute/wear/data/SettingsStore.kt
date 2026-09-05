@@ -142,6 +142,18 @@ class SettingsStore(context: Context) {
         set(value) = preferences.edit().putLong(KEY_PREFS_REVISION, value).apply()
 
     /**
+     * The phone session that revision belongs to.
+     *
+     * Without it the revision is meaningless across a restart of the phone: it counts
+     * up from one within a session, so a watch that had applied revision three would
+     * ignore everything a freshly started phone said until the pilot had changed four
+     * things.
+     */
+    var appliedPrefsSession: Long
+        get() = preferences.getLong(KEY_PREFS_SESSION, 0)
+        set(value) = preferences.edit().putLong(KEY_PREFS_SESSION, value).apply()
+
+    /**
      * Takes what the phone sets, if it is newer than what was taken before.
      *
      * Wholesale, and only when the revision moves. The phone bumps it when someone
@@ -152,9 +164,11 @@ class SettingsStore(context: Context) {
      * @return true when something was taken
      */
     fun applyPreferences(prefs: WatchPreferences): Boolean {
-        if (prefs.revision <= appliedPrefsRevision) {
+        val sameSession = prefs.sessionId == appliedPrefsSession
+        if (sameSession && prefs.revision <= appliedPrefsRevision) {
             return false
         }
+        appliedPrefsSession = prefs.sessionId
         appliedPrefsRevision = prefs.revision
         // An empty order means "your own default", not "no screens at all".
         if (prefs.pageOrder.isNotBlank()) {
@@ -200,6 +214,7 @@ class SettingsStore(context: Context) {
         const val KEY_CHART_MODE = "chartMode"
         const val KEY_TRANSPORT = "transportMode"
         const val KEY_PREFS_REVISION = "appliedPrefsRevision"
+        const val KEY_PREFS_SESSION = "appliedPrefsSession"
         const val KEY_ALARM_VIBRATION = "alarmVibration"
 
         // A page identifier is a short lower-case word, so a comma cannot appear in

@@ -425,6 +425,7 @@ private fun NearbyPlaceDto.toDomain(): NearbyPlace = NearbyPlace(
 )
 
 fun PrefsDto.toDomain(): WatchPreferences = WatchPreferences(
+    sessionId = sessionId,
     revision = revision,
     pageOrder = pageOrder,
     hiddenPages = hiddenPages,
