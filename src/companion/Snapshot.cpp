@@ -484,6 +484,21 @@ QJsonObject Companion::Snapshot::nav(const Companion::Revisions& revisions,
     document.insert("sid"_L1, static_cast<qint64>(revisions.session));
     document.insert("navRev"_L1, static_cast<qint64>(revisions.nav));
     document.insert("routeRev"_L1, static_cast<qint64>(revisions.route));
+
+    // Every other counter, so that a client knows what went stale without asking.
+    //
+    // This frame is the only thing that streams. Over Bluetooth a client reads the
+    // capability document once when it connects and would otherwise never hear that the
+    // weather or the NOTAMs had moved; the alternative is re-fetching a twenty-kilobyte
+    // document on a timer in case it changed. Sixty bytes a frame buys that away.
+    QJsonObject documentRevisions;
+    documentRevisions.insert("notam"_L1, static_cast<qint64>(revisions.notam));
+    documentRevisions.insert("weather"_L1, static_cast<qint64>(revisions.weather));
+    documentRevisions.insert("vac"_L1, static_cast<qint64>(revisions.vac));
+    documentRevisions.insert("log"_L1, static_cast<qint64>(revisions.log));
+    documentRevisions.insert("nearby"_L1, static_cast<qint64>(revisions.nearby));
+    documentRevisions.insert("traffic"_L1, static_cast<qint64>(revisions.traffic));
+    document.insert("rev"_L1, documentRevisions);
     document.insert("t"_L1, QDateTime::currentSecsSinceEpoch());
     document.insert("status"_L1, toString(status));
     document.insert("flightStatus"_L1, toString(navigator->flightStatus()));

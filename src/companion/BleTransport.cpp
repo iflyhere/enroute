@@ -153,18 +153,14 @@ void Companion::BleTransport::start()
         connect(m_server, &Companion::CompanionServer::navDocumentChanged,
                 this, &Companion::BleTransport::publishNav);
 
-        // Every document a client may be holding. It is told that one changed and
-        // asks for it again if it cares; pushing them all would spend the radio on
-        // documents nothing is looking at.
-        for (const auto signal : {&Companion::CompanionServer::routeDocumentChanged,
-                                  &Companion::CompanionServer::notamDocumentChanged,
-                                  &Companion::CompanionServer::weatherDocumentChanged,
-                                  &Companion::CompanionServer::vacDocumentChanged,
-                                  &Companion::CompanionServer::logDocumentChanged,
-                                  &Companion::CompanionServer::nearbyDocumentChanged})
-        {
-            connect(m_server, signal, this, &Companion::BleTransport::publishDocumentMeta);
-        }
+        // Nothing is connected for the other documents. A client learns what changed
+        // from the revision counters in the navigation frame, which arrives anyway, and
+        // asks for what it wants.
+        //
+        // Announcing a change used to re-prepare whichever document the client last
+        // asked for, whatever had actually changed: a weather update made a client
+        // discard and re-fetch the route, and told it nothing about the weather. It
+        // also replaced the document a transfer in progress was reading from.
     }
 
     setErrorString({});
@@ -492,11 +488,18 @@ void Companion::BleTransport::publishNav()
     }
     m_lastNavRevision = revisions.nav;
 
-    // The compact frame: no formatted strings. They are a convenience on a link with
-    // bandwidth to spare, and this one has to fit a frame into as few notifications as
-    // possible. The SI members are a complete description, and the protocol document
-    // says so.
-    const auto frame = m_server->navDocumentCompact();
+    // The full frame, formatted strings included.
+    //
+    // Dropping them saves 229 bytes -- 19 notifications a second instead of 31,
+    // measured -- and costs the display almost everything on it. A client renders the
+    // phone's own strings, because the rounding and the translated unit suffixes belong
+    // to Navigation::Aircraft and re-deriving them elsewhere means the watch says
+    // 12.37 NM while the phone says 12.4 nm on the same leg. Without them a watch on
+    // Bluetooth shows the next waypoint's name and its course, and a dash everywhere
+    // else: distance, altitude, ground speed, ETE and ETA all gone. If this link ever
+    // proves too slow for a frame a second, the rate is the thing to lower, not the
+    // content -- correct numbers every two seconds beat dashes every one.
+    const auto frame = m_server->navDocument();
     if (frame.isEmpty())
     {
         return;
@@ -519,19 +522,6 @@ void Companion::BleTransport::publishNav()
         fragment.append(frame.mid(index * payloadBytes, payloadBytes));
         m_service->writeCharacteristic(characteristic, fragment);
     }
-}
-
-
-void Companion::BleTransport::publishDocumentMeta()
-{
-    // Only for the document a client is actually holding. Announcing a change to
-    // something nobody asked for would be a notification the client has to decode and
-    // discard.
-    if (!m_connected || m_preparedName.isEmpty())
-    {
-        return;
-    }
-    prepareDocument(m_preparedName);
 }
 
 

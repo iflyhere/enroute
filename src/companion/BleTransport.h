@@ -100,7 +100,6 @@ namespace Companion
         void publishNav();
 
         // Announces that a document a client may be holding has changed.
-        void publishDocumentMeta();
 
         void onCharacteristicWritten(const QLowEnergyCharacteristic& characteristic,
                                      const QByteArray& value);
