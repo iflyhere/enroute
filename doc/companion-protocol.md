@@ -57,8 +57,22 @@ Ten counters carry all cache coherency:
 | `trafficRev` | `quint32` | Incremented on **every** published traffic frame, unlike the counters above, which move only when their content changes. That is deliberate: a client has to be able to tell "no traffic" from "no data", and the only thing separating them is that frames keep arriving. |
 | `mapRev` | `quint32` | Changes whenever the set of downloaded map files changes. Appears in the capability document, and in every tile URL. A client that sees it move must refetch the style: the URLs in the one it holds no longer resolve, which is what stops its tile cache from outliving the maps it was filled from. |
 
-Every navigation frame repeats `routeRev`. That one field is the whole caching protocol: a client
-caches the route document keyed on `(sid, routeRev)` and refetches when either changes.
+Every navigation frame repeats `routeRev` and carries a `rev` object with all six remaining document
+counters:
+
+```json
+"rev": { "notam": 3, "weather": 12, "vac": 1, "log": 4, "nearby": 9, "traffic": 2841 }
+```
+
+Together they are the whole caching protocol: a client caches each document keyed on `(sid, <its>Rev)`
+and refetches when either changes. A counter of zero means the phone has never published that
+document; there is nothing behind it and asking wastes a round trip.
+
+**Why they are in the frame and not only in the capability document.** A client on Wi-Fi could
+revalidate each endpoint with its ETag, but a Bluetooth client reads the capability document once
+when it connects and the frame is the only thing that streams afterwards. Without these counters such
+a client either refetches a twenty-kilobyte NOTAM document on a timer in case it changed, or never
+learns that it did. Sixty bytes a frame settles it for every transport at once.
 
 **Refetch the capability document at the same moment.** It is rebuilt in lockstep with the route
 document, so a changed `routeRev` is also the only signal that its contents may have moved. A client
@@ -658,7 +672,7 @@ are carried, so a client shares its parser between transports.
 | `e5c0a000-9b6f-4a1e-8d3c-1f7a2b6d4e10` | service | | |
 | `e5c0a001-...` | Info | read | the capability document, plus `ip` and `code`, so that Bluetooth can bootstrap the Wi-Fi transport without typing |
 
-| `e5c0a002-...` | Nav | read, notify | navigation frame with `fmt` suppressed |
+| `e5c0a002-...` | Nav | read, notify | the navigation frame, `fmt` included |
 | `e5c0a003-...` | DocMeta | read, notify | `{"doc":"route","len":2104,"enc":"zlib","hash":"a91c33f2","chunk":19,"frags":111}` |
 | `e5c0a004-...` | DocData | notify | the requested document, compressed and chunked |
 | `e5c0a005-...` | Control | write | `{"get":"route","from":0}` or `{"rate":2000}` |
