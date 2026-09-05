@@ -459,6 +459,20 @@ class BleNavTransport(
                         announcedHash = meta.hash
                         documents.reset()
                         nextFragment = 0
+
+                        if (meta.fragments == 0) {
+                            // The phone saying there is nothing behind that name. Held
+                            // at the revision it was asked for, or this would be asked
+                            // for again every thirty frames for the life of the link.
+                            Log.i(TAG, "nothing behind " + meta.document)
+                            announcedDocument?.let { name ->
+                                requestedAt.remove(name)?.let { r -> held[name] = r }
+                                if (fetching == name) {
+                                    fetching = null
+                                }
+                            }
+                            fetchNextIfIdle(client)
+                        }
                     }
 
                     DATA_UUID -> {

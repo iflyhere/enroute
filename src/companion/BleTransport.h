@@ -158,6 +158,11 @@ namespace Companion
         // receive and can tell a complete transfer from a truncated one.
         void prepareDocument(const QString& name);
 
+        // Tells a client that a name it asked for has nothing behind it, so that it
+        // records the revision and stops asking. Silence cannot say this: a client
+        // cannot tell it from a transfer that has not started yet.
+        void announceNothing(const QString& name);
+
         // Sends at most one window of fragments, starting at the requested one, and
         // then stops. A hundred notifications written in a loop overflow the Android
         // Bluetooth queue; the client asks for the next window when it is ready.
