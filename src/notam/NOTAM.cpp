@@ -339,11 +339,8 @@ void NOTAM::NOTAM::updateSectionTitle()
             m_sectionTitle = u"Next 90 days"_s;
             return;
         }
-        if (m_effectiveStart < QDateTime::currentDateTimeUtc().addDays(90))
-        {
-            m_sectionTitle = u"> 90 days"_s;
-            return;
-        }
+        m_sectionTitle = u"> 90 days"_s;
+        return;
     }
     m_sectionTitle = u"NOTAM"_s;
 }
