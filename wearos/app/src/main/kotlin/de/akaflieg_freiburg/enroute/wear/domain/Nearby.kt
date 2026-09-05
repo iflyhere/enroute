@@ -76,5 +76,6 @@ data class WatchPreferences(
     val bezel: String,
     val charts: String,
     val alarmVibration: Boolean,
+    val keepScreenOn: Boolean,
     val transport: String,
 )

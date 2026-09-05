@@ -432,5 +432,6 @@ fun PrefsDto.toDomain(): WatchPreferences = WatchPreferences(
     bezel = bezel,
     charts = charts,
     alarmVibration = alarmVibration,
+    keepScreenOn = keepScreenOn,
     transport = transport,
 )

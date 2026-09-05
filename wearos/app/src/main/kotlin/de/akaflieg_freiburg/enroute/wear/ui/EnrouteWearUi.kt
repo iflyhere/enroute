@@ -95,6 +95,7 @@ fun EnrouteWearUi(
     uiState: State<DataUiState>,
     settings: SettingsStore,
     discovery: Discovery,
+    holdDisplay: (Boolean) -> Unit,
     onSettingsChanged: () -> Unit,
 ) {
     // Start on the connection screen when no phone has ever been chosen, so that a
@@ -129,6 +130,7 @@ fun EnrouteWearUi(
         Screen.Main -> MainPages(
             uiState = uiState,
             settings = settings,
+            holdDisplay = holdDisplay,
             onOpenConnect = { screen = Screen.Connect },
             onRestartSession = onSettingsChanged,
         )
@@ -163,6 +165,7 @@ fun EnrouteWearUi(
 private fun MainPages(
     uiState: State<DataUiState>,
     settings: SettingsStore,
+    holdDisplay: (Boolean) -> Unit,
     onOpenConnect: () -> Unit,
     onRestartSession: () -> Unit,
 ) {
@@ -188,6 +191,11 @@ private fun MainPages(
         mutableStateOf(TransportMode.byId(settings.transportMode))
     }
     var alarmVibration by remember { mutableStateOf(settings.alarmVibration) }
+    var keepScreenOn by remember { mutableStateOf(settings.keepScreenOn) }
+
+    // Applied as it changes rather than once at startup, so a switch flicked here or on
+    // the phone takes effect while the pilot is looking at it.
+    LaunchedEffect(keepScreenOn) { holdDisplay(keepScreenOn) }
 
     // Re-read whenever the phone's preferences change. The service writes them into the
     // store, and the store is a file the screen otherwise reads exactly once, so without
@@ -203,6 +211,7 @@ private fun MainPages(
         chartMode = ChartMode.byId(settings.chartMode)
         transportMode = TransportMode.byId(settings.transportMode)
         alarmVibration = settings.alarmVibration
+        keepScreenOn = settings.keepScreenOn
     }
 
     // Null means "fit what is drawn". Not persisted: a range a pilot chose two flights
@@ -504,6 +513,7 @@ private fun MainPages(
                     hidden = hidden,
                     bezelAction = bezelAction,
                     alarmVibration = alarmVibration,
+                    keepScreenOn = keepScreenOn,
                     chartMode = chartMode,
                     transportMode = transportMode,
                     attribution = uiState.value.session.peer?.mapAttribution.orEmpty(),
@@ -528,6 +538,10 @@ private fun MainPages(
                     onAlarmVibration = { wanted ->
                         alarmVibration = wanted
                         settings.alarmVibration = wanted
+                    },
+                    onKeepScreenOn = { wanted ->
+                        keepScreenOn = wanted
+                        settings.keepScreenOn = wanted
                     },
                     onChartMode = { mode ->
                         chartMode = mode

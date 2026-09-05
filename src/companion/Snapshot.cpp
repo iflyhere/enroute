@@ -932,6 +932,7 @@ QJsonObject Companion::Snapshot::prefs(const Companion::Revisions& revisions)
     document.insert("bezel"_L1, settings->companionBezelAction());
     document.insert("charts"_L1, settings->companionChartMode());
     document.insert("alarmVibration"_L1, settings->companionAlarmVibration());
+    document.insert("keepScreenOn"_L1, settings->companionKeepScreenOn());
     document.insert("transport"_L1, settings->companionTransportMode());
 
     return document;

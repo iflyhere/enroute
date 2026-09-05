@@ -127,6 +127,17 @@ class SettingsStore(context: Context) {
         get() = preferences.getString(KEY_TRANSPORT, "") ?: ""
         set(value) = preferences.edit().putString(KEY_TRANSPORT, value).apply()
 
+    /**
+     * Whether the display is held lit.
+     *
+     * On by default, because that is the flight case and the one a pilot cannot fix
+     * mid-air by tapping. Off is for everything else, and it is the largest saving this
+     * app has to offer.
+     */
+    var keepScreenOn: Boolean
+        get() = preferences.getBoolean(KEY_KEEP_SCREEN_ON, true)
+        set(value) = preferences.edit().putBoolean(KEY_KEEP_SCREEN_ON, value).apply()
+
     var chartMode: String
         get() = preferences.getString(KEY_CHART_MODE, "") ?: ""
         set(value) = preferences.edit().putString(KEY_CHART_MODE, value).apply()
@@ -182,6 +193,7 @@ class SettingsStore(context: Context) {
             chartMode = prefs.charts
         }
         alarmVibration = prefs.alarmVibration
+        keepScreenOn = prefs.keepScreenOn
         if (prefs.transport.isNotBlank()) {
             transportMode = prefs.transport
         }
@@ -216,6 +228,7 @@ class SettingsStore(context: Context) {
         const val KEY_PREFS_REVISION = "appliedPrefsRevision"
         const val KEY_PREFS_SESSION = "appliedPrefsSession"
         const val KEY_ALARM_VIBRATION = "alarmVibration"
+        const val KEY_KEEP_SCREEN_ON = "keepScreenOn"
 
         // A page identifier is a short lower-case word, so a comma cannot appear in
         // one and needs no escaping.
