@@ -225,6 +225,21 @@ private fun MainPages(
     // full threshold moves a step. Otherwise one flick runs through the whole range.
     var rotaryAccumulator by remember { mutableStateOf(0f) }
 
+    // The page the bezel is steering towards while the pager is still animating there.
+    // Null means "wherever the pager says", which is the truth once it has settled.
+    var rotaryTarget by remember { mutableStateOf<Int?>(null) }
+
+    // Released whenever the pager comes to rest, whatever brought it there: an
+    // animation that finished, one a swipe interrupted, or the swipe itself. Clearing
+    // it from the animation's own coroutine leaked -- a swipe cancels that coroutine,
+    // so the target stayed set for the rest of the session and every later turn of the
+    // bezel counted from a page the pilot was no longer on.
+    LaunchedEffect(pagerState.isScrollInProgress) {
+        if (!pagerState.isScrollInProgress) {
+            rotaryTarget = null
+        }
+    }
+
     HorizontalPager(
         state = pagerState,
         modifier = Modifier
@@ -242,19 +257,22 @@ private fun MainPages(
                 // it is the setting the pilot chose. Zoom stays reachable everywhere
                 // through the vertical drag below, which is why this is safe to take.
                 if (bezelAction == BezelAction.Pages) {
-                    rotaryAccumulator += event.verticalScrollPixels
-                    var step = 0
-                    while (rotaryAccumulator >= ROTARY_THRESHOLD) {
-                        rotaryAccumulator -= ROTARY_THRESHOLD
-                        step += 1
-                    }
-                    while (rotaryAccumulator <= -ROTARY_THRESHOLD) {
-                        rotaryAccumulator += ROTARY_THRESHOLD
-                        step -= 1
-                    }
+                    val (step, carry) = rotarySteps(
+                        rotaryAccumulator + event.verticalScrollPixels,
+                        ROTARY_PAGE_THRESHOLD,
+                    )
+                    rotaryAccumulator = carry
                     if (step != 0) {
-                        val target = (pagerState.currentPage + step)
-                            .coerceIn(0, pages.size - 1)
+                        // Counted from where the pager is heading, not from where it
+                        // is. currentPage does not move until the scroll animation
+                        // finishes, so a burst of events -- which is what a bezel
+                        // delivers -- all computed the same target and collapsed into
+                        // one step by accident. That looked correct and was luck:
+                        // straddle an animation boundary and the same gesture moves
+                        // two pages instead of one.
+                        val from = rotaryTarget ?: pagerState.currentPage
+                        val target = (from + step).coerceIn(0, pages.size - 1)
+                        rotaryTarget = target
                         scope.launch { pagerState.animateScrollToPage(target) }
                     }
                     return@onRotaryScrollEvent true
@@ -262,14 +280,16 @@ private fun MainPages(
 
                 when (page) {
                     WearPage.Map -> {
-                        rotaryAccumulator += event.verticalScrollPixels
-                        while (rotaryAccumulator >= ROTARY_THRESHOLD) {
-                            rotaryAccumulator -= ROTARY_THRESHOLD
-                            zoom = ZoomLevel.stepped(zoom, 1)
-                        }
-                        while (rotaryAccumulator <= -ROTARY_THRESHOLD) {
-                            rotaryAccumulator += ROTARY_THRESHOLD
-                            zoom = ZoomLevel.stepped(zoom, -1)
+                        val (step, carry) = rotarySteps(
+                            rotaryAccumulator + event.verticalScrollPixels,
+                            ROTARY_THRESHOLD,
+                        )
+                        rotaryAccumulator = carry
+                        // One zoom step an event, unlike the pages: a scale is worth
+                        // fine control, and overshooting it costs a turn back rather
+                        // than losing the screen a pilot was reading.
+                        if (step != 0) {
+                            zoom = ZoomLevel.stepped(zoom, step)
                         }
                         // Consumed, or the system scrolls something else instead.
                         true
@@ -511,6 +531,18 @@ private fun peerDescription(state: DataUiState, host: String, port: Int): String
 }
 
 private const val ROTARY_THRESHOLD = 120f
+
+/**
+ * Pixels of rotation per page.
+ *
+ * A Galaxy Watch 7 bezel delivers 136 pixels an event, so this is about four events --
+ * roughly a quarter turn -- to the screen. Deliberately much coarser than the zoom
+ * threshold above: a sleeve brushing the rim should not change what a pilot is looking
+ * at, and nine screens under one revolution would make that inevitable. It also keeps
+ * the feel that was measured before the arithmetic was corrected, where one burst of
+ * events happened to move exactly one page.
+ */
+private const val ROTARY_PAGE_THRESHOLD = 500f
 
 // Pixels of drag per zoom step. A watch face is 480 pixels across, so this gives about
 // six steps across the whole screen -- coarse enough to hit without aiming.

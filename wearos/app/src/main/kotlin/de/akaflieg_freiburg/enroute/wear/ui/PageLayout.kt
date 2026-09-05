@@ -165,3 +165,32 @@ enum class ChartMode(val id: String, val label: String) {
             entries.firstOrNull { mode -> mode.id == id } ?: Automatic
     }
 }
+
+/**
+ * How many steps a rotation has earned, and what is left over.
+ *
+ * @param accumulated pixels of rotation gathered since the last step
+ * @param threshold pixels per step
+ * @return the number of steps, signed, and the remainder to carry forward
+ *
+ * The remainder is carried rather than discarded: a bezel delivers a fixed quantum per
+ * event -- 136 pixels on a Galaxy Watch 7 -- which divides into no sensible threshold
+ * evenly, and throwing the difference away makes a slow turn travel further than a fast
+ * one over the same angle.
+ */
+fun rotarySteps(accumulated: Float, threshold: Float): Pair<Int, Float> {
+    if (threshold <= 0f) {
+        return 0 to 0f
+    }
+    var remainder = accumulated
+    var steps = 0
+    while (remainder >= threshold) {
+        remainder -= threshold
+        steps += 1
+    }
+    while (remainder <= -threshold) {
+        remainder += threshold
+        steps -= 1
+    }
+    return steps to remainder
+}
