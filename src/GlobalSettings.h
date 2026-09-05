@@ -158,6 +158,14 @@ public:
      */
     Q_PROPERTY(bool companionBluetoothEnabled READ companionBluetoothEnabled WRITE setCompanionBluetoothEnabled BINDABLE bindableCompanionBluetoothEnabled NOTIFY companionBluetoothEnabledChanged)
 
+    /*! \brief Keep publishing while this app is not in the foreground
+     *
+     *  Off by default. It holds a foreground service and a wake lock open, which is
+     *  what stops Android throttling the link -- and which a pilot should switch on
+     *  deliberately rather than discover in a battery report.
+     */
+    Q_PROPERTY(bool companionInBackground READ companionInBackground WRITE setCompanionInBackground NOTIFY companionInBackgroundChanged)
+
     /*! \brief Six-digit code that a companion device must present */
     Q_PROPERTY(QString companionPairingCode READ companionPairingCode WRITE setCompanionPairingCode NOTIFY companionPairingCodeChanged)
 
@@ -334,6 +342,12 @@ public:
      * @returns Property companionPairingCode
      */
     [[nodiscard]] auto companionPairingCode() const -> QString { return m_companionPairingCode; }
+
+    /*! \brief Getter function for property of the same name
+     *
+     * @returns Property companionInBackground
+     */
+    [[nodiscard]] auto companionInBackground() const -> bool { return m_companionInBackground; }
 
     /*! \brief Getter function for property of the same name
      *
@@ -533,6 +547,12 @@ public:
 
     /*! \brief Setter function for property of the same name
      *
+     *  @param newCompanionInBackground Property companionInBackground
+     */
+    void setCompanionInBackground(bool newCompanionInBackground);
+
+    /*! \brief Setter function for property of the same name
+     *
      *  @param newCompanionPageOrder Property companionPageOrder
      */
     void setCompanionPageOrder(const QString& newCompanionPageOrder);
@@ -666,6 +686,9 @@ signals:
     void companionPreferencesChanged();
 
     /*! \brief Notifier signal */
+    void companionInBackgroundChanged();
+
+    /*! \brief Notifier signal */
     void companionBluetoothEnabledChanged();
 
     /*! \brief Notifier signal */
@@ -700,6 +723,7 @@ private:
     QProperty<bool> m_companionNetworkEnabled {m_settings.value(QStringLiteral("companion/networkEnabled"), false).toBool()};
     QProperty<bool> m_companionBluetoothEnabled {m_settings.value(QStringLiteral("companion/bluetoothEnabled"), false).toBool()};
     QString m_companionPairingCode {m_settings.value(QStringLiteral("companion/pairingCode")).toString()};
+    bool m_companionInBackground {m_settings.value(QStringLiteral("companion/inBackground"), false).toBool()};
     QString m_companionPageOrder {m_settings.value(QStringLiteral("companion/pageOrder")).toString()};
     QString m_companionHiddenPages {m_settings.value(QStringLiteral("companion/hiddenPages")).toString()};
     QString m_companionBezelAction {m_settings.value(QStringLiteral("companion/bezelAction"), QStringLiteral("pages")).toString()};

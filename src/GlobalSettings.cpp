@@ -327,6 +327,19 @@ void GlobalSettings::setCompanionAlarmVibration(bool newCompanionAlarmVibration)
 }
 
 
+void GlobalSettings::setCompanionInBackground(bool newCompanionInBackground)
+{
+    if (newCompanionInBackground == m_companionInBackground)
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/inBackground"), newCompanionInBackground);
+    m_companionInBackground = newCompanionInBackground;
+    emit companionInBackgroundChanged();
+}
+
+
 void GlobalSettings::setCompanionPairingCode(const QString& newCompanionPairingCode)
 {
     if (newCompanionPairingCode == m_companionPairingCode)

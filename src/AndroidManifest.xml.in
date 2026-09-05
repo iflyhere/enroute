@@ -22,6 +22,7 @@
   <uses-permission android:name="android.permission.WAKE_LOCK"/>
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"/>
 
   <supports-screens
     android:anyDensity="true"
@@ -249,6 +250,15 @@
     <service
       android:name="de.akaflieg_freiburg.enroute.FlightLogService"
       android:foregroundServiceType="location"
+      android:exported="false"/>
+
+    <!-- Keeps the companion link alive while this app is not in the foreground.
+         connectedDevice and never dataSync: the platform caps a dataSync foreground
+         service at roughly six hours in twenty-four and then stops it, which on a long
+         cross-country would mean the watch going dark mid-leg. -->
+    <service
+      android:name="de.akaflieg_freiburg.enroute.CompanionService"
+      android:foregroundServiceType="connectedDevice"
       android:exported="false"/>
     
     <!-- NOTE: android:authorities must match AUTHORITY in de/akaflieg_freiburg/enroute/IntentLauncher.java -->

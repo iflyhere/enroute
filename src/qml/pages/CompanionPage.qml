@@ -256,6 +256,31 @@ Page {
                 text: CompanionServer.errorString
             }
 
+            WordWrappingSwitchDelegate {
+                id: backgroundSwitch
+
+                Layout.fillWidth: true
+                text: qsTr("Keep publishing in the background")
+                icon.source: "/icons/material/ic_cached.svg"
+
+                Component.onCompleted: {
+                    backgroundSwitch.checked = GlobalSettings.companionInBackground
+                }
+
+                onToggled: {
+                    PlatformAdaptor.vibrateBrief()
+                    GlobalSettings.companionInBackground = backgroundSwitch.checked
+                }
+            }
+
+            Label {
+                Layout.fillWidth: true
+                Layout.margins: companionPage.font.pixelSize
+                wrapMode: Text.Wrap
+                textFormat: Text.StyledText
+                text: qsTr("Without this the companion device is served only while this app is on screen: Android throttles a backgrounded app until its updates arrive minutes apart and then stop. With it, a notification stays in the shade and the link survives the phone being put away.")
+            }
+
             Label {
                 Layout.fillWidth: true
                 Layout.margins: companionPage.font.pixelSize
