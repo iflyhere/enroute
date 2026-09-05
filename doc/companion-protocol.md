@@ -57,6 +57,14 @@ Ten counters carry all cache coherency:
 | `trafficRev` | `quint32` | Incremented on **every** published traffic frame, unlike the counters above, which move only when their content changes. That is deliberate: a client has to be able to tell "no traffic" from "no data", and the only thing separating them is that frames keep arriving. |
 | `mapRev` | `quint32` | Changes whenever the set of downloaded map files changes. Appears in the capability document, and in every tile URL. A client that sees it move must refetch the style: the URLs in the one it holds no longer resolve, which is what stops its tile cache from outliving the maps it was filled from. |
 
+Every navigation frame carries `alarm`, the collision alarm level, zero when there is none. It is
+also on the traffic document, where the rest of the warning lives; it is repeated here because a
+client that had to fetch that document to learn it was warned had to fetch it on every tick. Against
+one real phone's own documents that is 28 fragments a second over Bluetooth, beside the frame's 32 --
+nearly half the link, to keep a list of airliners current for the sake of one integer. On the frame
+it is free: ten bytes on 590 is the same 32 fragments. It also means a client whose traffic document
+did not arrive, or could not be decoded, is still warned.
+
 Every navigation frame repeats `routeRev` and carries a `rev` object with all six remaining document
 counters:
 

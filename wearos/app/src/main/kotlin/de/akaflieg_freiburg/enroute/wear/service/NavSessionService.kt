@@ -254,7 +254,13 @@ class NavSessionService : Service() {
         alert = created
         scope.launch {
             SessionHolder.state
-                .map { state -> state.traffic?.warning?.alarmLevel ?: 0 }
+                // From the navigation frame, not the traffic document. The frame
+                // arrives every second on both transports; the traffic document is
+                // ordinary detail that a slow link may pace, and a wrist should not be
+                // buzzed late because a list of airliners was still in flight. It also
+                // means the alarm survives a traffic document that never arrived or
+                // could not be decoded.
+                .map { state -> state.frame?.alarmLevel ?: 0 }
                 .distinctUntilChanged()
                 .collect { level -> created.onAlarmLevel(level, settings.alarmVibration) }
         }

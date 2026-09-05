@@ -154,6 +154,7 @@ fun NavFrameDto.toDomain(): NavFrame {
         statusText = fmt?.statusText ?: "",
         flightLevel = measured(pressureAltitudeM, fmt?.pressureAltitude),
         flightLevelImplausible = pressureAltitudeImplausible,
+        alarmLevel = alarmLevel,
     )
 }
 

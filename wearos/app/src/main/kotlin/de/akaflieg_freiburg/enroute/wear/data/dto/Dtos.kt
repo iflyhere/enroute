@@ -131,6 +131,14 @@ data class NavFrameDto(
      * is the one thing that streams afterwards.
      */
     @SerialName("rev") val revisions: DocumentRevisionsDto? = null,
+    /**
+     * The collision alarm level, zero when there is none.
+     *
+     * On the frame rather than only on the traffic document, so that a wrist is buzzed
+     * as promptly as the frame arrives, and so that it still is when the traffic
+     * document did not arrive or could not be read.
+     */
+    @SerialName("alarm") val alarmLevel: Int = 0,
 )
 
 /**
