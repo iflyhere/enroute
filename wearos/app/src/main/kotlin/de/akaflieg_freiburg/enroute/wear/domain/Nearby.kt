@@ -59,3 +59,20 @@ data class NearbyPlace(
     val distanceM: Double?,
     val bearingDeg: Double?,
 )
+
+/**
+ * What the phone says the watch's screens and controls should be.
+ *
+ * @property revision moves only when someone changes something on the phone, which is
+ * what makes it safe to apply wholesale: it is always a deliberate act, never a
+ * republication of what was already there.
+ */
+data class WatchPreferences(
+    val revision: Long,
+    val pageOrder: String,
+    val hiddenPages: String,
+    val bezel: String,
+    val charts: String,
+    val alarmVibration: Boolean,
+    val transport: String,
+)

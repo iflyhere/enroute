@@ -27,6 +27,7 @@
 #include <QRegularExpression>
 
 #include "GlobalObject.h"
+#include "GlobalSettings.h"
 #include "companion/Protocol.h"
 #include "companion/Snapshot.h"
 #include "config.h"
@@ -510,6 +511,7 @@ QJsonObject Companion::Snapshot::nav(const Companion::Revisions& revisions,
     documentRevisions.insert("log"_L1, static_cast<qint64>(revisions.log));
     documentRevisions.insert("nearby"_L1, static_cast<qint64>(revisions.nearby));
     documentRevisions.insert("traffic"_L1, static_cast<qint64>(revisions.traffic));
+    documentRevisions.insert("prefs"_L1, static_cast<qint64>(revisions.prefs));
     document.insert("rev"_L1, documentRevisions);
     document.insert("t"_L1, QDateTime::currentSecsSinceEpoch());
     document.insert("status"_L1, toString(status));
@@ -909,6 +911,28 @@ QJsonObject Companion::Snapshot::vacs(const Companion::Revisions& revisions,
         charts.append(chart);
     }
     document.insert("vac"_L1, charts);
+
+    return document;
+}
+
+
+QJsonObject Companion::Snapshot::prefs(const Companion::Revisions& revisions)
+{
+    auto* const settings = GlobalObject::globalSettings();
+
+    QJsonObject document;
+    document.insert("v"_L1, Companion::protocolVersion);
+    document.insert("sid"_L1, static_cast<qint64>(revisions.session));
+    document.insert("prefsRev"_L1, static_cast<qint64>(revisions.prefs));
+
+    // Sent even when empty, and an empty order means "your own default". A companion
+    // that has never been arranged here must not be given a blank screen list.
+    document.insert("pageOrder"_L1, settings->companionPageOrder());
+    document.insert("hiddenPages"_L1, settings->companionHiddenPages());
+    document.insert("bezel"_L1, settings->companionBezelAction());
+    document.insert("charts"_L1, settings->companionChartMode());
+    document.insert("alarmVibration"_L1, settings->companionAlarmVibration());
+    document.insert("transport"_L1, settings->companionTransportMode());
 
     return document;
 }

@@ -178,6 +178,18 @@ private fun MainPages(
     }
     var alarmVibration by remember { mutableStateOf(settings.alarmVibration) }
 
+    // Re-read whenever the phone's preferences have been taken. The service writes them
+    // into the store, and the store is a file the screen otherwise reads exactly once,
+    // so without this a change made on the phone would not appear until a restart.
+    LaunchedEffect(uiState.value.session.prefs?.revision) {
+        order = settings.pageOrder
+        hidden = settings.hiddenPages
+        bezelAction = BezelAction.byId(settings.bezelAction)
+        chartMode = ChartMode.byId(settings.chartMode)
+        transportMode = TransportMode.byId(settings.transportMode)
+        alarmVibration = settings.alarmVibration
+    }
+
     // Null means "fit what is drawn". Not persisted: a range a pilot chose two flights
     // ago is not a range they chose for this one.
     var radarRangeM by remember { mutableStateOf<Double?>(null) }

@@ -164,6 +164,12 @@ void Companion::CompanionServer::deferredInitialization()
     connect(GlobalObject::globalSettings(), &GlobalSettings::companionBluetoothEnabledChanged,
             this, &Companion::CompanionServer::updateTransport);
 
+    // The companion's own display preferences. No timer: they change when the pilot
+    // changes them and at no other time. Here rather than in the constructor, where
+    // GlobalObject forbids reaching for a singleton at all.
+    connect(GlobalObject::globalSettings(), &GlobalSettings::companionPreferencesChanged,
+            this, &Companion::CompanionServer::publishPrefs);
+
     updateTransport();
 }
 
@@ -438,9 +444,20 @@ void Companion::CompanionServer::publishVacs()
 void Companion::CompanionServer::markVacsDirty()
 {
     publishVacs();
+    publishPrefs();
     publishFlightLog();
     publishTraffic();
     publishNearby();
+}
+
+
+void Companion::CompanionServer::publishPrefs()
+{
+    m_revisions.prefs++;
+    m_prefsDocument = QJsonDocument(Companion::Snapshot::prefs(m_revisions))
+                          .toJson(QJsonDocument::Compact);
+
+    emit prefsDocumentChanged();
 }
 
 
@@ -555,6 +572,7 @@ void Companion::CompanionServer::updateTransport()
         m_vacDocument.clear();
         m_vacFingerprint.clear();
         m_logDocument.clear();
+        m_prefsDocument.clear();
         m_logFingerprint.clear();
         m_trafficDocument.clear();
         m_nearbyDocument.clear();

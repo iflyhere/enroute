@@ -25,6 +25,7 @@ import de.akaflieg_freiburg.enroute.wear.data.dto.HelloDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NavFrameDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NearbyBoardDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NotamBoardDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.PrefsDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.RouteDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.TrafficBoardDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.VacBoardDto
@@ -114,6 +115,7 @@ class HttpNavTransport(
         var weatherETag: String? = null
         var vacETag: String? = null
         var logETag: String? = null
+        var prefsETag: String? = null
         var trafficETag: String? = null
         var nearbyETag: String? = null
 
@@ -123,6 +125,7 @@ class HttpNavTransport(
         var weatherFetchedAt = 0L
         var vacsFetchedAt = 0L
         var logFetchedAt = 0L
+        var prefsFetchedAt = 0L
         var nearbyFetchedAt = 0L
 
         while (true) {
@@ -210,6 +213,23 @@ class HttpNavTransport(
                             TransportEvent.NearbyUpdate(
                                 WireJson.json.decodeFromString<NearbyBoardDto>(nearby.body)
                                     .toDomain(),
+                            ),
+                        )
+                    }
+                }
+
+                // The phone's display preferences. Rarely changed and cheap to ask
+                // for -- the whole document is a few hundred bytes and an unchanged one
+                // costs a 304 -- but asked for often enough that a pilot rearranging
+                // screens on the phone sees the watch follow while still holding both.
+                if (now - prefsFetchedAt >= PREFS_PERIOD_MS) {
+                    prefsFetchedAt = now
+                    val prefs = request(PREFS, ifNoneMatch = prefsETag)
+                    if (prefs != null) {
+                        prefsETag = prefs.etag
+                        emit(
+                            TransportEvent.PrefsUpdate(
+                                WireJson.json.decodeFromString<PrefsDto>(prefs.body).toDomain(),
                             ),
                         )
                     }
@@ -338,6 +358,7 @@ class HttpNavTransport(
         const val WEATHER = "/weather"
         const val VACS = "/vacs"
         const val LOG = "/log"
+        const val PREFS = "/prefs"
         const val TRAFFIC = "/traffic"
         const val NEARBY = "/nearby"
 
@@ -353,6 +374,16 @@ class HttpNavTransport(
         const val VAC_PERIOD_MS = 300_000L
 
         const val LOG_PERIOD_MS = 30_000L
+
+        /**
+         * How often to ask for the preferences.
+         *
+         * Five seconds, which is far more often than they change and still cheap: an
+         * unchanged document is a 304 with no body. The point is the moment a pilot is
+         * arranging screens on the phone with the watch on the wrist, where a longer
+         * period would feel broken.
+         */
+        const val PREFS_PERIOD_MS = 5_000L
 
         const val NEARBY_PERIOD_MS = 60_000L
         const val CONNECT_TIMEOUT_MS = 3_000

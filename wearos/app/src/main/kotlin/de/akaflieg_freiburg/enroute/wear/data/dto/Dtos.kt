@@ -156,6 +156,7 @@ data class DocumentRevisionsDto(
     @SerialName("log") val log: Long = 0,
     @SerialName("nearby") val nearby: Long = 0,
     @SerialName("traffic") val traffic: Long = 0,
+    @SerialName("prefs") val prefs: Long = 0,
 )
 
 @Serializable
@@ -425,4 +426,23 @@ data class DocMetaDto(
     @SerialName("hash") val hash: String? = null,
     @SerialName("chunk") val payloadBytes: Int = 0,
     @SerialName("frags") val fragments: Int = 0,
+)
+
+/**
+ * The display preferences, as the phone holds them.
+ *
+ * Everything here is also settable on the watch. The phone is where they are edited and
+ * the watch is where they can be tweaked: this document is applied when [revision]
+ * moves, which happens only when someone changes something on the phone.
+ */
+@Serializable
+data class PrefsDto(
+    @SerialName("prefsRev") val revision: Long = 0,
+    /** Screen identifiers in order. Empty means the watch's own default. */
+    @SerialName("pageOrder") val pageOrder: String = "",
+    @SerialName("hiddenPages") val hiddenPages: String = "",
+    @SerialName("bezel") val bezel: String = "",
+    @SerialName("charts") val charts: String = "",
+    @SerialName("alarmVibration") val alarmVibration: Boolean = true,
+    @SerialName("transport") val transport: String = "",
 )

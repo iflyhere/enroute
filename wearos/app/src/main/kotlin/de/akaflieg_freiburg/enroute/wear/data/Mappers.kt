@@ -25,6 +25,7 @@ import de.akaflieg_freiburg.enroute.wear.data.dto.MetarDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NavFrameDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NavLegDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NearbyBoardDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.PrefsDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NearbyPlaceDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NotamAreaDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NotamBoardDto
@@ -45,6 +46,7 @@ import de.akaflieg_freiburg.enroute.wear.domain.FlightCategory
 import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
 import de.akaflieg_freiburg.enroute.wear.domain.FlightStatus
 import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
+import de.akaflieg_freiburg.enroute.wear.domain.WatchPreferences
 import de.akaflieg_freiburg.enroute.wear.domain.Measured
 import de.akaflieg_freiburg.enroute.wear.domain.MetarReport
 import de.akaflieg_freiburg.enroute.wear.domain.NavFrame
@@ -420,4 +422,14 @@ private fun NearbyPlaceDto.toDomain(): NearbyPlace = NearbyPlace(
     way = way?.takeIf { text -> text.isNotBlank() },
     distanceM = distanceM,
     bearingDeg = bearingDeg,
+)
+
+fun PrefsDto.toDomain(): WatchPreferences = WatchPreferences(
+    revision = revision,
+    pageOrder = pageOrder,
+    hiddenPages = hiddenPages,
+    bezel = bezel,
+    charts = charts,
+    alarmVibration = alarmVibration,
+    transport = transport,
 )

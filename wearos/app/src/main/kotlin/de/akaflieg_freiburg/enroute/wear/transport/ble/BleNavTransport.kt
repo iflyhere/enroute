@@ -44,6 +44,7 @@ import de.akaflieg_freiburg.enroute.wear.data.dto.HelloDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NavFrameDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NearbyBoardDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.NotamBoardDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.PrefsDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.RouteDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.TrafficBoardDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.VacBoardDto
@@ -423,6 +424,7 @@ class BleNavTransport(
                                 "log" to revisions.log,
                                 "nearby" to revisions.nearby,
                                 "traffic" to revisions.traffic,
+                                "prefs" to revisions.prefs,
                             )
                         } ?: mapOf("route" to decoded.routeRevision)
 
@@ -565,6 +567,9 @@ class BleNavTransport(
                         )
                         "traffic" -> TransportEvent.TrafficUpdate(
                             WireJson.json.decodeFromString<TrafficBoardDto>(text).toDomain(),
+                        )
+                        "prefs" -> TransportEvent.PrefsUpdate(
+                            WireJson.json.decodeFromString<PrefsDto>(text).toDomain(),
                         )
                         "nearby" -> TransportEvent.NearbyUpdate(
                             WireJson.json.decodeFromString<NearbyBoardDto>(text).toDomain(),

@@ -22,6 +22,7 @@ package de.akaflieg_freiburg.enroute.wear.transport
 import de.akaflieg_freiburg.enroute.wear.domain.FlightLogBoard
 import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
 import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
+import de.akaflieg_freiburg.enroute.wear.domain.WatchPreferences
 import de.akaflieg_freiburg.enroute.wear.domain.NavFrame
 import de.akaflieg_freiburg.enroute.wear.domain.NearbyBoard
 import de.akaflieg_freiburg.enroute.wear.domain.NotamBoard
@@ -61,6 +62,9 @@ sealed interface TransportEvent {
     data class VacUpdate(val vacs: VacBoard) : TransportEvent
     data class FlightLogUpdate(val log: FlightLogBoard) : TransportEvent
     data class TrafficUpdate(val traffic: TrafficBoard) : TransportEvent
+    /** The phone's display preferences, applied when their revision moves. */
+    data class PrefsUpdate(val prefs: WatchPreferences) : TransportEvent
+
     data class NearbyUpdate(val nearby: NearbyBoard) : TransportEvent
     data class Failed(val reason: FailureReason, val detail: String? = null) : TransportEvent
 }

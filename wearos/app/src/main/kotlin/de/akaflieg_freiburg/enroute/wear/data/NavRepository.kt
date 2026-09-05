@@ -24,6 +24,7 @@ import de.akaflieg_freiburg.enroute.wear.domain.FlightRoute
 import de.akaflieg_freiburg.enroute.wear.domain.NavFrame
 import de.akaflieg_freiburg.enroute.wear.domain.NearbyBoard
 import de.akaflieg_freiburg.enroute.wear.domain.NotamBoard
+import de.akaflieg_freiburg.enroute.wear.domain.WatchPreferences
 import de.akaflieg_freiburg.enroute.wear.domain.TrafficBoard
 import de.akaflieg_freiburg.enroute.wear.domain.VacBoard
 import de.akaflieg_freiburg.enroute.wear.domain.WeatherBoard
@@ -87,6 +88,13 @@ data class SessionState(
      * is down -- and a blank list would read as "nothing to report".
      */
     val notams: NotamBoard? = null,
+    /**
+     * The phone's display preferences, or null until they arrive.
+     *
+     * Held here rather than written straight into the settings so that the screen can
+     * see them move: the pager reads the settings once and would otherwise not notice.
+     */
+    val prefs: WatchPreferences? = null,
     /**
      * Last weather board received, kept across a reconnect for the same reason. A
      * METAR is valid for an hour and a half, so the last one is still the best
@@ -218,6 +226,9 @@ class NavRepository(
 
                 is TransportEvent.TrafficUpdate ->
                     current.copy(traffic = event.traffic)
+
+                is TransportEvent.PrefsUpdate ->
+                    current.copy(prefs = event.prefs)
 
                 is TransportEvent.NearbyUpdate ->
                     current.copy(nearby = event.nearby)
