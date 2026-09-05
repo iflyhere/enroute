@@ -158,11 +158,35 @@ class BleNavTransport(
             }
         }
 
+        // What this client holds, by document name, and what it is fetching now. The
+        // link carries one transfer at a time, so a document is asked for only when the
+        // previous one has arrived -- otherwise the second request re-prepares the
+        // phone's buffer under the first, and neither completes.
+        val held = mutableMapOf<String, Long>()
+        var published = emptyMap<String, Long>()
+        var fetching: String? = null
+
+        // The revision each in-flight request was made against. Read back when the
+        // document arrives, because by then `published` has been replaced by a newer
+        // frame: recording that newer number against the older content would lose a
+        // change that happened while the transfer was running, and it would stay lost.
+        val requestedAt = mutableMapOf<String, Long>()
+
         val navFrames = Reassembler()
         val documents = Reassembler()
         var announcedHash: String? = null
         var announcedDocument: String? = null
         var nextFragment = 0
+
+        fun fetchNextIfIdle(client: BluetoothGatt) {
+            if (fetching != null) {
+                return
+            }
+            val next = staleDocuments(published, held).firstOrNull() ?: return
+            fetching = next
+            requestedAt[next] = published[next] ?: 0L
+            requestDocument(next, client, client.getService(SERVICE_UUID))
+        }
 
         val gattCallback = object : BluetoothGattCallback() {
 
@@ -178,6 +202,8 @@ class BleNavTransport(
                     Log.i(TAG, "disconnected, status $status")
                     navFrames.reset()
                     documents.reset()
+                    fetching = null
+                    requestedAt.clear()
                     pending.clear()
                     busy = false
                     trySend(TransportEvent.Failed(FailureReason.PeerClosed, "disconnected"))
@@ -308,9 +334,18 @@ class BleNavTransport(
                 if (payload == null) {
                     return
                 }
+                // Seeds the route revision, so the request below is recorded against a
+                // real number rather than zero -- otherwise the first navigation frame
+                // would find the route stale and fetch all seven kilobytes of it again.
+                published = published + ("route" to (helloOf(payload)?.routeRevision ?: 0L))
                 emitHello(payload)
 
-                // The route first, because every navigation frame refers to it.
+                // The route, before any revision counter has arrived: every navigation
+                // frame refers to it, and waiting for the first frame to say so shows
+                // an empty screen for as long as the phone's publish interval, which on
+                // the ground is several seconds.
+                fetching = "route"
+                requestedAt["route"] = published["route"] ?: 0L
                 requestDocument("route", client, service = client.getService(SERVICE_UUID))
             }
 
@@ -321,10 +356,27 @@ class BleNavTransport(
                 val payload = characteristic.value ?: return
                 when (characteristic.uuid) {
                     NAV_UUID -> navFrames.accept(payload)?.let { document ->
-                        runCatching {
+                        val decoded = runCatching {
                             WireJson.json.decodeFromString<NavFrameDto>(document.decodeToString())
-                                .toDomain()
-                        }.getOrNull()?.let { frame -> trySend(TransportEvent.Nav(frame)) }
+                        }.getOrNull() ?: return
+                        trySend(TransportEvent.Nav(decoded.toDomain()))
+
+                        // The frame is where a Bluetooth client learns that anything
+                        // else moved. Without this it would fetch the route once and
+                        // never hear about the NOTAMs, the weather or anything else
+                        // again -- which is most of what the watch shows.
+                        published = decoded.revisions?.let { revisions ->
+                            mapOf(
+                                "route" to decoded.routeRevision,
+                                "notams" to revisions.notam,
+                                "weather" to revisions.weather,
+                                "vacs" to revisions.vac,
+                                "log" to revisions.log,
+                                "nearby" to revisions.nearby,
+                                "traffic" to revisions.traffic,
+                            )
+                        } ?: mapOf("route" to decoded.routeRevision)
+                        fetchNextIfIdle(client)
                     }
 
                     META_UUID -> {
@@ -370,6 +422,10 @@ class BleNavTransport(
                 }
             }
 
+            private fun helloOf(payload: ByteArray): HelloDto? = runCatching {
+                WireJson.json.decodeFromString<HelloDto>(payload.decodeToString())
+            }.getOrNull()
+
             private fun emitHello(payload: ByteArray) {
                 val hello = runCatching {
                     WireJson.json.decodeFromString<HelloDto>(payload.decodeToString())
@@ -394,6 +450,18 @@ class BleNavTransport(
                 }
                 Log.i(TAG, "received " + announcedDocument + ", " + inflated.size + " bytes")
                 emitDocument(announcedDocument, inflated.decodeToString())
+
+                // Recorded against what the phone said when the request went out, not
+                // against what it says now: a document that changed again while this
+                // one was in flight must stay stale, or the change is lost until the
+                // next one.
+                announcedDocument?.let { name ->
+                    requestedAt.remove(name)?.let { revision -> held[name] = revision }
+                    if (fetching == name) {
+                        fetching = null
+                    }
+                }
+                gatt?.let { client -> fetchNextIfIdle(client) }
             }
 
             private fun emitDocument(name: String?, text: String) {

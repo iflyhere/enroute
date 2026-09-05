@@ -19,10 +19,12 @@
 
 package de.akaflieg_freiburg.enroute.wear
 
+import de.akaflieg_freiburg.enroute.wear.transport.ble.DOCUMENT_ORDER
 import de.akaflieg_freiburg.enroute.wear.transport.ble.LAST_FRAGMENT_MASK
 import de.akaflieg_freiburg.enroute.wear.transport.ble.Reassembler
 import de.akaflieg_freiburg.enroute.wear.transport.ble.inflateQCompressed
 import de.akaflieg_freiburg.enroute.wear.transport.ble.matchesHash
+import de.akaflieg_freiburg.enroute.wear.transport.ble.staleDocuments
 import java.io.ByteArrayOutputStream
 import java.security.MessageDigest
 import java.util.zip.Deflater
@@ -193,5 +195,45 @@ class BleFramingTest {
         val document = "{}".toByteArray()
         assertTrue(matchesHash(document, null))
         assertTrue(matchesHash(document, ""))
+    }
+
+    @Test
+    fun `only the documents whose revision moved are asked for`() {
+        val published = mapOf(
+            "route" to 2L, "notams" to 7L, "weather" to 3L,
+            "vacs" to 1L, "log" to 4L, "nearby" to 5L, "traffic" to 9L,
+        )
+        val held = mapOf("route" to 2L, "notams" to 6L, "weather" to 3L)
+        // The route and the weather are current; the NOTAMs moved, and the rest have
+        // never been held at all.
+        assertEquals(
+            listOf("notams", "nearby", "log", "vacs", "traffic"),
+            staleDocuments(published, held),
+        )
+    }
+
+    @Test
+    fun `a document the phone has never published is not asked for`() {
+        // Revision zero means there is nothing behind it. Asking would spend a round
+        // trip on a slow link to be told so, once a second, forever.
+        val published = mapOf("route" to 1L, "notams" to 0L, "weather" to 0L)
+        assertEquals(listOf("route"), staleDocuments(published, emptyMap()))
+    }
+
+    @Test
+    fun `nothing is asked for when everything is current`() {
+        val published = mapOf("route" to 4L, "notams" to 2L)
+        assertTrue(staleDocuments(published, mapOf("route" to 4L, "notams" to 2L)).isEmpty())
+    }
+
+    @Test
+    fun `the route comes first and traffic last`() {
+        // Every navigation frame refers to the route, so an empty screen without it is
+        // the worst first impression. Traffic changes every second, and a slow link
+        // that kept it current would never finish anything else.
+        val published = DOCUMENT_ORDER.associateWith { 1L }
+        val order = staleDocuments(published, emptyMap())
+        assertEquals("route", order.first())
+        assertEquals("traffic", order.last())
     }
 }

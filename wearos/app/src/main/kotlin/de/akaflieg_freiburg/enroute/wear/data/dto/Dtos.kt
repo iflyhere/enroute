@@ -123,6 +123,31 @@ data class NavFrameDto(
     /** True when there is a reading and the phone does not believe it. */
     @SerialName("pAltImplausible") val pressureAltitudeImplausible: Boolean = false,
     @SerialName("fmt") val formatted: FormattedDto? = null,
+    /**
+     * What every other document is currently at.
+     *
+     * The only way a Bluetooth client learns that something it is not holding has
+     * changed: it reads the capability document once when it connects, and this frame
+     * is the one thing that streams afterwards.
+     */
+    @SerialName("rev") val revisions: DocumentRevisionsDto? = null,
+)
+
+/**
+ * The revision of each document the phone serves.
+ *
+ * Zero means the phone has never published that document, which is different from "it
+ * changed to nothing" -- a client that has no revision of its own asks once and finds
+ * out.
+ */
+@Serializable
+data class DocumentRevisionsDto(
+    @SerialName("notam") val notam: Long = 0,
+    @SerialName("weather") val weather: Long = 0,
+    @SerialName("vac") val vac: Long = 0,
+    @SerialName("log") val log: Long = 0,
+    @SerialName("nearby") val nearby: Long = 0,
+    @SerialName("traffic") val traffic: Long = 0,
 )
 
 @Serializable
