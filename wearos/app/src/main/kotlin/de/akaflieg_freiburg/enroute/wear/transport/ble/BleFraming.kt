@@ -172,3 +172,28 @@ fun matchesHash(document: ByteArray, announced: String?): Boolean {
  * is what a sanity limit should be.
  */
 const val MAX_DOCUMENT_BYTES = 1_048_576
+
+/**
+ * The documents this client fetches over Bluetooth, in the order it wants them.
+ *
+ * The route first because every navigation frame refers to it, then what a pilot looks
+ * at soonest. Traffic is last on purpose: it changes every second and a slow link that
+ * spent itself keeping traffic current would never finish anything else.
+ */
+val DOCUMENT_ORDER = listOf("route", "notams", "nearby", "weather", "log", "vacs", "traffic")
+
+/**
+ * Which documents are out of date, in the order they should be asked for.
+ *
+ * @param published what the phone says each document is at
+ * @param held what this client last received, by name
+ *
+ * A document the phone has never published (revision zero) is not requested: there is
+ * nothing behind it, and asking would spend a round trip to be told so. A document the
+ * client has never held is requested as soon as the phone has one.
+ */
+fun staleDocuments(published: Map<String, Long>, held: Map<String, Long>): List<String> =
+    DOCUMENT_ORDER.filter { name ->
+        val theirs = published[name] ?: 0L
+        theirs > 0L && held[name] != theirs
+    }
