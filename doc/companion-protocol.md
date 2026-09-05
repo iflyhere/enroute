@@ -711,6 +711,15 @@ the cached one from a discovery, so a phone whose GATT database changed since th
 stays wrong. A client that connects and finds no companion service should drop that cache once and
 reconnect before reporting the service missing.
 
+**A client must also handle `onServiceChanged`, or it will not notice the phone restarting.** When
+the app on the phone dies and comes back, the link-layer connection survives it: no disconnect is
+delivered, the notifications simply stop, and the central is told only that the peer's services
+changed. A client that ignores that callback holds a connection which will never carry anything
+again -- correctly aged stale numbers on the display, and no retry, forever. The right response is to
+drop the cached service list and rebuild the session from scratch rather than merely rediscover: the
+phone's session id changes when it restarts, which invalidates every revision the client holds.
+Measured: with the callback handled, a phone restart costs about eleven seconds and repairs itself.
+
 **The client must request a larger MTU, and DocMeta is why.** The default ATT MTU of 23 leaves 20
 usable bytes; a DocMeta document is around a hundred. At the default it arrives truncated, fails to
 parse, and the transfer then stalls with nothing reported anywhere -- the client is waiting for a
