@@ -128,9 +128,32 @@ The Wear OS emulator is enough for layout, the status and freshness renderings, 
 transitions (`adb shell am broadcast -a com.google.android.wearable.action.ENTER_AMBIENT --ez
 enter_ambient true`) and the HTTP transport over `adb reverse`.
 
-It cannot answer anything about Bluetooth, Wi-Fi power management, battery life, thermal behaviour in
-a sunlit cockpit, or readability through polarised sunglasses. Those need the real watch, and a green
-emulator run says nothing about them.
+**It also answers Bluetooth, which is worth knowing because it sounds as though it should not.**
+Android emulator images from API 33 carry a virtual Bluetooth controller, and two emulators on one
+host see each other over BLE. A Wear OS emulator running this app has scanned, connected, negotiated
+an MTU of 517, subscribed and pulled every document -- including a 21738-byte NOTAM document, about
+two hundred fragments, so the fragment index wraps past 128 on the wire and not only in a unit test
+-- from a phone emulator running the app, with no IP path between the two. Every silent failure in
+`doc/companion-protocol.md` under "Transport 2" was found that way rather than in an aircraft.
+
+Build an x86_64 APK for it: the shipping one is `armeabi-v7a` only, which is what watches run, and an
+emulator refuses it with `INSTALL_FAILED_NO_MATCHING_ABIS`.
+
+```bash
+./gradlew :app:assembleDebug -PwearAbi=x86_64
+```
+
+Two things make an emulator Bluetooth session confusing rather than informative:
+
+- **Never leave two builds of the phone app installed.** Both advertise the same service UUID, a
+  client connects to whichever answered, and the one that is not running has no services to offer.
+  Android then caches that empty service list, and every later connection looks like a radio fault.
+- The advertised local name is the adapter's, not the app's, so filter scans on the service UUID.
+
+What the emulator still cannot answer: Wi-Fi power management, battery life, radio range, contention
+with a Bluetooth headset on the same phone, thermal behaviour in a sunlit cockpit, and readability
+through polarised sunglasses. Nor rotary input -- injecting a bezel event needs root, so the app logs
+every one it receives (`adb logcat -s EnrouteWear:V | grep rotary`) and a human has to turn it.
 
 ## Transport staging
 

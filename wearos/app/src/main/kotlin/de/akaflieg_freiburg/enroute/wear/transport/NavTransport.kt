@@ -136,6 +136,15 @@ enum class FailureReason {
     /** The pairing code was rejected. */
     Unauthorized,
 
+    /**
+     * The app lacks a permission the transport needs, so it never started.
+     *
+     * Its own reason because it is the one failure a pilot can fix and the one that is
+     * indistinguishable from every other: an ungranted BLUETOOTH_SCAN makes the scan
+     * return nothing and report nothing, which looks precisely like no phone in range.
+     */
+    PermissionMissing,
+
     /** The peer accepted the connection and then stopped answering. */
     PeerClosed,
 

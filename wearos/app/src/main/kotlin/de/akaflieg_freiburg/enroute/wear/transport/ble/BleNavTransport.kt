@@ -33,8 +33,10 @@ import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.ParcelUuid
 import android.util.Log
+import androidx.core.content.ContextCompat
 import de.akaflieg_freiburg.enroute.wear.data.WireJson
 import de.akaflieg_freiburg.enroute.wear.data.dto.DocMetaDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.FlightLogDto
@@ -90,6 +92,24 @@ class BleNavTransport(
     override val displayName: String get() = "Bluetooth"
 
     override fun session(): Flow<TransportEvent> = callbackFlow {
+        // Before anything else, because without these the scan below starts, returns
+        // nothing, reports nothing, and is indistinguishable from an empty sky.
+        val missing = requiredPermissions().filter { permission ->
+            ContextCompat.checkSelfPermission(context, permission) !=
+                PackageManager.PERMISSION_GRANTED
+        }
+        if (missing.isNotEmpty()) {
+            Log.w(TAG, "not scanning: " + missing.joinToString { it.substringAfterLast('.') })
+            trySend(
+                TransportEvent.Failed(
+                    FailureReason.PermissionMissing,
+                    "Bluetooth permission not granted",
+                ),
+            )
+            close()
+            return@callbackFlow
+        }
+
         val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
         val adapter = manager?.adapter
         if (adapter == null || !adapter.isEnabled) {
@@ -172,6 +192,11 @@ class BleNavTransport(
         // change that happened while the transfer was running, and it would stay lost.
         val requestedAt = mutableMapOf<String, Long>()
 
+        // Navigation frames counted since the document being fetched last made
+        // progress. The queue holds one transfer at a time, so anything that loses a
+        // request without reporting it stops every document, not just this one.
+        var framesWithoutProgress = 0
+
         val navFrames = Reassembler()
         val documents = Reassembler()
         var announcedHash: String? = null
@@ -184,6 +209,7 @@ class BleNavTransport(
             }
             val next = staleDocuments(published, held).firstOrNull() ?: return
             fetching = next
+            framesWithoutProgress = 0
             requestedAt[next] = published[next] ?: 0L
             requestDocument(next, client, client.getService(SERVICE_UUID))
         }
@@ -399,6 +425,23 @@ class BleNavTransport(
                                 "traffic" to revisions.traffic,
                             )
                         } ?: mapOf("route" to decoded.routeRevision)
+
+                        // A transfer that has gone quiet is released rather than waited
+                        // on forever. The Bluetooth stack refuses a write by returning
+                        // false and saying nothing else, and one lost request would
+                        // otherwise stop every document for the life of the connection
+                        // while the link itself looked perfectly healthy.
+                        if (fetching != null) {
+                            framesWithoutProgress += 1
+                            if (framesWithoutProgress > FRAMES_BEFORE_GIVING_UP) {
+                                Log.w(TAG, "no progress on " + fetching + ", asking again")
+                                documents.reset()
+                                nextFragment = 0
+                                fetching?.let { name -> requestedAt.remove(name) }
+                                fetching = null
+                                framesWithoutProgress = 0
+                            }
+                        }
                         fetchNextIfIdle(client)
                     }
 
@@ -419,6 +462,7 @@ class BleNavTransport(
                     }
 
                     DATA_UUID -> {
+                        framesWithoutProgress = 0
                         nextFragment += 1
                         val complete = documents.accept(payload)
                         if (complete == null) {
@@ -513,7 +557,16 @@ class BleNavTransport(
                         )
                         else -> null
                     }
-                }.getOrNull() ?: return
+                }.getOrNull()
+                if (event == null) {
+                    // Recorded as held all the same, by the caller: a phone speaking a
+                    // version this build cannot read will not become readable on the
+                    // next attempt, and asking again every second would spend the radio
+                    // on it. But the screen will stay empty, so this is the one clue
+                    // that says why.
+                    Log.w(TAG, "could not decode " + name + ", " + text.length + " chars")
+                    return
+                }
                 trySend(event)
             }
         }
@@ -571,6 +624,33 @@ class BleNavTransport(
         val CLIENT_CONFIG_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
 
         const val WINDOW_FRAGMENTS = 8
+
+        /**
+         * What this transport cannot work without.
+         *
+         * Empty below API 31, where both are install-time permissions and are therefore
+         * always held by an installed app.
+         */
+        fun requiredPermissions(): List<String> =
+            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
+                emptyList()
+            } else {
+                listOf(
+                    android.Manifest.permission.BLUETOOTH_SCAN,
+                    android.Manifest.permission.BLUETOOTH_CONNECT,
+                )
+            }
+
+        /**
+         * Navigation frames a transfer may go without progress before it is abandoned.
+         *
+         * Frames rather than seconds, because they are the clock this transport already
+         * has, and because a link delivering none of them has a bigger problem than a
+         * stalled document. Thirty is generous against the measured worst case: the
+         * largest document seen, 21738 bytes over about two hundred fragments, arrived
+         * inside two seconds.
+         */
+        const val FRAMES_BEFORE_GIVING_UP = 30
 
         /**
          * Makes Android forget what services a peer had.

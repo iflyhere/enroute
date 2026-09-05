@@ -147,6 +147,18 @@ class NavRepository(
                 // A refused code is not a transient failure. Stop, and let a new code
                 // restart the session; MainActivity restarts the service whenever the
                 // pilot changes one.
+                if (lastReason == FailureReason.PermissionMissing) {
+                    // Nothing to wait for: no amount of retrying grants a permission,
+                    // and a watch asking every thirty seconds for something only a tap
+                    // can fix spends its battery staying wrong.
+                    _state.update {
+                        it.copy(
+                            connection = ConnectionState.Rejected,
+                            lastFailure = lastReason,
+                        )
+                    }
+                    return@launch
+                }
                 if (lastReason == FailureReason.Unauthorized) {
                     _state.update { it.copy(connection = ConnectionState.Rejected) }
                     return@launch
