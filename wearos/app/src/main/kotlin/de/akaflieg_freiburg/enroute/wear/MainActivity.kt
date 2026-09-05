@@ -74,12 +74,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Without this, Wear OS returns to the watch face after about ten seconds
-        // without touch input -- and a pilot with both hands on the controls touches
-        // nothing. Keeping the display awake is the single most important thing this
-        // app does to be usable in flight.
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
         settings = SettingsStore(this)
         settings.applyOverrides(intent)
 
@@ -94,7 +88,24 @@ class MainActivity : ComponentActivity() {
 
         val discovery = Discovery(getSystemService(Context.WIFI_SERVICE) as? WifiManager)
 
-        setContent { EnrouteWearApp(settings, discovery) }
+        setContent { EnrouteWearApp(settings, discovery, ::holdDisplay) }
+    }
+
+    /**
+     * Holds the display lit, or lets it behave like any other watch app's.
+     *
+     * Wear OS returns to the watch face after about ten seconds without touch, and a
+     * pilot with both hands on the controls touches nothing -- so in the air this is the
+     * single most important thing the app does to be usable at all. On the ground it is
+     * the largest thing it costs in battery, which is why it is a setting rather than a
+     * decision made once here.
+     */
+    private fun holdDisplay(hold: Boolean) {
+        if (hold) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
     }
 
     /**
@@ -126,7 +137,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun EnrouteWearApp(settings: SettingsStore, discovery: Discovery) {
+private fun EnrouteWearApp(
+    settings: SettingsStore,
+    discovery: Discovery,
+    holdDisplay: (Boolean) -> Unit,
+) {
     val context = LocalContext.current
     val viewModel: DataViewModel = viewModel(factory = remember { DataViewModel.Factory() })
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
@@ -145,6 +160,7 @@ private fun EnrouteWearApp(settings: SettingsStore, discovery: Discovery) {
             uiState = uiState,
             settings = settings,
             discovery = discovery,
+            holdDisplay = holdDisplay,
             onSettingsChanged = {
                 // A restart is what makes the service pick up the new address.
                 NavSessionService.stop(context)

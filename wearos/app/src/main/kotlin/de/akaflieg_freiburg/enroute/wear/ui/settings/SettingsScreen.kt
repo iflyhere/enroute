@@ -70,6 +70,7 @@ fun SettingsScreen(
     hidden: Set<String>,
     bezelAction: BezelAction,
     alarmVibration: Boolean,
+    keepScreenOn: Boolean,
     chartMode: ChartMode,
     transportMode: TransportMode,
     attribution: String,
@@ -80,6 +81,7 @@ fun SettingsScreen(
     onToggleHidden: (WearPage) -> Unit,
     onBezelAction: (BezelAction) -> Unit,
     onAlarmVibration: (Boolean) -> Unit,
+    onKeepScreenOn: (Boolean) -> Unit,
     onChartMode: (ChartMode) -> Unit,
     onTransportMode: (TransportMode) -> Unit,
     onOpenConnect: () -> Unit,
@@ -134,6 +136,23 @@ fun SettingsScreen(
                 Note(
                     "A collision alarm buzzes the wrist whichever screen is open, and " +
                         "only when the phone raises the alarm level.",
+                )
+            }
+
+            item { SectionTitle("Display") }
+            item {
+                ChoiceRow(
+                    options = listOf("Always on", "Normal"),
+                    selected = if (keepScreenOn) 0 else 1,
+                    onSelect = { index -> onKeepScreenOn(index == 0) },
+                )
+            }
+            item {
+                Note(
+                    "Always on is what makes this readable in flight: a watch returns " +
+                        "to its face after seconds without touch, and hands on the " +
+                        "controls touch nothing. It is also the largest thing this app " +
+                        "costs in battery.",
                 )
             }
 
