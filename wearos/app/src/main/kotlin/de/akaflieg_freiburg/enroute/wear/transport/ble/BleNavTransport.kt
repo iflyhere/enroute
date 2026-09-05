@@ -166,6 +166,8 @@ class BleNavTransport(
             runNext()
         }
 
+        fun service(client: BluetoothGatt) = client.getService(SERVICE_UUID)
+
         fun requestDocument(
             name: String,
             client: BluetoothGatt,
@@ -267,6 +269,21 @@ class BleNavTransport(
                 // which the metadata cannot arrive whole.
                 Log.i(TAG, "MTU is now $mtu")
                 completed()
+
+                // Told to the phone, because it cannot read it: Qt does not expose the
+                // negotiated MTU in the peripheral role, so without this it fragments
+                // to the nineteen bytes that are safe at the default and fifteen times
+                // slower than this link can carry. Before anything is asked for, so the
+                // first document already travels at the right size.
+                service(client)?.let { found ->
+                    val control = found.getCharacteristic(CONTROL_UUID)
+                    if (control != null) {
+                        submit("state MTU $mtu") {
+                            control.value = "{\"mtu\":$mtu}".toByteArray()
+                            client.writeCharacteristic(control)
+                        }
+                    }
+                }
             }
 
             override fun onDescriptorWrite(

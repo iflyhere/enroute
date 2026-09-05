@@ -187,6 +187,11 @@ namespace Companion
 
         quint32 m_lastNavRevision {0};
 
+        // Payload bytes per fragment. Starts at the floor that is always safe and grows
+        // when a client states the MTU it negotiated, which is the only way this side
+        // can learn it: Qt does not expose the negotiated MTU in the peripheral role.
+        int m_payloadBytes {19};
+
         // The document a client is being sent, already compressed. Held rather than
         // recompressed per window, so that a transfer cannot see two different
         // versions of the same document halfway through.
