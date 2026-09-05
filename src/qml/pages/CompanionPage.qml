@@ -367,9 +367,15 @@ Page {
                     Label {
                         Layout.fillWidth: true
                         text: companionPage.screenName(screenRow.modelData)
-                        color: companionPage.isHidden(screenRow.modelData)
-                               ? Qt.rgba(0.5, 0.5, 0.5, 1.0)
-                               : companionPage.palette.text
+                        // No colour of its own. Setting one to palette.text made every
+                        // name all but invisible: this app's Material theme does not
+                        // put the label colour there, so the inherited default is the
+                        // only thing that is right in both light and dark.
+                        //
+                        // A hidden screen is dimmed by opacity for the same reason --
+                        // it is a shade of whatever the theme chose rather than a grey
+                        // that happens to work on one background.
+                        opacity: companionPage.isHidden(screenRow.modelData) ? 0.4 : 1.0
                     }
 
                     ToolButton {
