@@ -166,6 +166,12 @@ public:
      *  Empty means the companion's own default. A companion that does not know one of
      *  these identifiers ignores it, and inserts any screen of its own that is missing
      *  here, so a phone and a watch of different versions still agree on the rest.
+     *
+     *  One string rather than a list, because that is what travels on the wire. Note
+     *  for anyone editing the settings file by hand: QSettings quotes a value
+     *  containing commas when it writes one, and reads an *unquoted* comma-separated
+     *  value back as a list, whose toString() is empty. Written through this property
+     *  it round-trips; typed into the file without quotes it silently does not.
      */
     Q_PROPERTY(QString companionPageOrder READ companionPageOrder WRITE setCompanionPageOrder NOTIFY companionPreferencesChanged)
 
