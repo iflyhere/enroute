@@ -515,6 +515,31 @@ Page {
             }
 
             WordWrappingSwitchDelegate {
+                id: screenOnSwitch
+
+                Layout.fillWidth: true
+                text: qsTr("Keep the watch display on")
+                icon.source: "/icons/material/ic_settings.svg"
+
+                Component.onCompleted: {
+                    screenOnSwitch.checked = GlobalSettings.companionKeepScreenOn
+                }
+
+                onToggled: {
+                    PlatformAdaptor.vibrateBrief()
+                    GlobalSettings.companionKeepScreenOn = screenOnSwitch.checked
+                }
+            }
+
+            Label {
+                Layout.fillWidth: true
+                Layout.margins: companionPage.font.pixelSize
+                wrapMode: Text.Wrap
+                textFormat: Text.StyledText
+                text: qsTr("A smartwatch returns to its watch face after a few seconds without touch, and a pilot with both hands on the controls touches nothing. Keeping the display lit is what makes the companion readable in flight, and it is the largest thing it costs in battery.")
+            }
+
+            WordWrappingSwitchDelegate {
                 Layout.fillWidth: true
                 text: qsTr("Vibrate on traffic alarm")
                 icon.source: "/icons/material/ic_warning.svg"

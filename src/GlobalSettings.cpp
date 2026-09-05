@@ -301,6 +301,19 @@ void GlobalSettings::setCompanionTransportMode(const QString& newCompanionTransp
 }
 
 
+void GlobalSettings::setCompanionKeepScreenOn(bool newCompanionKeepScreenOn)
+{
+    if (newCompanionKeepScreenOn == m_companionKeepScreenOn)
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/keepScreenOn"), newCompanionKeepScreenOn);
+    m_companionKeepScreenOn = newCompanionKeepScreenOn;
+    emit companionPreferencesChanged();
+}
+
+
 void GlobalSettings::setCompanionAlarmVibration(bool newCompanionAlarmVibration)
 {
     if (newCompanionAlarmVibration == m_companionAlarmVibration)

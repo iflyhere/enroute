@@ -583,7 +583,7 @@ settings, held by the phone.
   "pageOrder": "map,data,notam,weather,log,settings",
   "hiddenPages": "vacs",
   "bezel": "pages", "charts": "auto",
-  "alarmVibration": true, "transport": "auto" }
+  "alarmVibration": true, "keepScreenOn": true, "transport": "auto" }
 ```
 
 | Field | Meaning |
@@ -593,6 +593,7 @@ settings, held by the phone.
 | `bezel` | `pages` or `zoom`: what a rotary input does. |
 | `charts` | `auto`, `on` or `off`: whether approach charts are drawn on the map. |
 | `alarmVibration` | Whether a collision alarm vibrates. Absent means **true**: a warning that is silent by accident is the wrong way for a default to be wrong. |
+| `keepScreenOn` | Whether the companion holds its display lit. Absent means **true**, which is the flight case: a watch returns to its face after seconds without touch, and a pilot with both hands on the controls touches nothing. It is also the largest thing a companion costs in battery, which is why it is a setting. |
 | `transport` | `auto`, `wifi` or `ble`: which link the companion should use. |
 
 **Why the phone holds them.** Arranging nine screens with a fingertip on a 454 pixel disc is a poor

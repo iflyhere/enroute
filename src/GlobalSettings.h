@@ -184,6 +184,14 @@ public:
     /*! \brief Approach charts on the companion: "auto", "on" or "off" */
     Q_PROPERTY(QString companionChartMode READ companionChartMode WRITE setCompanionChartMode NOTIFY companionPreferencesChanged)
 
+    /*! \brief Whether the companion keeps its display lit
+     *
+     *  On in the air, because Wear OS returns to the watch face after about ten seconds
+     *  without touch and a pilot with both hands on the controls touches nothing. Off
+     *  everywhere else, because it is the largest thing the companion costs in battery.
+     */
+    Q_PROPERTY(bool companionKeepScreenOn READ companionKeepScreenOn WRITE setCompanionKeepScreenOn NOTIFY companionPreferencesChanged)
+
     /*! \brief Whether the companion vibrates on a collision alarm */
     Q_PROPERTY(bool companionAlarmVibration READ companionAlarmVibration WRITE setCompanionAlarmVibration NOTIFY companionPreferencesChanged)
 
@@ -356,6 +364,12 @@ public:
      * @returns Property companionAlarmVibration
      */
     [[nodiscard]] auto companionAlarmVibration() const -> bool { return m_companionAlarmVibration; }
+
+    /*! \brief Getter function for property of the same name
+     *
+     * @returns Property companionKeepScreenOn
+     */
+    [[nodiscard]] auto companionKeepScreenOn() const -> bool { return m_companionKeepScreenOn; }
 
     /*! \brief Getter function for property of the same name
      *
@@ -549,6 +563,12 @@ public:
 
     /*! \brief Setter function for property of the same name
      *
+     *  @param newCompanionKeepScreenOn Property companionKeepScreenOn
+     */
+    void setCompanionKeepScreenOn(bool newCompanionKeepScreenOn);
+
+    /*! \brief Setter function for property of the same name
+     *
      *  @param newCompanionTransportMode Property companionTransportMode
      */
     void setCompanionTransportMode(const QString& newCompanionTransportMode);
@@ -685,6 +705,7 @@ private:
     QString m_companionBezelAction {m_settings.value(QStringLiteral("companion/bezelAction"), QStringLiteral("pages")).toString()};
     QString m_companionChartMode {m_settings.value(QStringLiteral("companion/chartMode"), QStringLiteral("auto")).toString()};
     bool m_companionAlarmVibration {m_settings.value(QStringLiteral("companion/alarmVibration"), true).toBool()};
+    bool m_companionKeepScreenOn {m_settings.value(QStringLiteral("companion/keepScreenOn"), true).toBool()};
     QString m_companionTransportMode {m_settings.value(QStringLiteral("companion/transportMode"), QStringLiteral("auto")).toString()};
 
     QProperty<bool> m_positioningByTrafficDataReceiver;

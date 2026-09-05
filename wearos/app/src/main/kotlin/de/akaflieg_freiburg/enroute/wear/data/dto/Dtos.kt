@@ -452,5 +452,7 @@ data class PrefsDto(
     @SerialName("bezel") val bezel: String = "",
     @SerialName("charts") val charts: String = "",
     @SerialName("alarmVibration") val alarmVibration: Boolean = true,
+    /** Whether the watch holds its display lit. Absent means yes, which is the flight case. */
+    @SerialName("keepScreenOn") val keepScreenOn: Boolean = true,
     @SerialName("transport") val transport: String = "",
 )
