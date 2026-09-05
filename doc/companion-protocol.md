@@ -677,6 +677,11 @@ are carried, so a client shares its parser between transports.
 | `e5c0a004-...` | DocData | notify | the requested document, compressed and chunked |
 | `e5c0a005-...` | Control | write | `{"get":"route","from":0}` or `{"rate":2000}` |
 
+**`frags` of zero means the name is valid and there is nothing behind it.** A client
+records the revision it asked at and stops asking. Silence cannot carry that meaning: a client
+cannot tell it from a transfer that has not started yet, so it waits, gives up, and asks again for
+the life of the connection.
+
 `get` takes **any** of the document names this protocol serves — `route`, `notams`, `weather`,
 `vacs`, `log`, `traffic`, `nearby` — not only the route. The two characteristics were named
 RouteMeta and RouteData when the route was the only large document; they carry whichever one was

@@ -402,6 +402,7 @@ void Companion::BleTransport::prepareDocument(const QString& name)
         m_prepared.clear();
         m_preparedName.clear();
         m_preparedFragments = 0;
+        announceNothing(name);
         return;
     }
 
@@ -414,9 +415,13 @@ void Companion::BleTransport::prepareDocument(const QString& name)
 
     if (m_preparedFragments > maxFragments)
     {
+        // Too big for this transport. Answered the same way as an empty document,
+        // because from the client's side the two are identical: there is nothing here
+        // that it is going to receive, and it needs to stop asking.
         m_prepared.clear();
         m_preparedName.clear();
         m_preparedFragments = 0;
+        announceNothing(name);
         return;
     }
 
@@ -437,6 +442,28 @@ void Companion::BleTransport::prepareDocument(const QString& name)
         m_service->writeCharacteristic(m_service->characteristic(uuidOf(metaUuidString)),
                                        QJsonDocument(meta).toJson(QJsonDocument::Compact));
     }
+}
+
+
+void Companion::BleTransport::announceNothing(const QString& name)
+{
+    if (m_service.isNull())
+    {
+        return;
+    }
+
+    // Zero fragments: the name is valid and there is nothing behind it. Silence would
+    // say the same to a human and the opposite to a client, which cannot tell it from a
+    // transfer that has not started yet and will wait, then ask again, forever.
+    QJsonObject meta;
+    meta.insert("doc"_L1, name);
+    meta.insert("len"_L1, 0);
+    meta.insert("enc"_L1, "zlib"_L1);
+    meta.insert("chunk"_L1, payloadBytes);
+    meta.insert("frags"_L1, 0);
+
+    m_service->writeCharacteristic(m_service->characteristic(uuidOf(metaUuidString)),
+                                   QJsonDocument(meta).toJson(QJsonDocument::Compact));
 }
 
 
