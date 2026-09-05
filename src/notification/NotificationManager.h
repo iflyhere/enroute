@@ -181,7 +181,11 @@ private:
 
     // Setup speaker: construct the speaker, move it to the GUI thread, make it
     // a child of this and wire it up.
-    void setupSpeaker();
+    //
+    // The language is passed in rather than looked up here, because under Linux this
+    // runs in a worker thread and GlobalObject's accessors are not safe to call from
+    // one.
+    void setupSpeaker(const QString& language);
 
     // This method cleans the list m_spokenNotifications and sorts it by
     // importance. If a notification is in the list, it speaks the notication

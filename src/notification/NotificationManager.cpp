@@ -53,15 +53,19 @@ Notifications::NotificationManager::NotificationManager(QObject *parent) : Globa
 
 void Notifications::NotificationManager::deferredInitialization()
 {
+    // Read here, in the GUI thread, and captured below: the Linux branch runs in a
+    // worker thread, where reaching for a GlobalObject singleton is not safe.
+    const auto language = GlobalObject::platformAdaptor()->language();
+
 #if defined(Q_OS_LINUX) and not defined(Q_OS_ANDROID)
     // Under Linux, the constructor of QTextToSpeech is extremely slow. For that reason we run the constructor in a separate thread.
-    m_speakerFuture = QtConcurrent::run([this]() { setupSpeaker();} );
+    m_speakerFuture = QtConcurrent::run([this, language]() { setupSpeaker(language);} );
 #else
     // On other operating systems, we construct the QTextToSpeech object
     // directly.
     //
     // Note: under Android, QTextToSpeech MUST be created in the GUI thread
-    setupSpeaker();
+    setupSpeaker(language);
 #endif
 
     m_speechBreakTimer.setInterval(1s);
@@ -226,13 +230,13 @@ void Notifications::NotificationManager::onSpeakerStateChanged(QTextToSpeech::St
     }
 }
 
-void Notifications::NotificationManager::setupSpeaker()
+void Notifications::NotificationManager::setupSpeaker(const QString& language)
 {
     auto *speaker = new QTextToSpeech();
     speaker->moveToThread(thread());
     speaker->setParent(this);
     QQmlEngine::setObjectOwnership(speaker, QQmlEngine::CppOwnership);
-    speaker->setLocale(QLocale(GlobalObject::platformAdaptor()->language()));
+    speaker->setLocale(QLocale(language));
     connect(speaker, &QTextToSpeech::stateChanged, this, &Notifications::NotificationManager::onSpeakerStateChanged);
     m_speaker = speaker;
 
