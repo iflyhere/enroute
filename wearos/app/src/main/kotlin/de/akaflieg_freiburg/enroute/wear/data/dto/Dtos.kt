@@ -437,6 +437,14 @@ data class DocMetaDto(
  */
 @Serializable
 data class PrefsDto(
+    /**
+     * The phone's session, regenerated every time its app starts.
+     *
+     * Carried because [revision] is not monotonic across a restart: it counts up from
+     * one within a session, so without this a watch that had already applied revision
+     * three would ignore everything a freshly started phone ever said.
+     */
+    @SerialName("sid") val sessionId: Long = 0,
     @SerialName("prefsRev") val revision: Long = 0,
     /** Screen identifiers in order. Empty means the watch's own default. */
     @SerialName("pageOrder") val pageOrder: String = "",

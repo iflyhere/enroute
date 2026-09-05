@@ -69,6 +69,24 @@ class PreferenceAdoptionTest {
     }
 
     @Test
+    fun `a restarted phone is not ignored`() {
+        // The revision counts up from one within a session, so a phone that has just
+        // started says "revision 1" whatever it said before. Without the session id a
+        // watch that had already applied revision three would ignore everything that
+        // phone ever said again, and the settings page would look broken.
+        val first = WireJson.json
+            .decodeFromString<PrefsDto>("""{"sid":111,"prefsRev":3,"bezel":"zoom"}""")
+            .toDomain()
+        val afterRestart = WireJson.json
+            .decodeFromString<PrefsDto>("""{"sid":222,"prefsRev":1,"bezel":"pages"}""")
+            .toDomain()
+        assertEquals(111L, first.sessionId)
+        assertEquals(222L, afterRestart.sessionId)
+        // A lower revision, and it must still be taken, because the session differs.
+        assertTrue(afterRestart.revision < first.revision)
+    }
+
+    @Test
     fun `an unknown field does not stop the rest being read`() {
         // A phone from a later version. Failing here would mean a watch that ignores
         // every preference because one of them was new.

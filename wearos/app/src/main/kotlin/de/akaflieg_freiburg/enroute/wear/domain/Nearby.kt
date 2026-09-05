@@ -68,6 +68,8 @@ data class NearbyPlace(
  * republication of what was already there.
  */
 data class WatchPreferences(
+    /** The phone's session. A new one makes [revision] meaningless. */
+    val sessionId: Long,
     val revision: Long,
     val pageOrder: String,
     val hiddenPages: String,

@@ -83,6 +83,8 @@ fun SettingsScreen(
     onChartMode: (ChartMode) -> Unit,
     onTransportMode: (TransportMode) -> Unit,
     onOpenConnect: () -> Unit,
+    sessionRunning: Boolean,
+    onToggleSession: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -203,6 +205,31 @@ fun SettingsScreen(
                 }
             }
             item { Note("Tap to pair with a different phone.") }
+
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(CARD_BACKGROUND)
+                        .clickable(onClick = onToggleSession)
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                ) {
+                    Text(
+                        text = if (sessionRunning) "Stop session" else "Start session",
+                        color = if (sessionRunning) CockpitColors.Warning else CockpitColors.OnBackground,
+                        fontSize = 12.sp,
+                    )
+                }
+            }
+            item {
+                Note(
+                    "Leaving the app does not stop it: the link and the screen have to " +
+                        "survive a glance away, which is the whole point in flight. On " +
+                        "the ground it is worth stopping.",
+                )
+            }
 
             item { SectionTitle("About") }
             item {
