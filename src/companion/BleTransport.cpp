@@ -52,7 +52,20 @@ namespace
     // which three are ATT overhead and one is the fragment header; Qt does not expose
     // the negotiated MTU in the peripheral role, so this is the floor that always
     // works rather than the best case that sometimes does.
-    constexpr int payloadBytes = 23 - 3 - 1;
+    // The floor: the default ATT MTU of 23, less three bytes of notification header
+    // and one of ours. Never wrong, and fifteen times slower than it needs to be, so a
+    // client that has negotiated more says so and the floor is only where we start.
+    constexpr int payloadFloor = 23 - 3 - 1;
+
+    // A ceiling on what a client may ask for, well below what the numbers allow.
+    //
+    // A GATT attribute value may be 512 bytes and a notification carries the MTU less
+    // three, so a client stating 517 arithmetically permits 513 payload bytes. Sending
+    // that killed the Android system server on an emulator -- one byte over the
+    // attribute limit, and the stack did not object, it died. 244 is the payload of the
+    // 247-byte MTU that every stack handles, it is thirteen times the floor, and going
+    // further would buy the difference between six fragments a second and four.
+    constexpr int payloadCeiling = 244;
 
     // Fragments per request. The document's number, and the reason for it: writing a
     // hundred notifications in a loop overflows the Android Bluetooth queue.
@@ -184,6 +197,7 @@ void Companion::BleTransport::stop()
     m_prepared.clear();
     m_preparedName.clear();
     m_preparedFragments = 0;
+    m_payloadBytes = payloadFloor;
 
     if (m_connected)
     {
@@ -412,7 +426,7 @@ void Companion::BleTransport::prepareDocument(const QString& name)
     // client skips four bytes and inflates the rest.
     m_prepared = qCompress(plain);
     m_preparedName = name;
-    m_preparedFragments = static_cast<int>((m_prepared.size() + payloadBytes - 1) / payloadBytes);
+    m_preparedFragments = static_cast<int>((m_prepared.size() + m_payloadBytes - 1) / m_payloadBytes);
 
     if (m_preparedFragments > maxFragments)
     {
@@ -435,7 +449,7 @@ void Companion::BleTransport::prepareDocument(const QString& name)
     meta.insert("len"_L1, static_cast<qint64>(m_prepared.size()));
     meta.insert("enc"_L1, "zlib"_L1);
     meta.insert("hash"_L1, QString::fromLatin1(digest.left(4).toHex()));
-    meta.insert("chunk"_L1, payloadBytes);
+    meta.insert("chunk"_L1, m_payloadBytes);
     meta.insert("frags"_L1, m_preparedFragments);
 
     if (!m_service.isNull())
@@ -460,7 +474,7 @@ void Companion::BleTransport::announceNothing(const QString& name)
     meta.insert("doc"_L1, name);
     meta.insert("len"_L1, 0);
     meta.insert("enc"_L1, "zlib"_L1);
-    meta.insert("chunk"_L1, payloadBytes);
+    meta.insert("chunk"_L1, m_payloadBytes);
     meta.insert("frags"_L1, 0);
 
     m_service->writeCharacteristic(m_service->characteristic(uuidOf(metaUuidString)),
@@ -485,9 +499,9 @@ void Companion::BleTransport::sendWindow(int from)
     for (auto index = from; index < last; ++index)
     {
         QByteArray fragment;
-        fragment.reserve(1 + payloadBytes);
+        fragment.reserve(1 + m_payloadBytes);
         fragment.append(fragmentHeader(index, m_preparedFragments));
-        fragment.append(m_prepared.mid(index * payloadBytes, payloadBytes));
+        fragment.append(m_prepared.mid(index * m_payloadBytes, m_payloadBytes));
         m_service->writeCharacteristic(characteristic, fragment);
     }
 }
@@ -541,13 +555,13 @@ void Companion::BleTransport::publishNav()
 
     // Fragmented with the same one-byte header, and small enough that a window is not
     // needed: a compact frame is a few hundred bytes at most.
-    const auto total = static_cast<int>((frame.size() + payloadBytes - 1) / payloadBytes);
+    const auto total = static_cast<int>((frame.size() + m_payloadBytes - 1) / m_payloadBytes);
     for (auto index = 0; index < total; ++index)
     {
         QByteArray fragment;
-        fragment.reserve(1 + payloadBytes);
+        fragment.reserve(1 + m_payloadBytes);
         fragment.append(fragmentHeader(index, total));
-        fragment.append(frame.mid(index * payloadBytes, payloadBytes));
+        fragment.append(frame.mid(index * m_payloadBytes, m_payloadBytes));
         m_service->writeCharacteristic(characteristic, fragment);
     }
 }
@@ -578,6 +592,26 @@ void Companion::BleTransport::onCharacteristicWritten(
             prepareDocument(wanted);
         }
         sendWindow(from);
+        return;
+    }
+
+    // {"mtu":517} -- the MTU the client negotiated, which this side cannot read.
+    //
+    // Qt does not expose it in the peripheral role, so without this the phone fragments
+    // to the floor: nineteen payload bytes, which is never wrong and fifteen times
+    // slower than it needs to be. Clamped rather than trusted -- a client that states
+    // an MTU it does not have would break every notification after it, and the failure
+    // would look like a radio fault.
+    if (request.contains("mtu"_L1))
+    {
+        const auto stated = request.value("mtu"_L1).toInt() - 3 - 1;
+        m_payloadBytes = qBound(payloadFloor, stated, payloadCeiling);
+
+        // Anything prepared under the old size is now described by a metadata document
+        // that no longer matches. Dropped rather than resent: the client asks again.
+        m_prepared.clear();
+        m_preparedName.clear();
+        m_preparedFragments = 0;
         return;
     }
 

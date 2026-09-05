@@ -782,10 +782,27 @@ in the worst case, typically 244 once the central requests a larger MTU. Every N
 notification is therefore prefixed with one byte: bit 7 set marks the last fragment, bits 0 to 6
 carry the fragment index modulo 128. A single-fragment frame begins with `0x80`.
 
-Qt does not expose the negotiated MTU in the peripheral role, so the phone fragments to the
-guaranteed floor rather than the typical case: 19 payload bytes. That is wasteful on a link that
-negotiated more, and it is the only size that is never wrong. `chunk` in the metadata states it,
-so a client never has to assume.
+Qt does not expose the negotiated MTU in the peripheral role, so the phone starts at the guaranteed
+floor: 19 payload bytes, which is never wrong and fifteen times slower than the link can carry.
+**A client therefore states the MTU it negotiated** by writing `{"mtu":517}` to Control, before it
+asks for anything, and the phone fragments to that size from then on. `chunk` in the metadata always
+says which size is in use, so a client never has to assume.
+
+The phone clamps what it is told to 244 payload bytes and never below 19. Not because the arithmetic
+forbids more -- an MTU of 517 permits 513 -- but because a GATT attribute value may be 512 bytes, and
+sending 514 killed the Android system server on an emulator: one byte over, and the stack did not
+object, it died. 244 is the payload of the 247-byte MTU that every stack handles, and the difference
+between it and the theoretical maximum is six fragments a second against four.
+
+Measured between two emulators, the same eight documents including a 21738-byte NOTAM document:
+
+| fragment payload | notifications for everything | time |
+|---|---|---|
+| 19 bytes | several hundred | 2.7 s |
+| 244 bytes | **42** | **1.9 s** |
+
+The steady state is the more important half: a navigation frame and a traffic document once a second
+is 60 notifications a second at the floor and 6 at 244.
 
 **No pairing code travels over Bluetooth.** Over Wi-Fi the code is what keeps a stranger on the same
 network from reading the aircraft's position. Being connected to this GATT server already means being
