@@ -28,6 +28,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,6 +79,10 @@ import org.maplibre.geojson.Point
 import java.net.URI
 import kotlin.math.cos
 import kotlin.math.sin
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.alpha
+import kotlinx.coroutines.delay
 
 /**
  * The pilot's own map, rendered on the watch.
@@ -199,15 +206,35 @@ fun MapLibreScreen(
             },
         )
 
-        // Feedback for the bezel and the drag. Without it a zoom step on a map with
+        // Feedback for the bezel and the drag: without it a zoom step on a map with
         // few features looks like nothing happened, and the pilot keeps turning.
-        MapText(
-            text = ZoomLevel.label(zoom),
-            labelColour = labelColour,
-            haloColour = haloColour,
-            fontSize = 11.sp,
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp),
+        //
+        // It fades once the turning stops. Feedback for a momentary action does not
+        // belong on the map permanently -- the top of a round display is where the map
+        // is widest, and a label that never leaves is one more thing burned into it.
+        var showZoom by remember { mutableStateOf(false) }
+        LaunchedEffect(zoom) {
+            showZoom = true
+            delay(ZOOM_LABEL_MS)
+            showZoom = false
+        }
+        val zoomAlpha by animateFloatAsState(
+            targetValue = if (showZoom) 1f else 0f,
+            animationSpec = tween(durationMillis = 400),
+            label = "zoomLabel",
         )
+        if (zoomAlpha > 0.01f) {
+            MapText(
+                text = ZoomLevel.label(zoom),
+                labelColour = labelColour,
+                haloColour = haloColour,
+                fontSize = 11.sp,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 10.dp)
+                    .alpha(zoomAlpha),
+            )
+        }
 
         if (route == null || route.waypoints.isEmpty()) {
             MapText(
@@ -664,3 +691,11 @@ private fun offset(from: GeoPoint, bearingDeg: Double, distanceM: Double): GeoPo
 }
 
 private const val METRES_PER_DEGREE = 111_320.0
+
+/**
+ * How long the zoom label stays up after the last change.
+ *
+ * Long enough to read at arm's length while still turning, short enough that it is gone
+ * before the pilot looks back at the map.
+ */
+private const val ZOOM_LABEL_MS = 1_500L
