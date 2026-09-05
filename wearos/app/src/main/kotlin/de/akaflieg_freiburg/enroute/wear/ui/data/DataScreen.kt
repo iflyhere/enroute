@@ -101,10 +101,17 @@ fun DataScreen(
                 )
                 if (state.session.connection == ConnectionState.Rejected) {
                     Text(
-                        // The one state the pilot has to act on, so it says how.
-                        text = "Long press to re-pair",
+                        // The states the pilot has to act on, so each says how. A
+                        // permission is granted in the watch's own settings, not here,
+                        // and re-pairing would not help.
+                        text = if (state.session.lastFailure == FailureReason.PermissionMissing) {
+                            "Allow Bluetooth in\nthe watch settings"
+                        } else {
+                            "Long press to re-pair"
+                        },
                         color = CockpitColors.Muted,
                         fontSize = 11.sp,
+                        textAlign = TextAlign.Center,
                         modifier = Modifier.padding(top = 4.dp),
                     )
                 }
@@ -402,6 +409,9 @@ const val TAG_EMPTY = "empty"
  * state legitimately passes through Connecting on every attempt.
  */
 fun connectionMessage(connection: ConnectionState, lastFailure: FailureReason?): String = when {
+    // Before the Rejected case below, which it shares: the state says the link will not
+    // come back on its own, and only this says why, which is the half a pilot can act on.
+    lastFailure == FailureReason.PermissionMissing -> "Bluetooth not allowed"
     connection == ConnectionState.Rejected -> "Wrong pairing code"
     lastFailure == FailureReason.Unauthorized -> "Wrong pairing code"
     lastFailure != null -> "No connection"
