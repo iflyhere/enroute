@@ -176,11 +176,13 @@ const val MAX_DOCUMENT_BYTES = 1_048_576
 /**
  * The documents this client fetches over Bluetooth, in the order it wants them.
  *
- * The route first because every navigation frame refers to it, then what a pilot looks
- * at soonest. Traffic is last on purpose: it changes every second and a slow link that
+ * Preferences first, because they decide which screens exist at all and in what order,
+ * and arriving after them means rearranging under the pilot's finger. Then the route,
+ * which every navigation frame refers to, then what a pilot looks at soonest. Traffic is last on purpose: it changes every second and a slow link that
  * spent itself keeping traffic current would never finish anything else.
  */
-val DOCUMENT_ORDER = listOf("route", "notams", "nearby", "weather", "log", "vacs", "traffic")
+val DOCUMENT_ORDER =
+    listOf("prefs", "route", "notams", "nearby", "weather", "log", "vacs", "traffic")
 
 /**
  * Which documents are out of date, in the order they should be asked for.

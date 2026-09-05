@@ -227,13 +227,15 @@ class BleFramingTest {
     }
 
     @Test
-    fun `the route comes first and traffic last`() {
-        // Every navigation frame refers to the route, so an empty screen without it is
-        // the worst first impression. Traffic changes every second, and a slow link
-        // that kept it current would never finish anything else.
+    fun `preferences come first, then the route, and traffic last`() {
+        // Preferences decide which screens exist and in what order, so anything that
+        // arrives before them gets rearranged under the pilot's finger. The route is
+        // next because every navigation frame refers to it. Traffic is last because it
+        // changes every second, and a slow link that kept it current would never finish
+        // anything else.
         val published = DOCUMENT_ORDER.associateWith { 1L }
         val order = staleDocuments(published, emptyMap())
-        assertEquals("route", order.first())
+        assertEquals(listOf("prefs", "route"), order.take(2))
         assertEquals("traffic", order.last())
     }
 }

@@ -182,6 +182,12 @@ namespace Companion
         /*! \brief Encoded flight log document, or empty while the feature is off */
         [[nodiscard]] QByteArray logDocument() const {return m_logDocument;}
 
+        /*! \brief The companion's display preferences, as served
+         *
+         *  @returns The preferences document
+         */
+        [[nodiscard]] QByteArray prefsDocument() const {return m_prefsDocument;}
+
         /*! \brief Encoded traffic document, or empty while the feature is off */
         [[nodiscard]] QByteArray trafficDocument() const {return m_trafficDocument;}
 
@@ -263,6 +269,9 @@ namespace Companion
         /*! \brief Emitted after logDocument() has been updated */
         void logDocumentChanged();
 
+        /*! \brief Emitted after prefsDocument() has been updated */
+        void prefsDocumentChanged();
+
         /*! \brief Emitted after trafficDocument() has been updated */
         void trafficDocumentChanged();
 
@@ -304,6 +313,10 @@ namespace Companion
 
         void publishFlightLog();
 
+        // Rebuilds the preferences document. Driven by the settings changing rather
+        // than by a timer: nothing here moves on its own.
+        void publishPrefs();
+
         void markFlightLogDirty();
 
         // Unlike the other publishers this one does not compare before publishing.
@@ -339,6 +352,7 @@ namespace Companion
         QByteArray m_weatherDocument;
         QByteArray m_vacDocument;
         QByteArray m_logDocument;
+        QByteArray m_prefsDocument;
         QByteArray m_trafficDocument;
         QByteArray m_nearbyDocument;
 

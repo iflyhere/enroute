@@ -161,6 +161,29 @@ public:
     /*! \brief Six-digit code that a companion device must present */
     Q_PROPERTY(QString companionPairingCode READ companionPairingCode WRITE setCompanionPairingCode NOTIFY companionPairingCodeChanged)
 
+    /*! \brief Screens the companion shows, in order, as comma-separated identifiers
+     *
+     *  Empty means the companion's own default. A companion that does not know one of
+     *  these identifiers ignores it, and inserts any screen of its own that is missing
+     *  here, so a phone and a watch of different versions still agree on the rest.
+     */
+    Q_PROPERTY(QString companionPageOrder READ companionPageOrder WRITE setCompanionPageOrder NOTIFY companionPreferencesChanged)
+
+    /*! \brief Screens the companion hides, as comma-separated identifiers */
+    Q_PROPERTY(QString companionHiddenPages READ companionHiddenPages WRITE setCompanionHiddenPages NOTIFY companionPreferencesChanged)
+
+    /*! \brief What the companion's bezel does: "pages" or "zoom" */
+    Q_PROPERTY(QString companionBezelAction READ companionBezelAction WRITE setCompanionBezelAction NOTIFY companionPreferencesChanged)
+
+    /*! \brief Approach charts on the companion: "auto", "on" or "off" */
+    Q_PROPERTY(QString companionChartMode READ companionChartMode WRITE setCompanionChartMode NOTIFY companionPreferencesChanged)
+
+    /*! \brief Whether the companion vibrates on a collision alarm */
+    Q_PROPERTY(bool companionAlarmVibration READ companionAlarmVibration WRITE setCompanionAlarmVibration NOTIFY companionPreferencesChanged)
+
+    /*! \brief Which link the companion uses: "auto", "wifi" or "ble" */
+    Q_PROPERTY(QString companionTransportMode READ companionTransportMode WRITE setCompanionTransportMode NOTIFY companionPreferencesChanged)
+
     /*! \brief Use traffic data receiver for positioning */
     Q_PROPERTY(bool positioningByTrafficDataReceiver READ positioningByTrafficDataReceiver WRITE setPositioningByTrafficDataReceiver BINDABLE bindablePositioningByTrafficDataReceiver)
 
@@ -297,6 +320,42 @@ public:
      * @returns Property companionPairingCode
      */
     [[nodiscard]] auto companionPairingCode() const -> QString { return m_companionPairingCode; }
+
+    /*! \brief Getter function for property of the same name
+     *
+     * @returns Property companionPageOrder
+     */
+    [[nodiscard]] auto companionPageOrder() const -> QString { return m_companionPageOrder; }
+
+    /*! \brief Getter function for property of the same name
+     *
+     * @returns Property companionHiddenPages
+     */
+    [[nodiscard]] auto companionHiddenPages() const -> QString { return m_companionHiddenPages; }
+
+    /*! \brief Getter function for property of the same name
+     *
+     * @returns Property companionBezelAction
+     */
+    [[nodiscard]] auto companionBezelAction() const -> QString { return m_companionBezelAction; }
+
+    /*! \brief Getter function for property of the same name
+     *
+     * @returns Property companionChartMode
+     */
+    [[nodiscard]] auto companionChartMode() const -> QString { return m_companionChartMode; }
+
+    /*! \brief Getter function for property of the same name
+     *
+     * @returns Property companionAlarmVibration
+     */
+    [[nodiscard]] auto companionAlarmVibration() const -> bool { return m_companionAlarmVibration; }
+
+    /*! \brief Getter function for property of the same name
+     *
+     * @returns Property companionTransportMode
+     */
+    [[nodiscard]] auto companionTransportMode() const -> QString { return m_companionTransportMode; }
 
     [[nodiscard]] auto nightMode() const -> bool { return m_nightMode.value(); }
 
@@ -452,6 +511,42 @@ public:
      */
     void setCompanionPairingCode(const QString& newCompanionPairingCode);
 
+    /*! \brief Setter function for property of the same name
+     *
+     *  @param newCompanionPageOrder Property companionPageOrder
+     */
+    void setCompanionPageOrder(const QString& newCompanionPageOrder);
+
+    /*! \brief Setter function for property of the same name
+     *
+     *  @param newCompanionHiddenPages Property companionHiddenPages
+     */
+    void setCompanionHiddenPages(const QString& newCompanionHiddenPages);
+
+    /*! \brief Setter function for property of the same name
+     *
+     *  @param newCompanionBezelAction Property companionBezelAction
+     */
+    void setCompanionBezelAction(const QString& newCompanionBezelAction);
+
+    /*! \brief Setter function for property of the same name
+     *
+     *  @param newCompanionChartMode Property companionChartMode
+     */
+    void setCompanionChartMode(const QString& newCompanionChartMode);
+
+    /*! \brief Setter function for property of the same name
+     *
+     *  @param newCompanionAlarmVibration Property companionAlarmVibration
+     */
+    void setCompanionAlarmVibration(bool newCompanionAlarmVibration);
+
+    /*! \brief Setter function for property of the same name
+     *
+     *  @param newCompanionTransportMode Property companionTransportMode
+     */
+    void setCompanionTransportMode(const QString& newCompanionTransportMode);
+
     void setNightMode(bool newNightMode);
 
     /*! \brief Setter function for property of the same name
@@ -536,6 +631,14 @@ signals:
     /*! \brief Notifier signal */
     void companionNetworkEnabledChanged();
 
+    /*! \brief Notifier signal
+     *
+     *  One signal for every companion preference rather than one each: they are
+     *  published together in a single document, so a separate signal per property would
+     *  only mean six ways to trigger the same republication.
+     */
+    void companionPreferencesChanged();
+
     /*! \brief Notifier signal */
     void companionBluetoothEnabledChanged();
 
@@ -571,6 +674,12 @@ private:
     QProperty<bool> m_companionNetworkEnabled {m_settings.value(QStringLiteral("companion/networkEnabled"), false).toBool()};
     QProperty<bool> m_companionBluetoothEnabled {m_settings.value(QStringLiteral("companion/bluetoothEnabled"), false).toBool()};
     QString m_companionPairingCode {m_settings.value(QStringLiteral("companion/pairingCode")).toString()};
+    QString m_companionPageOrder {m_settings.value(QStringLiteral("companion/pageOrder")).toString()};
+    QString m_companionHiddenPages {m_settings.value(QStringLiteral("companion/hiddenPages")).toString()};
+    QString m_companionBezelAction {m_settings.value(QStringLiteral("companion/bezelAction"), QStringLiteral("pages")).toString()};
+    QString m_companionChartMode {m_settings.value(QStringLiteral("companion/chartMode"), QStringLiteral("auto")).toString()};
+    bool m_companionAlarmVibration {m_settings.value(QStringLiteral("companion/alarmVibration"), true).toBool()};
+    QString m_companionTransportMode {m_settings.value(QStringLiteral("companion/transportMode"), QStringLiteral("auto")).toString()};
 
     QProperty<bool> m_positioningByTrafficDataReceiver;
 };

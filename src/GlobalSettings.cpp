@@ -236,6 +236,84 @@ void GlobalSettings::setCompanionBluetoothEnabled(bool newCompanionBluetoothEnab
 }
 
 
+void GlobalSettings::setCompanionPageOrder(const QString& newCompanionPageOrder)
+{
+    if (newCompanionPageOrder == m_companionPageOrder)
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/pageOrder"), newCompanionPageOrder);
+    m_companionPageOrder = newCompanionPageOrder;
+    emit companionPreferencesChanged();
+}
+
+
+void GlobalSettings::setCompanionHiddenPages(const QString& newCompanionHiddenPages)
+{
+    if (newCompanionHiddenPages == m_companionHiddenPages)
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/hiddenPages"), newCompanionHiddenPages);
+    m_companionHiddenPages = newCompanionHiddenPages;
+    emit companionPreferencesChanged();
+}
+
+
+void GlobalSettings::setCompanionBezelAction(const QString& newCompanionBezelAction)
+{
+    if (newCompanionBezelAction == m_companionBezelAction)
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/bezelAction"), newCompanionBezelAction);
+    m_companionBezelAction = newCompanionBezelAction;
+    emit companionPreferencesChanged();
+}
+
+
+void GlobalSettings::setCompanionChartMode(const QString& newCompanionChartMode)
+{
+    if (newCompanionChartMode == m_companionChartMode)
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/chartMode"), newCompanionChartMode);
+    m_companionChartMode = newCompanionChartMode;
+    emit companionPreferencesChanged();
+}
+
+
+void GlobalSettings::setCompanionTransportMode(const QString& newCompanionTransportMode)
+{
+    if (newCompanionTransportMode == m_companionTransportMode)
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/transportMode"), newCompanionTransportMode);
+    m_companionTransportMode = newCompanionTransportMode;
+    emit companionPreferencesChanged();
+}
+
+
+void GlobalSettings::setCompanionAlarmVibration(bool newCompanionAlarmVibration)
+{
+    if (newCompanionAlarmVibration == m_companionAlarmVibration)
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/alarmVibration"), newCompanionAlarmVibration);
+    m_companionAlarmVibration = newCompanionAlarmVibration;
+    emit companionPreferencesChanged();
+}
+
+
 void GlobalSettings::setCompanionPairingCode(const QString& newCompanionPairingCode)
 {
     if (newCompanionPairingCode == m_companionPairingCode)
