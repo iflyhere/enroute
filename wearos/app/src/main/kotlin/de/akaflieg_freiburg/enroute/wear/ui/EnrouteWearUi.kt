@@ -432,8 +432,16 @@ private fun MainPages(
                     // drawing when they have not. The fallback is not a lesser version
                     // of the same thing: it needs nothing but the route, so it still
                     // works on a phone with no maps on it at all.
-                    val mapRevision = uiState.value.session.peer?.mapRevision ?: 0L
-                    if (mapRevision > 0L) {
+                    // A revision is not enough. A phone with the feature on but no
+                    // aviation map downloaded serves a style with nothing in it and a
+                    // revision above zero, and the renderer then draws a blank white
+                    // disc with no explanation on it -- which is the worst of both, a
+                    // map that is not a map and a route that is not shown. The centre
+                    // hint is the honest test: the phone sends one only when it has map
+                    // data to centre on.
+                    val peer = uiState.value.session.peer
+                    val hasMap = (peer?.mapRevision ?: 0L) > 0L && peer?.mapCentre != null
+                    if (hasMap) {
                         MapLibreScreen(
                             styleUrl = "http://" + host + ":" + port +
                                 "/enroute/v1/map/style.json",

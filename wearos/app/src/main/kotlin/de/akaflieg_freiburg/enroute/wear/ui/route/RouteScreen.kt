@@ -65,6 +65,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.alpha
 import kotlinx.coroutines.delay
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.padding
 
 /**
  * The route drawn as vectors, with the aircraft on it.
@@ -179,11 +181,18 @@ fun RouteScreen(
         )
         if (labelAlpha > 0.01f) {
             Text(
-                text = "ROUTE",
+                // Says what this is *and* why, because it is not a page of its own: it
+                // is the map with nothing to draw a map from. A pilot who lands on a
+                // black disc with three names and a line on it deserves to be told that
+                // once -- and to be told the map is missing rather than left to wonder
+                // whether this is all there ever was.
+                text = "ROUTE ONLY\nno map data from the phone",
                 color = CockpitColors.Muted,
                 fontSize = 11.sp,
+                textAlign = TextAlign.Center,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
+                    .padding(top = 10.dp)
                     .alpha(labelAlpha),
             )
             Text(
@@ -582,7 +591,8 @@ const val TAG_NO_ROUTE = "route.none"
 /**
  * How long the page's name and scale stay up.
  *
- * Long enough to answer "what am I looking at", short enough to be gone before the
- * answer stops being needed.
+ * Two and a half seconds: long enough to read two lines at arm's length, in sunlight,
+ * while doing something else -- which is the only situation this will ever be read in --
+ * and short enough to be gone before the answer stops being needed.
  */
-private const val LABEL_MS = 1_800L
+private const val LABEL_MS = 2_500L
