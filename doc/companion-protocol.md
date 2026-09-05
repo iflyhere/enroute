@@ -54,6 +54,7 @@ Ten counters carry all cache coherency:
 | `vacRev` | `quint32` | Incremented whenever the set of approach charts changes, derived the same way as `notamRev`. Appears only in the approach chart document. |
 | `logRev` | `quint32` | Incremented whenever the flight log document changes, derived the same way as `notamRev`. Appears only in the flight log document. |
 | `nearbyRev` | `quint32` | Incremented whenever the nearby waypoint document changes, derived the same way as `notamRev`. Appears only in that document. |
+| `prefsRev` | `quint32` | Incremented whenever the companion preferences change. Unlike every other counter it is not derived from the data moving on its own: nothing here changes unless a pilot changes it. |
 | `trafficRev` | `quint32` | Incremented on **every** published traffic frame, unlike the counters above, which move only when their content changes. That is deliberate: a client has to be able to tell "no traffic" from "no data", and the only thing separating them is that frames keep arriving. |
 | `mapRev` | `quint32` | Changes whenever the set of downloaded map files changes. Appears in the capability document, and in every tile URL. A client that sees it move must refetch the style: the URLs in the one it holds no longer resolve, which is what stops its tile cache from outliving the maps it was filled from. |
 
@@ -69,7 +70,7 @@ Every navigation frame repeats `routeRev` and carries a `rev` object with all si
 counters:
 
 ```json
-"rev": { "notam": 3, "weather": 12, "vac": 1, "log": 4, "nearby": 9, "traffic": 2841 }
+"rev": { "notam": 3, "weather": 12, "vac": 1, "log": 4, "nearby": 9, "traffic": 2841, "prefs": 7 }
 ```
 
 Together they are the whole caching protocol: a client caches each document keyed on `(sid, <its>Rev)`
@@ -572,6 +573,41 @@ Notes that matter when writing a client:
 - `mapRev` is in every tile URL. When it changes, refetch the style.
 - Everything under `/map/` needs the pairing code like every other endpoint.
 
+### Preferences document
+
+`GET /enroute/v1/prefs`, or `{"get":"prefs"}` over Bluetooth. The companion device's own display
+settings, held by the phone.
+
+```json
+{ "v": 1, "sid": 812739, "prefsRev": 7,
+  "pageOrder": "map,data,notam,weather,log,settings",
+  "hiddenPages": "vacs",
+  "bezel": "pages", "charts": "auto",
+  "alarmVibration": true, "transport": "auto" }
+```
+
+| Field | Meaning |
+|---|---|
+| `pageOrder` | Screen identifiers in the order they should appear, comma separated. **Empty means the companion's own default** and never "no screens". |
+| `hiddenPages` | Screen identifiers not to show. A companion that hides everything still shows its settings screen, or there would be no way back. |
+| `bezel` | `pages` or `zoom`: what a rotary input does. |
+| `charts` | `auto`, `on` or `off`: whether approach charts are drawn on the map. |
+| `alarmVibration` | Whether a collision alarm vibrates. Absent means **true**: a warning that is silent by accident is the wrong way for a default to be wrong. |
+| `transport` | `auto`, `wifi` or `ble`: which link the companion should use. |
+
+**Why the phone holds them.** Arranging nine screens with a fingertip on a 454 pixel disc is a poor
+way to spend a pre-flight. The identifiers are the companion's, not the phone's: a phone lists the
+ones it knows about, a companion ignores any it does not recognise, and inserts any screen of its own
+that the list omits. So a phone and a companion of different versions still agree about the rest,
+and a list that has fallen behind is a cosmetic problem rather than a broken one.
+
+**Applied when `prefsRev` moves, and not otherwise.** The counter is incremented when someone
+changes something on the phone and at no other time, which is what makes applying the whole document
+right rather than surprising: it is always a deliberate act. Between two such moments a companion's
+own settings screen owns these values and may differ. That asymmetry is real and a companion should
+say so plainly rather than let a pilot discover it — the wire runs one way, and inventing a merge
+for two editors would be inventing a problem.
+
 ### Attribution is not optional
 
 The base map is OpenStreetMap data and the aviation data is openAIP and open flightmaps, licensed
@@ -690,8 +726,8 @@ records the revision it asked at and stops asking. Silence cannot carry that mea
 cannot tell it from a transfer that has not started yet, so it waits, gives up, and asks again for
 the life of the connection.
 
-`get` takes **any** of the document names this protocol serves — `route`, `notams`, `weather`,
-`vacs`, `log`, `traffic`, `nearby` — not only the route. The two characteristics were named
+`get` takes **any** of the document names this protocol serves — `prefs`, `route`, `notams`,
+`weather`, `vacs`, `log`, `traffic`, `nearby` — not only the route. The two characteristics were named
 RouteMeta and RouteData when the route was the only large document; they carry whichever one was
 last asked for, and `doc` in the metadata says which. An unknown name is answered with silence,
 because a client from a later version asking for something this one does not have is not an

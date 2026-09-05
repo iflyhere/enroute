@@ -83,6 +83,7 @@ class NavSessionService : Service() {
     private var alert: CollisionAlert? = null
     private var addressWatch: Job? = null
     private var handoverWatch: Job? = null
+    private var preferenceWatch: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     @Suppress("DEPRECATION")
@@ -105,6 +106,7 @@ class NavSessionService : Service() {
         startAlarmWatch(settings)
         startAddressWatch(settings)
         startHandoverWatch(settings)
+        startPreferenceWatch(settings)
 
         // Not sticky: if the system ever kills this, restarting it behind the pilot's
         // back would silently reopen a link they cannot see.
@@ -115,6 +117,7 @@ class NavSessionService : Service() {
         scope.cancel()
         addressWatch = null
         handoverWatch = null
+        preferenceWatch = null
         alert = null
         SessionHolder.stop()
         releaseLocks()
@@ -147,6 +150,30 @@ class NavSessionService : Service() {
             val chosen = if (mode.usesBluetooth(attempt)) bluetooth() else wifi()
             attempt += 1
             chosen
+        }
+    }
+
+    /**
+     * Takes the display preferences the phone sets.
+     *
+     * Written into the store rather than held here, because the store is where every
+     * screen already reads them from. Applied only when the phone's revision moves,
+     * which happens when someone changes something there and at no other time -- so a
+     * tweak made on the watch survives until the next deliberate change on the phone.
+     */
+    private fun startPreferenceWatch(settings: SettingsStore) {
+        if (preferenceWatch?.isActive == true) {
+            return
+        }
+        preferenceWatch = scope.launch {
+            SessionHolder.state
+                .mapNotNull { state -> state.prefs }
+                .distinctUntilChanged()
+                .collect { prefs ->
+                    if (settings.applyPreferences(prefs)) {
+                        Log.i(TAG, "took display preferences at revision " + prefs.revision)
+                    }
+                }
         }
     }
 

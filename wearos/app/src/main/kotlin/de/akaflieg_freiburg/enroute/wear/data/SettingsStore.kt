@@ -22,6 +22,7 @@ package de.akaflieg_freiburg.enroute.wear.data
 import android.content.Context
 import android.content.Intent
 import de.akaflieg_freiburg.enroute.wear.Config
+import de.akaflieg_freiburg.enroute.wear.domain.WatchPreferences
 import de.akaflieg_freiburg.enroute.wear.transport.TransportMode
 
 /**
@@ -131,6 +132,48 @@ class SettingsStore(context: Context) {
         set(value) = preferences.edit().putString(KEY_CHART_MODE, value).apply()
 
     /** Applies any of host, port and code that the launch intent carries. */
+    /**
+     * The revision of the preferences last taken from the phone.
+     *
+     * Stored so that a restart does not re-apply what the pilot has since changed here.
+     */
+    var appliedPrefsRevision: Long
+        get() = preferences.getLong(KEY_PREFS_REVISION, 0)
+        set(value) = preferences.edit().putLong(KEY_PREFS_REVISION, value).apply()
+
+    /**
+     * Takes what the phone sets, if it is newer than what was taken before.
+     *
+     * Wholesale, and only when the revision moves. The phone bumps it when someone
+     * changes something there and at no other time, so this is always a deliberate act
+     * -- which is what makes overwriting a watch-side tweak the right thing rather than
+     * a surprise. Between two such moments the watch's own settings screen owns these.
+     *
+     * @return true when something was taken
+     */
+    fun applyPreferences(prefs: WatchPreferences): Boolean {
+        if (prefs.revision <= appliedPrefsRevision) {
+            return false
+        }
+        appliedPrefsRevision = prefs.revision
+        // An empty order means "your own default", not "no screens at all".
+        if (prefs.pageOrder.isNotBlank()) {
+            pageOrder = prefs.pageOrder.split(SEPARATOR).filter { it.isNotBlank() }
+        }
+        hiddenPages = prefs.hiddenPages.split(SEPARATOR).filter { it.isNotBlank() }.toSet()
+        if (prefs.bezel.isNotBlank()) {
+            bezelAction = prefs.bezel
+        }
+        if (prefs.charts.isNotBlank()) {
+            chartMode = prefs.charts
+        }
+        alarmVibration = prefs.alarmVibration
+        if (prefs.transport.isNotBlank()) {
+            transportMode = prefs.transport
+        }
+        return true
+    }
+
     fun applyOverrides(intent: Intent?) {
         intent?.getStringExtra("host")?.let { host = it }
         intent?.getStringExtra("code")?.let { pairingCode = it }
@@ -156,6 +199,7 @@ class SettingsStore(context: Context) {
         const val KEY_BEZEL = "bezelAction"
         const val KEY_CHART_MODE = "chartMode"
         const val KEY_TRANSPORT = "transportMode"
+        const val KEY_PREFS_REVISION = "appliedPrefsRevision"
         const val KEY_ALARM_VIBRATION = "alarmVibration"
 
         // A page identifier is a short lower-case word, so a comma cannot appear in

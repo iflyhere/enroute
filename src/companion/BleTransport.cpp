@@ -384,6 +384,7 @@ QByteArray Companion::BleTransport::documentByName(const QString& name) const
         return {};
     }
     if (name == u"route"_s) { return m_server->routeDocument(); }
+    if (name == u"prefs"_s) { return m_server->prefsDocument(); }
     if (name == u"notams"_s) { return m_server->notamDocument(); }
     if (name == u"weather"_s) { return m_server->weatherDocument(); }
     if (name == u"vacs"_s) { return m_server->vacDocument(); }

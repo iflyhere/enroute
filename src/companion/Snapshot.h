@@ -84,6 +84,14 @@ namespace Companion
          */
         quint32 traffic {0};
 
+        /*! \brief Incremented whenever the companion preferences change
+         *
+         *  These are the companion's own display settings -- which screens it shows and
+         *  in what order, what its bezel does -- edited here because a phone is a far
+         *  better place to arrange nine screens than a watch face is.
+         */
+        quint32 prefs {0};
+
         /*! \brief Changes whenever the set of downloaded map files changes
          *
          *  Every tile URL contains this, so that a client's own tile cache cannot
@@ -241,6 +249,18 @@ namespace Companion
          *  @returns The document described under "Flight log document" in
          *  doc/companion-protocol.md, without its logRev member
          */
+        /*! \brief The companion's own display preferences
+         *
+         *  Owned by the phone and read by the companion, because the wire runs one way.
+         *  A companion applies them when the revision moves; between those moments its
+         *  own settings screen is free to differ.
+         *
+         *  @param revisions The current revision counters
+         *
+         *  @returns The preferences document
+         */
+        [[nodiscard]] QJsonObject prefs(const Companion::Revisions& revisions);
+
         [[nodiscard]] QJsonObject flightLog(const Companion::Revisions& revisions,
                                             int limit);
 
