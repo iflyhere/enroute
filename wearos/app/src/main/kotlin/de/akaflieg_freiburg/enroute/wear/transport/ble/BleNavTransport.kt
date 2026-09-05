@@ -211,6 +211,29 @@ class BleNavTransport(
                 }
             }
 
+            override fun onServiceChanged(client: BluetoothGatt) {
+                // The peer's GATT database changed under us. On this stack that is what
+                // the phone's app being restarted looks like -- measured: the link-layer
+                // connection survives the process dying, no disconnect is ever
+                // delivered, and notifications simply stop. Nothing else says the
+                // services discovered a minute ago are gone, so without this the watch
+                // sits on a connection that will never carry anything again, showing
+                // correctly-aged stale numbers forever and never retrying.
+                //
+                // The whole session is rebuilt rather than merely rediscovered: the
+                // phone's session id changes when it restarts, which invalidates every
+                // revision this client holds.
+                Log.i(TAG, "the peer's services changed, starting again")
+                discardServiceCache(client)
+                trySend(
+                    TransportEvent.Failed(
+                        FailureReason.PeerClosed,
+                        "the phone's services changed",
+                    ),
+                )
+                close()
+            }
+
             override fun onMtuChanged(client: BluetoothGatt, mtu: Int, status: Int) {
                 // Worth a line even when it works: everything downstream depends on it,
                 // and a peer that refuses to grow the MTU is the one configuration in
