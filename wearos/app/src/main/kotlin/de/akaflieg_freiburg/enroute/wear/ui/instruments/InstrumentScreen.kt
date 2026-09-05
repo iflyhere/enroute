@@ -138,27 +138,18 @@ fun InstrumentScreen(
             // what the needle means is the one place this label must not be.
             centreText(
                 centre, measurer, showing.title + subtitle(showing),
-                10.sp.value, TICK_LABEL, offsetY = radius * 0.56f,
+                10.sp.value, TICK_LABEL, offsetY = radius * 0.45f,
+            )
+
+            // The other two instruments as digits, in the phone's own words, inside the
+            // dial. Outside it there is nothing left: the face now runs to the edge of a
+            // round display, and text under the bottom ticks would be under the bezel.
+            centreText(
+                centre, measurer, digitalSummary(frame, showing, verticalUnit),
+                11.sp.value, CockpitColors.Primary, offsetY = radius * 0.62f,
             )
         }
 
-        // The other two as digits, in the phone's own words. Every one of these
-        // strings was formatted by the phone, so the dial and the phone cannot
-        // disagree about the number they are showing.
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 6.dp),
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
-        ) {
-            Text(
-                text = digitalSummary(frame, showing, verticalUnit),
-                color = CockpitColors.Primary,
-                fontSize = 11.sp,
-                textAlign = TextAlign.Center,
-            )
-        }
     }
 }
 
@@ -222,20 +213,18 @@ private fun DrawScope.drawAltimeter(
     altitudeM: Double?,
     unit: String,
 ) {
-    val perRevolution = if (unit == "m") 1_000.0 else 1_000.0
     drawFace(centre, radius)
 
-    // Ten major divisions, one per hundred of whatever the pilot's unit is, which is
+    // Ten major divisions, one per hundred of the pilot's unit, zero at twelve o'clock:
     // the layout of every altimeter ever built.
     for (index in 0 until 10) {
         val angle = index * 36.0
         tick(centre, radius, angle, long = true)
-        label(centre, radius * 0.78f, angle, index.toString(), measurer, 13.sp.value)
+        label(centre, radius * LABEL_FRACTION, angle, index.toString(), measurer, 14.sp.value)
     }
     for (index in 0 until 50) {
-        val angle = index * 7.2
         if (index % 5 != 0) {
-            tick(centre, radius, angle, long = false)
+            tick(centre, radius, index * 7.2, long = false)
         }
     }
 
@@ -251,9 +240,16 @@ private fun DrawScope.drawAltimeter(
         altitudeDigits(value, unit).toString() + " " + (if (unit == "m") "m" else "ft"),
         20.sp.value,
         CockpitColors.OnBackground,
-        offsetY = radius * 0.34f,
+        offsetY = radius * 0.30f,
     )
-    needle(centre, radius * 0.92f, dialAngleDeg(value, perRevolution), CockpitColors.OnBackground)
+
+    // The short hand first, so the long one lies over it where they cross. Thousands
+    // below hundreds is the order a pilot reads them in and the order they are drawn.
+    needle(
+        centre, radius * 0.58f, dialAngleDeg(value, 10_000.0),
+        CockpitColors.OnBackground, halfWidth = NEEDLE_HALF_WIDTH_PX * 1.9f,
+    )
+    needle(centre, radius * 0.94f, dialAngleDeg(value, 1_000.0), CockpitColors.OnBackground)
 }
 
 private fun DrawScope.drawSpeed(
@@ -273,18 +269,21 @@ private fun DrawScope.drawSpeed(
     }
     val fullScale = speedFullScale(shown, unit)
 
-    // A gap at the bottom, so nothing important sits where the needle rests and
-    // where the round bezel cuts most.
-    val start = SPAN_START_DEG
-    val sweep = SPAN_SWEEP_DEG
-    for (index in 0..10) {
-        val angle = start + sweep * index / 10.0
+    // Zero at twelve o'clock, sweeping clockwise nearly the whole way round: the layout
+    // of an airspeed indicator. The gap is at the top, where the scale closes on itself,
+    // not at the bottom -- a gap at the bottom belongs to a rev counter.
+    val step = speedTickStep(fullScale)
+    val divisions = (fullScale / step).roundToInt().coerceAtLeast(1)
+    for (index in 0..divisions) {
+        val angle = SPEED_SWEEP_DEG * index / divisions
         tick(centre, radius, angle, long = true)
         label(
-            centre, radius * 0.76f, angle,
-            (fullScale * index / 10.0).roundToInt().toString(),
-            measurer, 11.sp.value,
+            centre, radius * LABEL_FRACTION, angle,
+            (step * index).roundToInt().toString(), measurer, 12.sp.value,
         )
+    }
+    for (index in 0 until divisions * 2) {
+        tick(centre, radius, SPEED_SWEEP_DEG * (index + 0.5) / (divisions * 2), long = false)
     }
 
     if (!isUsable(speedMps)) {
@@ -294,11 +293,11 @@ private fun DrawScope.drawSpeed(
     centreText(
         centre, measurer,
         shown.roundToInt().toString() + " " + speedUnitLabel(unit),
-        20.sp.value, CockpitColors.OnBackground, offsetY = radius * 0.34f,
+        20.sp.value, CockpitColors.OnBackground, offsetY = radius * 0.30f,
     )
     needle(
-        centre, radius * 0.9f,
-        spanAngleDeg(shown, 0.0, fullScale, start, sweep),
+        centre, radius * 0.94f,
+        spanAngleDeg(shown, 0.0, fullScale, 0.0, SPEED_SWEEP_DEG),
         CockpitColors.OnBackground,
     )
 }
@@ -319,20 +318,26 @@ private fun DrawScope.drawVariometer(
         else -> verticalSpeedMps!! / METRES_PER_FOOT * 60.0
     }
 
-    // Zero on the left and climb over the top, which is the classic layout and the
-    // one in the instruments this is modelled on.
-    val start = VARIO_START_DEG
-    val sweep = VARIO_SWEEP_DEG
-    for (index in 0..10) {
-        val angle = start + sweep * index / 10.0
-        val value = -fullScale + 2.0 * fullScale * index / 10.0
-        tick(centre, radius, angle, long = index % 5 == 0)
-        if (index % 5 == 0 || index % 1 == 0) {
-            label(
-                centre, radius * 0.76f, angle,
-                (if (unit == "m") value.roundToInt() else (value / 100).roundToInt()).toString(),
-                measurer, 11.sp.value,
-            )
+    // Zero at nine o'clock, climb clockwise over the top, sink counter-clockwise under
+    // the bottom, both reaching full scale at three o'clock. One expression covers both
+    // halves, which is what makes the needle behave the way the instrument does.
+    val divisions = if (unit == "m") VARIO_DIVISIONS_MPS else VARIO_DIVISIONS_FPM
+    for (half in listOf(1, -1)) {
+        for (index in 0..divisions) {
+            val value = fullScale * index / divisions
+            tick(centre, radius, varioAngleDeg(half * value, fullScale), long = index % 1 == 0)
+            if (index > 0 || half > 0) {
+                label(
+                    centre, radius * LABEL_FRACTION, varioAngleDeg(half * value, fullScale),
+                    varioLabel(value, unit), measurer, 13.sp.value,
+                )
+            }
+        }
+    }
+    for (half in listOf(1, -1)) {
+        for (index in 0 until divisions) {
+            val value = fullScale * (index + 0.5) / divisions
+            tick(centre, radius, varioAngleDeg(half * value, fullScale), long = false)
         }
     }
 
@@ -342,15 +347,34 @@ private fun DrawScope.drawVariometer(
     }
     centreText(
         centre, measurer, verticalSpeedText(verticalSpeedMps!!, unit),
-        18.sp.value, CockpitColors.OnBackground, offsetY = radius * 0.34f,
+        18.sp.value, CockpitColors.OnBackground, offsetY = radius * 0.30f,
     )
     val colour = when {
         abs(shown) < fullScale * 0.03 -> CockpitColors.OnBackground
         shown > 0 -> CockpitColors.Good
         else -> CockpitColors.Caution
     }
-    needle(centre, radius * 0.9f, spanAngleDeg(shown, -fullScale, fullScale, start, sweep), colour)
+    needle(centre, radius * 0.94f, varioAngleDeg(shown, fullScale), colour)
 }
+
+/**
+ * Where a vertical speed sits on a dial with zero at nine o'clock.
+ *
+ * Clockwise from there for climb and counter-clockwise for sink, so both ends of the
+ * scale arrive at three o'clock. Written as one expression rather than two branches
+ * because it is one: the sign of the value carries the direction.
+ */
+fun varioAngleDeg(value: Double, fullScale: Double): Double {
+    if (fullScale <= 0.0) {
+        return VARIO_ZERO_DEG
+    }
+    val fraction = (value / fullScale).coerceIn(-1.0, 1.0)
+    return VARIO_ZERO_DEG + fraction * 180.0
+}
+
+/** What a vario tick says: metres per second as they are, feet per minute in hundreds. */
+private fun varioLabel(value: Double, unit: String): String =
+    if (unit == "m") value.roundToInt().toString() else (value / 100.0).roundToInt().toString()
 
 private fun speedUnitLabel(unit: String): String = when (unit) {
     "kmh" -> "km/h"
@@ -421,14 +445,20 @@ private fun DrawScope.centreText(
     )
 }
 
-private fun DrawScope.needle(centre: Offset, length: Float, angleDeg: Double, colour: Color) {
+private fun DrawScope.needle(
+    centre: Offset,
+    length: Float,
+    angleDeg: Double,
+    colour: Color,
+    halfWidth: Float = NEEDLE_HALF_WIDTH_PX,
+) {
     val angle = Math.toRadians(angleDeg - 90.0)
     val tip = Offset(
         centre.x + (length * cos(angle)).toFloat(),
         centre.y + (length * sin(angle)).toFloat(),
     )
     val perpendicular = Math.toRadians(angleDeg)
-    val half = NEEDLE_HALF_WIDTH_PX
+    val half = halfWidth
     val path = Path().apply {
         moveTo(tip.x, tip.y)
         lineTo(
@@ -449,19 +479,27 @@ private val FACE_COLOUR = Color(0x59FFFFFF)
 private val TICK_COLOUR = Color(0xB3FFFFFF)
 private val TICK_LABEL = Color(0xCCFFFFFF)
 
-private const val DIAL_FRACTION = 0.84f
+// To the edge. The display is round and so is the instrument, so a margin between them
+// buys nothing and costs the only thing a dial has: the length of its scale.
+private const val DIAL_FRACTION = 0.985f
+
+// Numbers sit inside the ticks, far enough in that the round bezel cannot clip them.
+private const val LABEL_FRACTION = 0.80f
+
 private const val NEEDLE_HALF_WIDTH_PX = 5f
 
-// Ten of the twelve hours of the face, leaving the bottom clear.
-private const val SPAN_START_DEG = 210.0
-private const val SPAN_SWEEP_DEG = 300.0
+// An airspeed indicator: zero at twelve o'clock, clockwise, closing on itself at the top.
+private const val SPEED_SWEEP_DEG = 330.0
 
-// Zero at nine o'clock, climb over the top.
-private const val VARIO_START_DEG = 270.0
-private const val VARIO_SWEEP_DEG = 180.0
+// A vertical speed indicator: zero at nine o'clock.
+private const val VARIO_ZERO_DEG = 270.0
 
+// Five metres a second, or two thousand feet a minute marked in hundreds -- which is
+// what the instrument this is modelled on is marked in.
 private const val VARIO_FULL_SCALE_MPS = 5.0
-private const val VARIO_FULL_SCALE_FPM = 1_000.0
+private const val VARIO_FULL_SCALE_FPM = 2_000.0
+private const val VARIO_DIVISIONS_MPS = 5
+private const val VARIO_DIVISIONS_FPM = 4
 
 private const val METRES_PER_FOOT = 0.3048
 private const val METRES_PER_NM = 1852.0
