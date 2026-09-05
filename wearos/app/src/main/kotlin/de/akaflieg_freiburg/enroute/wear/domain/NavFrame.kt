@@ -132,4 +132,11 @@ data class NavFrame(
     val flightLevel: Measured,
     /** True when the phone has a reading and does not believe it. */
     val flightLevelImplausible: Boolean,
+    /**
+     * The collision alarm level, zero when there is none.
+     *
+     * Read from here rather than from the traffic board: this arrives every second on
+     * both transports, and the traffic document does not have to.
+     */
+    val alarmLevel: Int = 0,
 )
