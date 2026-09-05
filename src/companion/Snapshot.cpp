@@ -485,6 +485,18 @@ QJsonObject Companion::Snapshot::nav(const Companion::Revisions& revisions,
     document.insert("navRev"_L1, static_cast<qint64>(revisions.nav));
     document.insert("routeRev"_L1, static_cast<qint64>(revisions.route));
 
+    // The collision alarm level, on the frame that streams rather than only on the
+    // traffic document.
+    //
+    // A client that had to fetch the traffic document to learn it was warned had to
+    // fetch it on every tick, which over Bluetooth is 28 fragments a second against the
+    // frame's 32 -- nearly half the link, to keep a list current for the sake of one
+    // integer. Here it costs nothing: ten bytes on a 590-byte frame is the same 32
+    // fragments. It also means a client whose traffic document did not arrive, or could
+    // not be read, is still warned.
+    const auto warning = GlobalObject::trafficDataProvider()->warning();
+    document.insert("alarm"_L1, warning.alarmLevel());
+
     // Every other counter, so that a client knows what went stale without asking.
     //
     // This frame is the only thing that streams. Over Bluetooth a client reads the
