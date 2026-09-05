@@ -24,6 +24,11 @@
 #include <QNetworkInterface>
 #include <QRandomGenerator>
 
+#if defined(Q_OS_ANDROID)
+#include <QJniObject>
+#include <QtCore/private/qandroidextras_p.h>
+#endif
+
 #include "GlobalSettings.h"
 #include "companion/BleTransport.h"
 #include "companion/CompanionServer.h"
@@ -169,6 +174,11 @@ void Companion::CompanionServer::deferredInitialization()
     // GlobalObject forbids reaching for a singleton at all.
     connect(GlobalObject::globalSettings(), &GlobalSettings::companionPreferencesChanged,
             this, &Companion::CompanionServer::publishPrefs);
+
+    // Switching background publishing on or off changes nothing about the transports,
+    // only whether the platform is told to leave them alone.
+    connect(GlobalObject::globalSettings(), &GlobalSettings::companionInBackgroundChanged,
+            this, &Companion::CompanionServer::updateTransport);
 
     updateTransport();
 }
@@ -523,6 +533,29 @@ void Companion::CompanionServer::publishNearby()
 }
 
 
+void Companion::CompanionServer::updateBackgroundService(bool wanted)
+{
+#if defined(Q_OS_ANDROID)
+    if (wanted == m_backgroundServiceRunning)
+    {
+        return;
+    }
+    m_backgroundServiceRunning = wanted;
+
+    QJniObject context = QNativeInterface::QAndroidApplication::context();
+    QJniObject::callStaticMethod<void>(
+        "de/akaflieg_freiburg/enroute/CompanionService",
+        wanted ? "start" : "stop",
+        "(Landroid/content/Context;)V",
+        context.object());
+#else
+    // Nowhere else suspends an application for being in the background, so there is
+    // nothing to hold open and nothing to tell the pilot about.
+    Q_UNUSED(wanted)
+#endif
+}
+
+
 void Companion::CompanionServer::updateTransport()
 {
     // Either transport keeps the machinery running. The documents and the timers are
@@ -530,6 +563,10 @@ void Companion::CompanionServer::updateTransport()
     const auto overWifi = GlobalObject::globalSettings()->companionNetworkEnabled();
     const auto overBluetooth = GlobalObject::globalSettings()->companionBluetoothEnabled();
     const auto enabled = overWifi || overBluetooth;
+
+    // Before anything else, so that a link being switched on is announced to the
+    // platform before the first document is published rather than after.
+    updateBackgroundService(enabled && GlobalObject::globalSettings()->companionInBackground());
 
     if (!enabled)
     {

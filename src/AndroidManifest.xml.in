@@ -39,6 +39,11 @@ ${FLIGHTLOG_ANDROID_PERMISSIONS}
   <uses-feature android:name="android.hardware.usb.host" android:required="false"/>
   <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
 
+  <!-- The companion link's own foreground service. Not behind FLIGHTLOG: a watch
+       reading the navigation frame has nothing to do with the flight log, and the
+       connectedDevice type is the one the platform does not cap at six hours a day. -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"/>
   <supports-screens
 
     android:anyDensity="true"
@@ -267,6 +272,15 @@ ${FLIGHTLOG_ANDROID_PERMISSIONS}
     <!-- Foreground service for the flight log; empty unless the CMake option
          FLIGHTLOG is set, see src/CMakeLists.txt -->
     ${FLIGHTLOG_ANDROID_SERVICE}
+
+    <!-- Keeps the companion link alive while this app is not in the foreground.
+         connectedDevice and never dataSync: the platform caps a dataSync foreground
+         service at roughly six hours in twenty-four and then stops it, which on a long
+         cross-country would mean the watch going dark mid-leg. -->
+    <service
+      android:name="de.akaflieg_freiburg.enroute.CompanionService"
+      android:foregroundServiceType="connectedDevice"
+      android:exported="false"/>
 
     <!-- NOTE: android:authorities must match AUTHORITY in de/akaflieg_freiburg/enroute/IntentLauncher.java -->
     <provider

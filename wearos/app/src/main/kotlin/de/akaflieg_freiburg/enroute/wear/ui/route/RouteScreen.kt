@@ -57,6 +57,14 @@ import de.akaflieg_freiburg.enroute.wear.ui.theme.CockpitColors
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.min
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.alpha
+import kotlinx.coroutines.delay
 
 /**
  * The route drawn as vectors, with the aircraft on it.
@@ -150,14 +158,44 @@ fun RouteScreen(
             }
         }
 
-        Text(
-            text = ZoomLevel.label(zoom),
-            color = CockpitColors.Muted,
-            fontSize = 11.sp,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .testTag(TAG_SCALE),
+        // What this page is, and what scale it is at, shown on arrival and on every
+        // change of scale, then faded.
+        //
+        // A pilot who lands on a black disc with three names and a line on it has to
+        // work out what they are looking at, and that question deserves an answer -- but
+        // only once. A label that never leaves is one more thing burned into a display
+        // that has room for the route and nothing else, which is the same reason the map
+        // attribution is on the About page and not across the bottom of the map.
+        var showLabel by remember { mutableStateOf(true) }
+        LaunchedEffect(zoom) {
+            showLabel = true
+            delay(LABEL_MS)
+            showLabel = false
+        }
+        val labelAlpha by animateFloatAsState(
+            targetValue = if (showLabel) 1f else 0f,
+            animationSpec = tween(durationMillis = 400),
+            label = "routeLabel",
         )
+        if (labelAlpha > 0.01f) {
+            Text(
+                text = "ROUTE",
+                color = CockpitColors.Muted,
+                fontSize = 11.sp,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .alpha(labelAlpha),
+            )
+            Text(
+                text = ZoomLevel.label(zoom),
+                color = CockpitColors.Muted,
+                fontSize = 11.sp,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .alpha(labelAlpha)
+                    .testTag(TAG_SCALE),
+            )
+        }
     }
 }
 
@@ -540,3 +578,11 @@ private const val MIN_NOTAM_CIRCLE_PX = 4f
 const val TAG_CANVAS = "route.canvas"
 const val TAG_SCALE = "route.scale"
 const val TAG_NO_ROUTE = "route.none"
+
+/**
+ * How long the page's name and scale stay up.
+ *
+ * Long enough to answer "what am I looking at", short enough to be gone before the
+ * answer stops being needed.
+ */
+private const val LABEL_MS = 1_800L
