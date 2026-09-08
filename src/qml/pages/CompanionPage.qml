@@ -44,6 +44,7 @@ Page {
         {id: "notam", name: qsTr("NOTAM")},
         {id: "nearby", name: qsTr("Nearby waypoints")},
         {id: "weather", name: qsTr("Weather")},
+        {id: "freq", name: qsTr("Frequencies")},
         {id: "log", name: qsTr("Flight log")},
         {id: "settings", name: qsTr("Settings")}
     ]

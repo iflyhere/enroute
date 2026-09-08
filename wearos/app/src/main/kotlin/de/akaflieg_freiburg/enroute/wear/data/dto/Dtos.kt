@@ -93,6 +93,37 @@ data class WaypointDto(
     @SerialName("e") val elevationM: Double? = null,
     @SerialName("t") val type: String? = null,
     @SerialName("cat") val category: String? = null,
+    /** Radio frequencies, in the phone's own order. Only on a route's waypoints. */
+    @SerialName("freq") val frequencies: List<FrequencyDto> = emptyList(),
+)
+
+/**
+ * One radio frequency, already split by the phone.
+ *
+ * [kind] is the group the app filed it under: "inf" for recorded information, "com" for
+ * what a pilot calls, "nav" for a navaid, "oth" for the rest. [value] is absent when the
+ * app knows a station and no number for it.
+ */
+@Serializable
+data class FrequencyDto(
+    @SerialName("k") val kind: String = "",
+    @SerialName("s") val station: String = "",
+    @SerialName("f") val value: String? = null,
+)
+
+/**
+ * The flight information service covering the aircraft's position.
+ *
+ * [area] is the sector, which is how a pilot confirms it is the right one; [bottom] and
+ * [top] are the phone's own strings for the vertical band.
+ */
+@Serializable
+data class FisDto(
+    @SerialName("s") val station: String = "",
+    @SerialName("f") val value: String? = null,
+    @SerialName("a") val area: String? = null,
+    @SerialName("bot") val bottom: String? = null,
+    @SerialName("top") val top: String? = null,
 )
 
 @Serializable
@@ -139,6 +170,14 @@ data class NavFrameDto(
      * document did not arrive or could not be read.
      */
     @SerialName("alarm") val alarmLevel: Int = 0,
+    /**
+     * The flight information service for where the aircraft is, most local first.
+     *
+     * On the frame rather than in a document of its own, because it changes when a
+     * sector boundary is crossed and a document polled every few minutes would name
+     * the wrong frequency for the minutes in between.
+     */
+    @SerialName("fis") val fis: List<FisDto> = emptyList(),
 )
 
 /**

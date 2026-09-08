@@ -139,4 +139,12 @@ data class NavFrame(
      * both transports, and the traffic document does not have to.
      */
     val alarmLevel: Int = 0,
+    /**
+     * The flight information service sectors the aircraft is inside, most local first.
+     *
+     * Empty when the phone has no position, when no sector covers it, or when the
+     * pilot's map has no airspace data -- three different reasons for the same absence,
+     * and none of them worth distinguishing on a wrist.
+     */
+    val fis: List<FisStation> = emptyList(),
 )

@@ -40,6 +40,9 @@ import de.akaflieg_freiburg.enroute.wear.data.dto.VacBoardDto
 import de.akaflieg_freiburg.enroute.wear.data.dto.WeatherBoardDto
 import de.akaflieg_freiburg.enroute.wear.domain.ApproachChart
 import de.akaflieg_freiburg.enroute.wear.domain.DetectionState
+import de.akaflieg_freiburg.enroute.wear.domain.Frequency
+import de.akaflieg_freiburg.enroute.wear.domain.FrequencyKind
+import de.akaflieg_freiburg.enroute.wear.domain.FisStation
 import de.akaflieg_freiburg.enroute.wear.domain.FlightEntry
 import de.akaflieg_freiburg.enroute.wear.domain.FlightLogBoard
 import de.akaflieg_freiburg.enroute.wear.domain.FlightCategory
@@ -100,6 +103,13 @@ fun RouteDto.toDomain(): FlightRoute = FlightRoute(
             type = WaypointType.fromWire(dto.type),
             category = dto.category,
             elevationM = dto.elevationM,
+            frequencies = dto.frequencies.map { frequency ->
+                Frequency(
+                    kind = FrequencyKind.fromWire(frequency.kind),
+                    station = frequency.station,
+                    value = frequency.value,
+                )
+            },
         )
     },
     legs = legs.mapIndexedNotNull { index, dto ->
@@ -157,6 +167,15 @@ fun NavFrameDto.toDomain(): NavFrame {
         flightLevel = measured(pressureAltitudeM, fmt?.pressureAltitude),
         flightLevelImplausible = pressureAltitudeImplausible,
         alarmLevel = alarmLevel,
+    fis = fis.map { station ->
+        FisStation(
+            station = station.station,
+            value = station.value,
+            area = station.area,
+            bottom = station.bottom,
+            top = station.top,
+        )
+    },
     )
 }
 
