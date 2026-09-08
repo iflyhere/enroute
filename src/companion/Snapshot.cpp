@@ -210,19 +210,36 @@ namespace
      *
      *  That property appends "<p><font color='red'>Computation incomplete…</font></p>"
      *  when wind or aircraft data are missing. A client would render the tags
-     *  literally, so they are removed here. The markup is known and contains no
-     *  entities, so a tag strip is enough and this stays free of QtGui.
+     *  literally, so they are removed here.
+     *
+     *  GeoMaps::VAC::description() is HTML too -- its own header says so -- and it
+     *  brings entities with it, so those are decoded as well: a client showing
+     *  "&nbsp;" is no better off than one showing "<td>". Only what Qt's own rich
+     *  text producers emit is handled, with "&amp;" last so that an escaped entity
+     *  survives as text. That keeps this file free of QTextDocumentFragment, and
+     *  therefore of QtGui.
      */
     QString plainText(const QString& richText)
     {
-        if (!richText.contains(u'<'))
+        if (!richText.contains(u'<') && !richText.contains(u'&'))
         {
             return richText;
         }
+
         static const QRegularExpression tag(u"<[^>]*>"_s);
         // QString::replace mutates, so this needs its own copy.
         auto result = richText;
-        return result.replace(tag, u" "_s).simplified();
+        result.replace(tag, u" "_s);
+
+        result.replace(u"&nbsp;"_s, u" "_s);
+        result.replace(u"&lt;"_s, u"<"_s);
+        result.replace(u"&gt;"_s, u">"_s);
+        result.replace(u"&quot;"_s, u"\""_s);
+        result.replace(u"&apos;"_s, u"'"_s);
+        result.replace(u"&#39;"_s, u"'"_s);
+        result.replace(u"&amp;"_s, u"&"_s);
+
+        return result.simplified();
     }
 
     /*! \brief The translated message that belongs to a route status
@@ -876,7 +893,9 @@ QJsonObject Companion::Snapshot::vacs(const Companion::Revisions& revisions,
         QJsonObject chart;
         chart.insert("n"_L1, vac.name);
 
-        const auto description = vac.description();
+        // Plain text: this one is an HTML table of the install date and the file
+        // size, which is what the app's own library page shows.
+        const auto description = plainText(vac.description());
         if (!description.isEmpty() && description != vac.name)
         {
             chart.insert("d"_L1, description);
