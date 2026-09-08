@@ -93,14 +93,38 @@ namespace
      *  and the app was serving all of it. So this is a precaution rather than a fix,
      *  and no observed bug is claimed for it.
      */
+    // A year, and immutable. A tile's address contains the map revision, so new maps
+    // mean new addresses rather than new contents at the old ones -- which is the one
+    // situation where telling a client never to ask again is the truth. Without any
+    // header at all a renderer keeps nothing and refetches every tile on every rebuild,
+    // which is ten to twenty seconds of map over a companion link.
+    constexpr auto immutableCache = "public, max-age=31536000, immutable";
+
+    // A day for the app's own resources. Their addresses carry no revision, so an app
+    // update can change what is behind one; a day is far longer than any flight and
+    // short enough that the next one picks the change up.
+    constexpr auto resourceCache = "public, max-age=86400";
+
     void writeLarge(const QByteArray& data,
                     const QByteArray& mimeType,
-                    QHttpServerResponder& responder)
+                    QHttpServerResponder& responder,
+                    const char* cacheControl = nullptr)
     {
         auto* buffer = new QBuffer;
         buffer->setData(data);
         buffer->open(QIODevice::ReadOnly);
-        responder.write(buffer, mimeType);
+
+        if (cacheControl == nullptr)
+        {
+            responder.write(buffer, mimeType);
+            return;
+        }
+
+        QHttpHeaders headers;
+        headers.append(QHttpHeaders::WellKnownHeader::ContentType, mimeType);
+        headers.append(QHttpHeaders::WellKnownHeader::CacheControl, QByteArray(cacheControl));
+        headers.append("X-Content-Type-Options", "nosniff");
+        responder.write(buffer, headers);
     }
 
     void writeResource(const QString& resourcePath,
@@ -113,7 +137,7 @@ namespace
             responder.write(QHttpServerResponder::StatusCode::NotFound);
             return;
         }
-        writeLarge(file.readAll(), contentType, responder);
+        writeLarge(file.readAll(), contentType, responder, resourceCache);
     }
 
     /*! \brief Content type for a tile of the given MBTiles format
@@ -765,6 +789,8 @@ bool Companion::MapAssets::writeTile(
             // header a client sees a corrupt protobuf.
             headers.append(QHttpHeaders::WellKnownHeader::ContentEncoding, "gzip");
         }
+        headers.append(QHttpHeaders::WellKnownHeader::CacheControl,
+                       QByteArray(immutableCache));
         headers.append("X-Content-Type-Options", "nosniff");
 
         // Same precaution as writeLarge(): a vector tile runs to a couple of hundred
@@ -822,7 +848,9 @@ bool Companion::MapAssets::writeVac(const QString& name, QHttpServerResponder& r
     {
         return false;
     }
-    writeLarge(file.readAll(), "image/webp", responder);
+    // A chart's address carries its own name and the library only changes when the
+    // pilot imports or removes one, which never happens in flight.
+    writeLarge(file.readAll(), "image/webp", responder, resourceCache);
     return true;
 }
 
