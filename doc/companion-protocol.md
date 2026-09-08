@@ -375,7 +375,7 @@ entry is fetched separately from `/enroute/v1/map/vac/<n>`.
 |---|---|
 | `available` | Whether the app could reach its chart library at all. **Not the same claim as an empty `vac` array**: false means the question could not be asked, an empty array means it was asked and there are no charts. A client must be able to tell a pilot which of the two happened. |
 | `vac[].n` | The chart's name in the library, and the last path element of its image URL. |
-| `vac[].d` | The app's own description. Omitted when it adds nothing to the name. |
+| `vac[].d` | The app's own description, as plain text. The app holds it as HTML -- a small table of the install date and the file size -- and it is stripped here, entities included, because a client would otherwise render the markup. Omitted when it adds nothing to the name. |
 | `vac[].sect` | The app's own section heading, e.g. the country. Omitted when empty. |
 | `vac[].q` | The four corners as `[longitude, latitude]`, in the order **top left, top right, bottom right, bottom left**. That is the app's own image-source order and what a renderer's quad expects, so it passes straight through. A manually imported chart is always axis aligned, because its corners come from its file name; a chart from a GeoTIFF can be a true quadrilateral, which is why four corners travel and not a rectangle. |
 | `vac[].bbox` | `[west, south, east, north]`. Derivable from `q`, and sent anyway because it is what the app's own selection rule tests. |
