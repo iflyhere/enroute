@@ -1,0 +1,392 @@
+/***************************************************************************
+ *   Copyright (C) 2026 by Soeren Gutbrod                                  *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 3 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+package de.akaflieg_freiburg.enroute.wear.transport.http
+
+import de.akaflieg_freiburg.enroute.wear.data.WireJson
+import de.akaflieg_freiburg.enroute.wear.data.dto.FlightLogDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.HelloDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.NavFrameDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.NearbyBoardDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.NotamBoardDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.PrefsDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.RouteDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.TrafficBoardDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.VacBoardDto
+import de.akaflieg_freiburg.enroute.wear.data.dto.WeatherBoardDto
+import de.akaflieg_freiburg.enroute.wear.data.parseStyleColour
+import de.akaflieg_freiburg.enroute.wear.data.toDomain
+import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
+import de.akaflieg_freiburg.enroute.wear.transport.FailureReason
+import de.akaflieg_freiburg.enroute.wear.transport.NavTransport
+import de.akaflieg_freiburg.enroute.wear.transport.PeerInfo
+import de.akaflieg_freiburg.enroute.wear.transport.TransportEvent
+import android.util.Log
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URL
+
+/**
+ * Stage 1 of the companion protocol: JSON over HTTP on the local network.
+ *
+ * Polls the navigation frame with a conditional GET, which costs a bare 304 whenever
+ * nothing has changed, and refetches the route only when the frame reports a different
+ * revision or a different session.
+ *
+ * Polling rather than a streamed response is deliberate. A watch radio wakes for each
+ * poll either way; a poll is its own reconnect logic, so a dropped connection needs no
+ * separate recovery path; and it keeps this class dependency-free -- java.net is enough,
+ * which matters for a project that has to justify every dependency it links.
+ */
+class HttpNavTransport(
+    private val host: String,
+    private val port: Int,
+    private val pairingCode: String,
+    private val pollPeriodMs: Long = 1_000,
+) : NavTransport {
+
+    override val displayName: String = "$host:$port"
+
+    private val base = "http://$host:$port/enroute/v1"
+
+    override fun session(): Flow<TransportEvent> = flow {
+        emit(TransportEvent.Connecting)
+
+        val hello = try {
+            request(HELLO)?.let { WireJson.json.decodeFromString<HelloDto>(it.body) }
+        } catch (unauthorized: UnauthorizedException) {
+            Log.w(TAG, "hello rejected: " + unauthorized.message)
+            emit(TransportEvent.Failed(FailureReason.Unauthorized, unauthorized.message))
+            return@flow
+        } catch (io: IOException) {
+            Log.w(TAG, "hello failed: " + io.javaClass.simpleName + ": " + io.message)
+            emit(TransportEvent.Failed(FailureReason.Unreachable, io.message))
+            return@flow
+        }
+        if (hello == null) {
+            emit(TransportEvent.Failed(FailureReason.Unreachable, "no response to hello"))
+            return@flow
+        }
+        if (hello.version != WireJson.PROTOCOL_VERSION) {
+            emit(
+                TransportEvent.Failed(
+                    FailureReason.ProtocolMismatch,
+                    "peer speaks protocol ${hello.version}",
+                ),
+            )
+            return@flow
+        }
+
+        // Logged because everything downstream depends on it and none of it is visible
+        // from the outside: whether a map is offered, where the camera starts, which
+        // notice to display. A wrong assumption here costs a whole test round.
+        Log.i(TAG, "peer " + hello.appVersion + " v" + hello.version +
+            " mapRev=" + hello.mapRevision +
+            " centre=" + hello.mapCentre +
+            " navPeriod=" + hello.navPeriodMs)
+
+        emit(TransportEvent.Connected(peerOf(hello)))
+
+        var knownRoute: Pair<Long, Long>? = null   // session id to route revision
+        var navETag: String? = null
+        var notamETag: String? = null
+        var weatherETag: String? = null
+        var vacETag: String? = null
+        var logETag: String? = null
+        var prefsETag: String? = null
+        var trafficETag: String? = null
+        var nearbyETag: String? = null
+
+        // Zero, not "now", so the first pass fetches NOTAMs instead of leaving the
+        // screen empty for a minute after connecting.
+        var notamsFetchedAt = 0L
+        var weatherFetchedAt = 0L
+        var vacsFetchedAt = 0L
+        var logFetchedAt = 0L
+        var prefsFetchedAt = 0L
+        var nearbyFetchedAt = 0L
+
+        while (true) {
+            try {
+                val response = request(NAV, ifNoneMatch = navETag)
+                if (response != null) {
+                    navETag = response.etag
+                    val frame = WireJson.json.decodeFromString<NavFrameDto>(response.body).toDomain()
+                    emit(TransportEvent.Nav(frame))
+
+                    // One field carries the whole caching protocol: refetch the route
+                    // when either the revision or the session identifier moves.
+                    val wanted = frame.sessionId to frame.routeRevision
+                    if (knownRoute != wanted) {
+                        val route = request(ROUTE)
+                            ?.let { WireJson.json.decodeFromString<RouteDto>(it.body) }
+                            ?.toDomain()
+                        if (route != null) {
+                            emit(TransportEvent.RouteUpdate(route))
+                            knownRoute = wanted
+                        }
+
+                        // The capability document is rebuilt in lockstep with the route
+                        // document, so this is also the moment its contents can have
+                        // changed. Refetching it closes a window that cost a whole test
+                        // round: a client that connects in the fraction of a second
+                        // before the phone first publishes its map revision otherwise
+                        // spends the entire session believing no map is on offer,
+                        // because the capability document is fetched exactly once.
+                        request(HELLO)
+                            ?.let { WireJson.json.decodeFromString<HelloDto>(it.body) }
+                            ?.let { fresh -> emit(TransportEvent.Connected(peerOf(fresh))) }
+                    }
+                }
+
+                // NOTAMs are on their own slow beat, and deliberately not tied to the
+                // nav revision: they change when the phone downloads data, a few times
+                // a day, not once a second. Polling them at the nav rate would cost a
+                // radio wake and a few kilobytes every second for data that is hours
+                // old. A 304 is the normal answer here.
+                val now = System.currentTimeMillis()
+                if (now - notamsFetchedAt >= NOTAM_PERIOD_MS) {
+                    notamsFetchedAt = now
+                    val notams = request(NOTAMS, ifNoneMatch = notamETag)
+                    if (notams != null) {
+                        notamETag = notams.etag
+                        emit(
+                            TransportEvent.NotamUpdate(
+                                WireJson.json.decodeFromString<NotamBoardDto>(notams.body).toDomain(),
+                            ),
+                        )
+                    }
+                }
+
+                // Weather is on its own beat for the same reason, but a faster one: a
+                // METAR is issued every half hour and the summary the phone writes
+                // states the observation's age, so a list left alone for five minutes
+                // would be visibly wrong about how old it is. A 304 is still the normal
+                // answer, because the phone only rebuilds when the content moves.
+                // Traffic rides at the navigation rate, with no beat of its own: it
+                // is the other thing on this link worth a second of a pilot's
+                // attention, and a target that moved two seconds ago is a target drawn
+                // in the wrong place. A 304 costs almost nothing when the phone has
+                // nothing new, which on the ground is every tick.
+                val traffic = request(TRAFFIC, ifNoneMatch = trafficETag)
+                if (traffic != null) {
+                    trafficETag = traffic.etag
+                    emit(
+                        TransportEvent.TrafficUpdate(
+                            WireJson.json.decodeFromString<TrafficBoardDto>(traffic.body)
+                                .toDomain(),
+                        ),
+                    )
+                }
+
+                // The nearby list moves with the aircraft, but the phone's own page
+                // computes its distances once when it opens and never again, so a
+                // minute here is more current than the phone is.
+                if (now - nearbyFetchedAt >= NEARBY_PERIOD_MS) {
+                    nearbyFetchedAt = now
+                    val nearby = request(NEARBY, ifNoneMatch = nearbyETag)
+                    if (nearby != null) {
+                        nearbyETag = nearby.etag
+                        emit(
+                            TransportEvent.NearbyUpdate(
+                                WireJson.json.decodeFromString<NearbyBoardDto>(nearby.body)
+                                    .toDomain(),
+                            ),
+                        )
+                    }
+                }
+
+                // The phone's display preferences. Rarely changed and cheap to ask
+                // for -- the whole document is a few hundred bytes and an unchanged one
+                // costs a 304 -- but asked for often enough that a pilot rearranging
+                // screens on the phone sees the watch follow while still holding both.
+                if (now - prefsFetchedAt >= PREFS_PERIOD_MS) {
+                    prefsFetchedAt = now
+                    val prefs = request(PREFS, ifNoneMatch = prefsETag)
+                    if (prefs != null) {
+                        prefsETag = prefs.etag
+                        emit(
+                            TransportEvent.PrefsUpdate(
+                                WireJson.json.decodeFromString<PrefsDto>(prefs.body).toDomain(),
+                            ),
+                        )
+                    }
+                }
+
+                // The logbook gains an entry when a flight ends, and the detector's
+                // state moves a handful of times per flight. Thirty seconds is fast
+                // enough for a takeoff banner to feel live without being a feed.
+                if (now - logFetchedAt >= LOG_PERIOD_MS) {
+                    logFetchedAt = now
+                    val log = request(LOG, ifNoneMatch = logETag)
+                    if (log != null) {
+                        logETag = log.etag
+                        emit(
+                            TransportEvent.FlightLogUpdate(
+                                WireJson.json.decodeFromString<FlightLogDto>(log.body).toDomain(),
+                            ),
+                        )
+                    }
+                }
+
+                // The chart library changes when the pilot imports or removes one,
+                // which never happens in flight. This poll exists so a client that
+                // connected before an import still learns about it.
+                if (now - vacsFetchedAt >= VAC_PERIOD_MS) {
+                    vacsFetchedAt = now
+                    val vacs = request(VACS, ifNoneMatch = vacETag)
+                    if (vacs != null) {
+                        vacETag = vacs.etag
+                        emit(
+                            TransportEvent.VacUpdate(
+                                WireJson.json.decodeFromString<VacBoardDto>(vacs.body).toDomain(),
+                            ),
+                        )
+                    }
+                }
+
+                if (now - weatherFetchedAt >= WEATHER_PERIOD_MS) {
+                    weatherFetchedAt = now
+                    val weather = request(WEATHER, ifNoneMatch = weatherETag)
+                    if (weather != null) {
+                        weatherETag = weather.etag
+                        emit(
+                            TransportEvent.WeatherUpdate(
+                                WireJson.json.decodeFromString<WeatherBoardDto>(weather.body)
+                                    .toDomain(),
+                            ),
+                        )
+                    }
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (unauthorized: UnauthorizedException) {
+                Log.w(TAG, "poll rejected: " + unauthorized.message)
+                emit(TransportEvent.Failed(FailureReason.Unauthorized, unauthorized.message))
+                return@flow
+            } catch (io: IOException) {
+                Log.w(TAG, "poll failed: " + io.javaClass.simpleName + ": " + io.message)
+                emit(TransportEvent.Failed(FailureReason.PeerClosed, io.message))
+                return@flow
+            }
+
+            delay(pollPeriodMs)
+        }
+    }.flowOn(Dispatchers.IO)
+
+    private fun peerOf(hello: HelloDto) = PeerInfo(
+        appVersion = hello.appVersion,
+        protocolVersion = hello.version,
+        sessionId = hello.sessionId,
+        navPeriodMs = hello.navPeriodMs,
+        mapRevision = hello.mapRevision,
+        mapAttribution = hello.mapAttribution,
+        mapCentre = hello.mapCentre.takeIf { it.size >= 2 }
+            ?.let { GeoPoint(latDeg = it[1], lonDeg = it[0]) },
+        mapCentreZoom = hello.mapCentre.getOrElse(2) { 0.0 },
+        verticalUnit = hello.units.verticalDistance,
+        horizontalUnit = hello.units.horizontalDistance,
+        mapLabelColour = parseStyleColour(hello.mapOverlay?.label),
+        mapHaloColour = parseStyleColour(hello.mapOverlay?.halo),
+    )
+
+    private class Response(val body: String, val etag: String?)
+
+    private class UnauthorizedException(message: String) : IOException(message)
+
+    /** Returns null for 304 Not Modified, meaning "unchanged, nothing to do". */
+    private fun request(path: String, ifNoneMatch: String? = null): Response? {
+        val connection = (URL(base + path).openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = CONNECT_TIMEOUT_MS
+            readTimeout = READ_TIMEOUT_MS
+            useCaches = false
+            // The header, never the query parameter: a pairing code in a URL would end
+            // up in logs and in browser history.
+            setRequestProperty("Authorization", "Bearer $pairingCode")
+            setRequestProperty("Accept", "application/json")
+            ifNoneMatch?.let { setRequestProperty("If-None-Match", it) }
+        }
+        try {
+            return when (val code = connection.responseCode) {
+                HttpURLConnection.HTTP_OK ->
+                    Response(
+                        body = connection.inputStream.bufferedReader().use { it.readText() },
+                        etag = connection.getHeaderField("ETag"),
+                    )
+
+                HttpURLConnection.HTTP_NOT_MODIFIED -> null
+
+                HttpURLConnection.HTTP_UNAUTHORIZED ->
+                    throw UnauthorizedException("pairing code rejected")
+
+                else -> throw IOException("HTTP $code")
+            }
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private companion object {
+        const val TAG = "EnrouteWear"
+        const val HELLO = "/hello"
+        const val NAV = "/nav"
+        const val ROUTE = "/route"
+        const val NOTAMS = "/notams"
+        const val WEATHER = "/weather"
+        const val VACS = "/vacs"
+        const val LOG = "/log"
+        const val PREFS = "/prefs"
+        const val TRAFFIC = "/traffic"
+        const val NEARBY = "/nearby"
+
+        // The phone rebuilds its NOTAM document every five minutes at the slowest, so
+        // a minute here means a client is never more than about a minute behind while
+        // costing one request per minute.
+        const val NOTAM_PERIOD_MS = 60_000L
+
+        // Half the phone's own rebuild period, so a change is on screen within about
+        // two and a half minutes without polling faster than the data can move.
+        const val WEATHER_PERIOD_MS = 150_000L
+
+        const val VAC_PERIOD_MS = 300_000L
+
+        const val LOG_PERIOD_MS = 30_000L
+
+        /**
+         * How often to ask for the preferences.
+         *
+         * Five seconds, which is far more often than they change and still cheap: an
+         * unchanged document is a 304 with no body. The point is the moment a pilot is
+         * arranging screens on the phone with the watch on the wrist, where a longer
+         * period would feel broken.
+         */
+        const val PREFS_PERIOD_MS = 5_000L
+
+        const val NEARBY_PERIOD_MS = 60_000L
+        const val CONNECT_TIMEOUT_MS = 3_000
+        const val READ_TIMEOUT_MS = 5_000
+    }
+}

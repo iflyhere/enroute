@@ -48,7 +48,9 @@
 #endif
 
 #include "DemoRunner.h"
+#include "companion/CompanionServer.h"
 #include "GlobalObject.h"
+#include "GlobalSettings.h"
 #include "Librarian.h"
 #include "config.h"
 #include "geomaps/Airspace.h"
@@ -200,6 +202,16 @@ auto main(int argc, char *argv[]) -> int
 
     // Create mobile platform adaptor and ask to disable to screen saver.
     GlobalObject::platformAdaptor()->disableScreenSaver();
+
+    // Start the companion link, if the user has enabled it. Constructed here rather
+    // than lazily from QML, because the link has to come up whether or not the user
+    // ever opens the settings page. Opening that page does construct the object even
+    // while the feature is off, which is harmless: a disabled server installs no
+    // observers, runs no timers and opens no socket.
+    if (GlobalObject::globalSettings()->companionNetworkEnabled())
+    {
+        GlobalObject::companionServer();
+    }
     if (positionalArguments.length() == 1)
     {
         GlobalObject::fileExchange()->processFileOpenRequest(positionalArguments[0], {});
@@ -227,6 +239,12 @@ auto main(int argc, char *argv[]) -> int
 #endif
     engine->rootContext()->setContextProperty(QStringLiteral("global"), new GlobalObject(engine) );
     engine->load(u"qrc:/qml/main.qml"_s);
+
+    // The approach chart library is a QML singleton, so an engine is the only way to
+    // reach it from C++. Set unconditionally rather than from the QML factory, because
+    // a pilot who enabled the companion once starts the app again without the settings
+    // page -- and therefore without that factory -- ever running.
+    GlobalObject::companionServer()->setQmlEngine(engine);
 #if defined(Q_OS_ANDROID)
     QNativeInterface::QAndroidApplication::hideSplashScreen(1);
 
