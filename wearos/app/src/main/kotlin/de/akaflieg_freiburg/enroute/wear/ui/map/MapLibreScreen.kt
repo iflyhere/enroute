@@ -121,7 +121,6 @@ fun MapLibreScreen(
     port: Int,
     zoom: ZoomLevel,
     isActive: Boolean,
-    holder: MapHolder,
     fallbackCentre: GeoPoint?,
     fallbackZoom: Double,
     labelColour: Long?,
@@ -133,6 +132,9 @@ fun MapLibreScreen(
     val configuration = LocalConfiguration.current
     val radiusPixels = with(density) { (configuration.screenWidthDp.dp.toPx()) / 2f }
 
+    // Held across recompositions so a position update touches the existing map instead
+    // of building a new one.
+    val holder = remember { MapHolder() }
 
     Box(modifier = modifier.fillMaxSize().background(CockpitColors.Background)) {
         AndroidView(
@@ -156,16 +158,14 @@ fun MapLibreScreen(
                     .logoEnabled(false)
                     .compassEnabled(false)
 
-                // Reused if one already exists. Building a MapView means a renderer, a
-                // style download and every tile and glyph again: ten to twenty seconds
-                // over a companion link, which is what a pilot reported after every
-                // screen change. Detached from whatever held it before, because a View
-                // that still has a parent cannot be added to another one.
-                holder.view?.let { existing ->
-                    (existing.parent as? ViewGroup)?.removeView(existing)
-                    return@AndroidView existing
-                }
-
+                // Always a new one. Handing back a MapView that has been detached from
+                // its parent looks like the obvious way to save the rebuild, and it
+                // does save it -- but the view comes back as a black disc, with the
+                // renderer logging nothing at all, because its surface went with the
+                // detachment and does not return. The rebuild is avoided a level up
+                // instead, by never releasing this page (see the pager), and what makes
+                // a rebuild survivable in the cases that are left is the tile cache
+                // rather than this.
                 MapView(context, options).also { view ->
                     view.onCreate(null)
 
@@ -197,12 +197,6 @@ fun MapLibreScreen(
                         }
                     }
                 }
-            },
-            // Left alive on purpose. The default detaches and this screen used to
-            // destroy, which is what made coming back cost a rebuild.
-            onRelease = { view ->
-                view.onPause()
-                (view.parent as? ViewGroup)?.removeView(view)
             },
             update = {
                 holder.applyRoute(route)
@@ -263,15 +257,33 @@ fun MapLibreScreen(
     }
 
     // The address inside every tile URL comes from the style, and the style is loaded
-    // once when the map is built. Now that the map outlives the page, a phone that moved
-    // -- a handover from Bluetooth to Wi-Fi, or a different network -- would otherwise
-    // leave this asking a host that is no longer there, and the symptom would be a map
-    // that renders once and never updates again.
+    // when the map is built. This page now stays composed for as long as the app runs,
+    // so a phone that moved -- a handover from Bluetooth to Wi-Fi, or another network --
+    // would otherwise leave the map asking a host that is no longer there, and the
+    // symptom would be a map that renders once and never updates again.
+    //
+    // The waiting matters as much as the reloading. Asking the renderer for a style
+    // while it is still loading one cancels every request the first made and it does
+    // not go back for them, which leaves the style fetched twice and not a single tile
+    // drawn. That is not a corner case: the phone's map revision is part of the address
+    // and arrives a moment after this page is first composed, so for a pilot whose
+    // first screen is the map it would happen on every start.
     LaunchedEffect(styleUrl) {
+        // Bounded, because a style load that fails never reports back and an unbounded
+        // wait would poll for the rest of the flight. Giving up and asking again is the
+        // right answer then: there is nothing left to interrupt.
+        var waited = 0L
+        while (waited < STYLE_WAIT_LIMIT_MS &&
+            (holder.map == null || (holder.loadedStyleUrl != null && holder.style == null))
+        ) {
+            delay(STYLE_WAIT_MS)
+            waited += STYLE_WAIT_MS
+        }
         val map = holder.map ?: return@LaunchedEffect
         if (holder.loadedStyleUrl == styleUrl) {
             return@LaunchedEffect
         }
+        holder.style = null
         holder.loadedStyleUrl = styleUrl
         map.setStyle(Style.Builder().fromUri(styleUrl)) { style ->
             holder.style = style
@@ -321,13 +333,18 @@ fun MapLibreScreen(
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
-            // The observer goes; the map stays. Destroying it here is what cost ten to
-            // twenty seconds on every return to this page -- the renderer, the style and
-            // every tile had to be fetched again. It is destroyed when the activity is,
-            // in the ON_DESTROY branch above, which is the only moment it is truly done
-            // with.
+            // A detached MapView cannot be revived, so there is nothing to be gained by
+            // keeping this one: it is released here rather than left to be found later
+            // as a black disc and a leaked render thread. The page it belongs to is the
+            // one page the pager never releases, so in normal use this runs when the
+            // pilot leaves the app and not on a screen change.
             lifecycleOwner.lifecycle.removeObserver(observer)
-            holder.view?.onPause()
+            holder.view?.onStop()
+            holder.view?.onDestroy()
+            holder.view = null
+            holder.map = null
+            holder.style = null
+            holder.loadedStyleUrl = null
         }
     }
 }
@@ -372,15 +389,18 @@ private fun MapText(
     )
 }
 
-/** Kept out of the composable so that Compose never has to reason about its identity. */
 /**
- * Everything about the map that must outlive the page.
+ * Everything about the map that has to survive a recomposition.
  *
- * Created above the pager rather than inside the page: a Compose pager takes a page out
- * of composition when it scrolls away, and rebuilding a MapView means the renderer, the
- * style and every tile again.
+ * One of these per composition of this screen, and deliberately not shared with anything
+ * outside it: it owns the MapView, and whoever owns a MapView must be the only one who
+ * can destroy it. Hoisting it above the pager, so that a page leaving the composition
+ * could hand its renderer back later, was tried and is a trap -- the page list changes
+ * once at startup when the phone's preferences arrive, the outgoing page's disposal then
+ * runs after the incoming page's factory, and what it destroys is the new map. The
+ * symptom is a blank disc that never draws a tile.
  */
-class MapHolder {
+private class MapHolder {
     var view: MapView? = null
     var map: MapLibreMap? = null
     var style: Style? = null
@@ -753,6 +773,22 @@ private fun offset(from: GeoPoint, bearingDeg: Double, distanceM: Double): GeoPo
 }
 
 private const val METRES_PER_DEGREE = 111_320.0
+
+/**
+ * How often the style loader looks again while the renderer is busy loading one.
+ *
+ * Short enough that the first style lands within a frame or two of the map being ready,
+ * long enough that waiting costs nothing.
+ */
+private const val STYLE_WAIT_MS = 50L
+
+/**
+ * How long that waiting goes on before the loader stops deferring.
+ *
+ * Long enough for a style to arrive over the slowest link this app has, short enough
+ * that a load which will never complete does not hold the map hostage.
+ */
+private const val STYLE_WAIT_LIMIT_MS = 20_000L
 
 /**
  * How long the zoom label stays up after the last change.
