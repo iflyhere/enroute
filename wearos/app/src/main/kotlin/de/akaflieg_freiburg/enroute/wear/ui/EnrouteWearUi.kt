@@ -58,6 +58,7 @@ import de.akaflieg_freiburg.enroute.wear.ui.connect.CodeEntryScreen
 import de.akaflieg_freiburg.enroute.wear.ui.connect.ConnectScreen
 import de.akaflieg_freiburg.enroute.wear.ui.data.DataScreen
 import de.akaflieg_freiburg.enroute.wear.ui.data.DataUiState
+import de.akaflieg_freiburg.enroute.wear.ui.freq.FrequencyScreen
 import de.akaflieg_freiburg.enroute.wear.ui.map.MapLibreScreen
 import de.akaflieg_freiburg.enroute.wear.ui.instruments.Instrument
 import de.akaflieg_freiburg.enroute.wear.ui.instruments.InstrumentScreen
@@ -244,6 +245,7 @@ private fun MainPages(
     val trafficScrollState = rememberScrollState()
     val nearbyListState = rememberScalingLazyListState()
     val weatherListState = rememberScalingLazyListState()
+    val freqListState = rememberScalingLazyListState()
     val logListState = rememberScalingLazyListState()
     val settingsListState = rememberScalingLazyListState()
 
@@ -358,6 +360,11 @@ private fun MainPages(
 
                     WearPage.Nearby -> {
                         nearbyListState.dispatchRawDelta(event.verticalScrollPixels)
+                        true
+                    }
+
+                    WearPage.Frequencies -> {
+                        freqListState.dispatchRawDelta(event.verticalScrollPixels)
                         true
                     }
 
@@ -512,6 +519,15 @@ private fun MainPages(
                 WearPage.Nearby -> NearbyScreen(
                     board = uiState.value.session.nearby,
                     listState = nearbyListState,
+                )
+
+                WearPage.Frequencies -> FrequencyScreen(
+                    fis = uiState.value.session.frame?.fis.orEmpty(),
+                    waypoints = uiState.value.session.route?.waypoints.orEmpty(),
+                    // Only for the marker, and only while the phone is willing to name
+                    // one: the frame omits it unless the aircraft is on the route.
+                    nextName = uiState.value.session.frame?.next?.name,
+                    listState = freqListState,
                 )
 
                 WearPage.Notam -> NotamScreen(

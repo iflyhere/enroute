@@ -36,6 +36,7 @@
 #include "flightlog/Flight.h"
 #include "flightlog/FlightDetector.h"
 #include "flightlog/FlightLog.h"
+#include "geomaps/Airspace.h"
 #include "geomaps/GeoMapProvider.h"
 #include "geomaps/VACLibrary.h"
 #include "notam/NOTAMProvider.h"
@@ -306,8 +307,159 @@ namespace
         return units;
     }
 
+    /*! \brief How far the aircraft moves before the FIS sector is looked up again
+     *
+     *  Far below the size of a sector and far above the wander of a fix, so the answer
+     *  is never stale in a way a pilot could notice, and the scan does not run on
+     *  every frame.
+     */
+    constexpr double fisRecomputeMetres = 2000.0;
+
+    /*! \brief Splits "STUTTGART TOWER 118.805" into a station and a frequency
+     *
+     *  The app keeps these as one line of text, which is the right shape for its own
+     *  waypoint page. A watch has no room for a line: it wants the number large and
+     *  the station small underneath, so the two are separated here rather than in
+     *  every client.
+     *
+     *  The frequency is a trailing token that looks like one. A line without it --
+     *  some NAV entries are a bare identifier -- keeps its whole text as the station
+     *  and carries no number, which is the honest encoding of "there is a station here
+     *  and the app has no frequency for it".
+     */
+    struct StationAndFrequency
+    {
+        QString station;
+        QString frequency;
+    };
+
+    StationAndFrequency splitFrequency(const QString& line)
+    {
+        static const QRegularExpression trailing(uR"(^(.*?)\s*([0-9]{3}\.[0-9]{1,3})$)"_s);
+        const auto match = trailing.match(line.trimmed());
+        if (!match.hasMatch())
+        {
+            return {line.trimmed(), {}};
+        }
+        return {match.captured(1).trimmed(), match.captured(2)};
+    }
+
+    /*! \brief The radio frequencies the app knows for a waypoint
+     *
+     *  Read out of the waypoint's own GeoJSON properties, which is where the app keeps
+     *  them: INF is the recorded information, COM what a pilot calls, NAV the navaids,
+     *  OTH the rest. Emitted in the app's own order, so a client shows what the phone
+     *  shows, and tagged with the group it came from, because ATIS and TOWER want
+     *  different weight on a display the size of a wrist.
+     */
+    QJsonArray frequencies(const GeoMaps::Waypoint& waypoint)
+    {
+        const auto properties = waypoint.toJSON().value("properties"_L1).toObject();
+
+        QJsonArray result;
+        for (const auto* group : {"INF", "COM", "NAV", "OTH"})
+        {
+            const auto text = properties.value(QLatin1StringView(group)).toString();
+            if (text.isEmpty())
+            {
+                continue;
+            }
+            const auto lines = text.split(u'\n', Qt::SkipEmptyParts);
+            for (const auto& line : lines)
+            {
+                const auto split = splitFrequency(line);
+                if (split.station.isEmpty() && split.frequency.isEmpty())
+                {
+                    continue;
+                }
+                QJsonObject entry;
+                entry.insert("k"_L1, QString::fromLatin1(group).toLower());
+                entry.insert("s"_L1, split.station);
+                if (!split.frequency.isEmpty())
+                {
+                    entry.insert("f"_L1, split.frequency);
+                }
+                result.append(entry);
+            }
+        }
+        return result;
+    }
+
+    /*! \brief The flight information service for a position
+     *
+     *  FIS is not a property of anything the app models as a station: it is an
+     *  airspace, and the frequency is inside its name -- "LANGEN - LANGEN INFORMATION
+     *  126.950", with an en dash. Which of the fifteen Langen frequencies applies
+     *  depends entirely on where the aircraft is, which is the question a pilot does
+     *  not want to answer from a chart in the air and the one the phone can already
+     *  answer.
+     *
+     *  Cached against the last position, because the answer needs a polygon
+     *  containment test against every airspace the app knows and this frame is built
+     *  once a second. Main thread only, like everything else here, which is what makes
+     *  a function-local cache safe.
+     */
+    QJsonArray flightInformationService(const QGeoCoordinate& position)
+    {
+        static QGeoCoordinate lastPosition;
+        static QJsonArray lastResult;
+
+        if (!position.isValid())
+        {
+            return {};
+        }
+        if (lastPosition.isValid() && lastPosition.distanceTo(position) < fisRecomputeMetres)
+        {
+            return lastResult;
+        }
+
+        QJsonArray result;
+        const auto airspaces = GlobalObject::geoMapProvider()->airspacesAtPosition(position);
+        for (const auto& entry : airspaces)
+        {
+            const auto airspace = entry.value<GeoMaps::Airspace>();
+            if (airspace.CAT() != u"FIS"_s)
+            {
+                continue;
+            }
+
+            // Both halves are worth having: the number is what gets dialled, the
+            // sector name is how a pilot confirms it is the right one.
+            //
+            // The separator is a bullet in the data this was written against, and a
+            // dash is accepted because another country's data may well use one. A
+            // plain hyphen is deliberately not in the set: GDANSK-ZACHOD has one in
+            // the sector name itself, and splitting there would report the station as
+            // "ZACHOD • GDANSK INFORMATION".
+            static const QRegularExpression separator(u"[•–—]"_s);
+            const auto name = airspace.name();
+            const auto at = name.indexOf(separator);
+            const auto area = (at < 0) ? QString() : name.left(at).trimmed();
+            const auto rest = (at < 0) ? name : name.mid(at + 1);
+            const auto split = splitFrequency(rest);
+
+            QJsonObject station;
+            station.insert("s"_L1, split.station);
+            if (!split.frequency.isEmpty())
+            {
+                station.insert("f"_L1, split.frequency);
+            }
+            if (!area.isEmpty())
+            {
+                station.insert("a"_L1, area);
+            }
+            station.insert("bot"_L1, airspace.lowerBound());
+            station.insert("top"_L1, airspace.upperBound());
+            result.append(station);
+        }
+
+        lastPosition = position;
+        lastResult = result;
+        return result;
+    }
+
     /*! \brief Slim wire representation of a waypoint */
-    QJsonObject toJSON(const GeoMaps::Waypoint& waypoint)
+    QJsonObject toJSON(const GeoMaps::Waypoint& waypoint, bool withFrequencies = false)
     {
         QJsonObject object;
         object.insert("n"_L1, waypoint.shortName());
@@ -329,6 +481,19 @@ namespace
 
         object.insert("t"_L1, waypoint.type());
         object.insert("cat"_L1, waypoint.category());
+
+        // Only where a client will actually read them. A route is a handful of
+        // waypoints and the frequencies are the point of asking; the nearby document
+        // is sixty of them, and sixty aerodromes' worth of radio is several kilobytes
+        // on a link that carries them one fragment at a time.
+        if (withFrequencies)
+        {
+            const auto radio = frequencies(waypoint);
+            if (!radio.isEmpty())
+            {
+                object.insert("freq"_L1, radio);
+            }
+        }
         return object;
     }
 
@@ -467,7 +632,7 @@ QJsonObject Companion::Snapshot::route(const Companion::Revisions& revisions)
     QJsonArray waypoints;
     for (const auto& waypoint : flightRoute->waypoints())
     {
-        waypoints.append(toJSON(waypoint));
+        waypoints.append(toJSON(waypoint, true));
     }
     document.insert("wp"_L1, waypoints);
 
@@ -573,6 +738,16 @@ QJsonObject Companion::Snapshot::nav(const Companion::Revisions& revisions,
         insertIfFinite(own, "tt"_L1, positionInfo.trueTrack());
         insertIfFinite(own, "vs"_L1, positionInfo.verticalSpeed());
         document.insert("own"_L1, own);
+
+        // On the streaming frame rather than in a document of its own: it changes when
+        // the aircraft crosses a sector boundary, which is a position event, and a
+        // client that learned it from a document polled every few minutes would offer
+        // the wrong frequency for the minutes in between.
+        const auto fis = flightInformationService(positionInfo.coordinate());
+        if (!fis.isEmpty())
+        {
+            document.insert("fis"_L1, fis);
+        }
     }
 
     // RemainingRouteInfo guarantees its nextWP members only while OnRoute, so

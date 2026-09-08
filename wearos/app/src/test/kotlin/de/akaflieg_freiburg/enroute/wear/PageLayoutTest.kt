@@ -78,7 +78,12 @@ class PageLayoutTest {
                 // Instruments and Traffic come before Notam in the enum, so they go
                 // in front of it rather than on the end.
                 WearPage.Instruments, WearPage.Traffic, WearPage.Notam,
-                WearPage.Nearby, WearPage.Weather, WearPage.Log, WearPage.Settings,
+                WearPage.Nearby, WearPage.Weather,
+                // Same rule, second time it mattered: the frequency page was added
+                // after this order was saved and belongs beside Weather, not on the
+                // end past the flight log.
+                WearPage.Frequencies,
+                WearPage.Log, WearPage.Settings,
             ),
             pages,
         )
@@ -166,7 +171,7 @@ class PageLayoutTest {
         assertEquals(
             listOf(
                 "map", "data", "instruments", "traffic",
-                "notam", "nearby", "weather", "log", "settings",
+                "notam", "nearby", "weather", "freq", "log", "settings",
             ),
             moved,
         )

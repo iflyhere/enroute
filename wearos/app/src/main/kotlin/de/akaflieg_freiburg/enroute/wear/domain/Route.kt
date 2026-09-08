@@ -49,6 +49,55 @@ data class RouteWaypoint(
     val type: WaypointType,
     val category: String?,
     val elevationM: Double?,
+    val frequencies: List<Frequency> = emptyList(),
+)
+
+/**
+ * One radio frequency a waypoint carries.
+ *
+ * Split by the phone into the station and the number, because a watch wants the number
+ * large and the station small underneath, and because the phone is where the app's own
+ * text lives.
+ */
+data class Frequency(
+    val kind: FrequencyKind,
+    val station: String,
+    val value: String?,
+)
+
+/** Which group the app filed a frequency under. */
+enum class FrequencyKind(val id: String, val label: String) {
+    /** Recorded information: ATIS and the like. Listen, do not call. */
+    Information("inf", "INFO"),
+
+    /** What a pilot calls: tower, ground, radio. */
+    Communication("com", "COM"),
+
+    /** A navaid's frequency, which is dialled into a receiver rather than a radio. */
+    Navaid("nav", "NAV"),
+
+    /** Everything the app files under none of the above. */
+    Other("oth", "OTHER"),
+    ;
+
+    companion object {
+        fun fromWire(id: String?): FrequencyKind =
+            entries.firstOrNull { it.id == id } ?: Other
+    }
+}
+
+/**
+ * A flight information service sector the aircraft is inside.
+ *
+ * The frequency is the point of it; the area and the band are what let a pilot check
+ * that it is the sector they think it is before pressing the button.
+ */
+data class FisStation(
+    val station: String,
+    val value: String?,
+    val area: String?,
+    val bottom: String?,
+    val top: String?,
 )
 
 /** Connects waypoint [from] to waypoint [from] + 1. [trueCourseDeg] is absent on very short legs. */
