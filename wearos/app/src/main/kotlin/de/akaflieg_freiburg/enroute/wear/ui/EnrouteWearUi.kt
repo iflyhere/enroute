@@ -58,6 +58,7 @@ import de.akaflieg_freiburg.enroute.wear.ui.connect.CodeEntryScreen
 import de.akaflieg_freiburg.enroute.wear.ui.connect.ConnectScreen
 import de.akaflieg_freiburg.enroute.wear.ui.data.DataScreen
 import de.akaflieg_freiburg.enroute.wear.ui.data.DataUiState
+import de.akaflieg_freiburg.enroute.wear.ui.map.MapHolder
 import de.akaflieg_freiburg.enroute.wear.ui.map.MapLibreScreen
 import de.akaflieg_freiburg.enroute.wear.ui.instruments.Instrument
 import de.akaflieg_freiburg.enroute.wear.ui.instruments.InstrumentScreen
@@ -230,6 +231,11 @@ private fun MainPages(
 
     var zoom by remember { mutableStateOf<ZoomLevel>(ZoomLevel.Automatic) }
     val pagerState = rememberPagerState(initialPage = 0) { pages.size }
+
+    // The map's renderer, style and tiles, held here so they survive the page scrolling
+    // out of the pager's composition. Rebuilding them cost ten to twenty seconds on
+    // every return to the map, which is what a pilot reported from real operations.
+    val mapHolder = remember { MapHolder() }
     val scope = rememberCoroutineScope()
 
     // Hoisted so the one rotary handler below can scroll them. Giving each list its own
@@ -278,6 +284,11 @@ private fun MainPages(
 
     HorizontalPager(
         state = pagerState,
+        // One page either side stays composed. Without it a single swipe takes the map
+        // out of the composition; with it the common move between the map and the data
+        // screen costs nothing at all. The neighbours are cheap -- lists and canvases --
+        // and the map's renderer is still paused when it is not the page on screen.
+        beyondViewportPageCount = 1,
         modifier = Modifier
             .fillMaxSize()
             .onRotaryScrollEvent { event ->
@@ -458,6 +469,7 @@ private fun MainPages(
                             port = port,
                             zoom = zoom,
                             isActive = pages.getOrNull(pagerState.currentPage) == WearPage.Map,
+                            holder = mapHolder,
                             fallbackCentre = uiState.value.session.peer?.mapCentre,
                             fallbackZoom = uiState.value.session.peer?.mapCentreZoom ?: 0.0,
                             labelColour = uiState.value.session.peer?.mapLabelColour,

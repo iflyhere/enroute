@@ -121,6 +121,7 @@ fun MapLibreScreen(
     port: Int,
     zoom: ZoomLevel,
     isActive: Boolean,
+    holder: MapHolder,
     fallbackCentre: GeoPoint?,
     fallbackZoom: Double,
     labelColour: Long?,
@@ -132,9 +133,6 @@ fun MapLibreScreen(
     val configuration = LocalConfiguration.current
     val radiusPixels = with(density) { (configuration.screenWidthDp.dp.toPx()) / 2f }
 
-    // Held across recompositions so a position update touches the existing map instead
-    // of building a new one.
-    val holder = remember { MapHolder() }
 
     Box(modifier = modifier.fillMaxSize().background(CockpitColors.Background)) {
         AndroidView(
@@ -158,6 +156,16 @@ fun MapLibreScreen(
                     .logoEnabled(false)
                     .compassEnabled(false)
 
+                // Reused if one already exists. Building a MapView means a renderer, a
+                // style download and every tile and glyph again: ten to twenty seconds
+                // over a companion link, which is what a pilot reported after every
+                // screen change. Detached from whatever held it before, because a View
+                // that still has a parent cannot be added to another one.
+                holder.view?.let { existing ->
+                    (existing.parent as? ViewGroup)?.removeView(existing)
+                    return@AndroidView existing
+                }
+
                 MapView(context, options).also { view ->
                     view.onCreate(null)
 
@@ -174,13 +182,13 @@ fun MapLibreScreen(
                     view.getMapAsync { map ->
                         holder.map = map
                         configure(map)
+                        holder.loadedStyleUrl = styleUrl
                         map.setStyle(Style.Builder().fromUri(styleUrl)) { style ->
                             holder.style = style
                             addOverlayLayers(style)
                             holder.applyRoute(route)
                             holder.applyOwnPosition(ownPosition)
                             holder.applyChart(charts, ownPosition, host, port)
-                holder.applyTraffic(traffic)
                             holder.applyTraffic(traffic)
                             holder.applyCamera(
                                 ownPosition, route, zoom, radiusPixels,
@@ -189,6 +197,12 @@ fun MapLibreScreen(
                         }
                     }
                 }
+            },
+            // Left alive on purpose. The default detaches and this screen used to
+            // destroy, which is what made coming back cost a rebuild.
+            onRelease = { view ->
+                view.onPause()
+                (view.parent as? ViewGroup)?.removeView(view)
             },
             update = {
                 holder.applyRoute(route)
@@ -248,6 +262,30 @@ fun MapLibreScreen(
 
     }
 
+    // The address inside every tile URL comes from the style, and the style is loaded
+    // once when the map is built. Now that the map outlives the page, a phone that moved
+    // -- a handover from Bluetooth to Wi-Fi, or a different network -- would otherwise
+    // leave this asking a host that is no longer there, and the symptom would be a map
+    // that renders once and never updates again.
+    LaunchedEffect(styleUrl) {
+        val map = holder.map ?: return@LaunchedEffect
+        if (holder.loadedStyleUrl == styleUrl) {
+            return@LaunchedEffect
+        }
+        holder.loadedStyleUrl = styleUrl
+        map.setStyle(Style.Builder().fromUri(styleUrl)) { style ->
+            holder.style = style
+            addOverlayLayers(style)
+            holder.applyRoute(route)
+            holder.applyOwnPosition(ownPosition)
+            holder.applyChart(charts, ownPosition, host, port)
+            holder.applyTraffic(traffic)
+            holder.applyCamera(
+                ownPosition, route, zoom, radiusPixels, fallbackCentre, fallbackZoom,
+            )
+        }
+    }
+
     // A pager keeps its neighbouring pages composed, so without this the renderer
     // keeps drawing while the pilot is looking at the data screen. Pausing it is the
     // single largest thing this screen does for battery life.
@@ -271,18 +309,25 @@ fun MapLibreScreen(
                 Lifecycle.Event.ON_RESUME -> view.onResume()
                 Lifecycle.Event.ON_PAUSE -> view.onPause()
                 Lifecycle.Event.ON_STOP -> view.onStop()
-                Lifecycle.Event.ON_DESTROY -> view.onDestroy()
+                Lifecycle.Event.ON_DESTROY -> {
+                    view.onDestroy()
+                    holder.view = null
+                    holder.map = null
+                    holder.style = null
+                    holder.loadedStyleUrl = null
+                }
                 else -> Unit
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
+            // The observer goes; the map stays. Destroying it here is what cost ten to
+            // twenty seconds on every return to this page -- the renderer, the style and
+            // every tile had to be fetched again. It is destroyed when the activity is,
+            // in the ON_DESTROY branch above, which is the only moment it is truly done
+            // with.
             lifecycleOwner.lifecycle.removeObserver(observer)
-            holder.view?.onStop()
-            holder.view?.onDestroy()
-            holder.view = null
-            holder.map = null
-            holder.style = null
+            holder.view?.onPause()
         }
     }
 }
@@ -328,10 +373,27 @@ private fun MapText(
 }
 
 /** Kept out of the composable so that Compose never has to reason about its identity. */
-private class MapHolder {
+/**
+ * Everything about the map that must outlive the page.
+ *
+ * Created above the pager rather than inside the page: a Compose pager takes a page out
+ * of composition when it scrolls away, and rebuilding a MapView means the renderer, the
+ * style and every tile again.
+ */
+class MapHolder {
     var view: MapView? = null
     var map: MapLibreMap? = null
     var style: Style? = null
+
+    /**
+     * The style this map is currently showing.
+     *
+     * Kept because the view now outlives the page, and the style carries the phone's
+     * address inside every tile URL. A handover from Bluetooth to Wi-Fi changes that
+     * address, and before the view was reused a rebuild picked the new one up by
+     * accident. Now it has to be noticed.
+     */
+    var loadedStyleUrl: String? = null
 
     private var lastRouteRevision: Long = -1
     private var shownChart: String? = null

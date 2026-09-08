@@ -28,6 +28,8 @@ import kotlin.math.cos
 import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
+import okhttp3.Cache
+import java.io.File
 
 /**
  * One-time setup for the map renderer.
@@ -64,6 +66,16 @@ object MapLibreSetup {
         currentCode = pairingCode
 
         val client = OkHttpClient.Builder()
+            // A disk cache of its own, on top of the renderer's.
+            //
+            // The renderer keeps an ambient cache of its own and honours the headers the
+            // phone now sends, so in principle this is a second copy of the same bytes.
+            // It is here because the failure it guards against was reported from a real
+            // flight -- ten to twenty seconds of map after every screen change -- and
+            // because the renderer's cache is native, undocumented in its details, and
+            // not something this project can test. Thirty-two megabytes on a watch is a
+            // real cost; a map that reloads for twenty seconds in the air is a worse one.
+            .cache(Cache(File(context.cacheDir, TILE_CACHE_DIR), TILE_CACHE_BYTES))
             .connectTimeout(CONNECT_TIMEOUT_S, TimeUnit.SECONDS)
             .readTimeout(READ_TIMEOUT_S, TimeUnit.SECONDS)
             .addInterceptor { chain ->
@@ -81,6 +93,9 @@ object MapLibreSetup {
 
         HttpRequestUtil.setOkHttpClient(client)
     }
+
+    private const val TILE_CACHE_DIR = "map-tiles"
+    private const val TILE_CACHE_BYTES = 32L * 1024L * 1024L
 
     private const val CONNECT_TIMEOUT_S = 5L
     private const val READ_TIMEOUT_S = 15L

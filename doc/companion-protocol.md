@@ -572,6 +572,14 @@ Notes that matter when writing a client:
   a base map and no hillshading.
 - `mapRev` is in every tile URL. When it changes, refetch the style.
 - Everything under `/map/` needs the pairing code like every other endpoint.
+- **Tiles are served `Cache-Control: public, max-age=31536000, immutable`.** The map revision is in
+  the path, so downloading new maps changes the address rather than the contents at an old one:
+  there is no such thing as a changed tile here, only a new one. A renderer's tile cache honours
+  these headers, and without any header at all it keeps nothing -- which meant every tile was
+  refetched over the companion link on every rebuild of the map. Sprites, glyph ranges and approach
+  chart images come from the app's own resources rather than a downloaded map, so their addresses
+  carry no revision and they get a day instead of a year. The style document is generated per
+  request and is not cached at all.
 
 ### Preferences document
 
