@@ -70,6 +70,36 @@ data class ApproachChart(
         point.lonDeg >= west && point.lonDeg <= east &&
             point.latDeg >= south && point.latDeg <= north
 
-    /** Where the phone serves the image, relative to the protocol prefix. */
-    val imagePath: String get() = "/map/vac/" + name
+    /**
+     * Where the phone serves the image, relative to the protocol prefix.
+     *
+     * The name is a path segment and real ones are full of spaces -- "EDDS Stuttgart
+     * 3" -- so it is percent encoded here. Pasted into a URL raw it does not merely
+     * fail to fetch: java.net.URI rejects it outright, and the renderer's ImageSource
+     * takes a URI, so the app went down with a URISyntaxException the first time a
+     * pilot flew within range of a chart. It never showed while the chart library was
+     * empty, which it is until a trip kit is imported.
+     */
+    val imagePath: String get() = "/map/vac/" + percentEncodeSegment(name)
+}
+
+/**
+ * Percent encodes one path segment of a URL.
+ *
+ * Written out rather than taken from android.net.Uri because this file is domain code
+ * with unit tests behind it, and the platform's encoder is a stub that throws when it
+ * runs off a device. The unreserved set is the one RFC 3986 names, so a chart called
+ * "EDDS Stuttgart 3" becomes "EDDS%20Stuttgart%203" and one called "EDTL" is untouched.
+ */
+fun percentEncodeSegment(segment: String): String {
+    val out = StringBuilder(segment.length)
+    for (byte in segment.toByteArray(Charsets.UTF_8)) {
+        val char = byte.toInt().toChar()
+        if (char.isLetterOrDigit() && char.code < 128 || char in "-._~") {
+            out.append(char)
+        } else {
+            out.append('%').append("%02X".format(byte.toInt() and 0xFF))
+        }
+    }
+    return out.toString()
 }

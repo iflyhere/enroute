@@ -97,6 +97,28 @@ class ApproachChartSelectionTest {
     }
 
     @Test
+    fun `a chart name becomes a legal path segment`() {
+        // Every name in a real library has spaces in it, and a raw space does not
+        // merely fail to fetch: java.net.URI refuses to parse the URL and the map
+        // page went down with it.
+        assertEquals(
+            "/map/vac/EDDS%20Stuttgart%203",
+            chart("EDDS Stuttgart 3", 9.0, 48.5, 9.5, 48.8).imagePath,
+        )
+        assertEquals("/map/vac/EDTF", chart("EDTF", 7.6, 47.9, 8.1, 48.2).imagePath)
+    }
+
+    @Test
+    fun `a chart name keeps its accents through the encoding`() {
+        // The library is not only German. Percent encoding works on UTF-8 bytes, so
+        // one non-ASCII character becomes two escapes, not one.
+        assertEquals(
+            "/map/vac/LF%C3%96%20Test",
+            chart("LFÖ Test", 1.0, 2.0, 3.0, 4.0).imagePath,
+        )
+    }
+
+    @Test
     fun `an unreachable library is not the same as an empty one`() {
         val unreachable = VacBoard(revision = 1, available = false, charts = emptyList())
         val empty = VacBoard(revision = 1, available = true, charts = emptyList())
