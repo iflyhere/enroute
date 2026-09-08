@@ -34,6 +34,7 @@ enum class WearPage(val id: String, val label: String) {
     Notam("notam", "NOTAM"),
     Nearby("nearby", "Nearby"),
     Weather("weather", "Weather"),
+    Frequencies("freq", "Frequencies"),
     Log("log", "Log"),
 
     /**

@@ -213,10 +213,19 @@ function statusText(status, offRouteThresholdM, unit) {
 // -------------------------------------------------------------------- the route
 
 const SHORT_ROUTE = [
-    { n: 'EDTF', en: 'EDTF (FREIBURG)',  lat: 48.02265, lon: 7.83258, e: 244, t: 'AD',  cat: 'AD-GLD' },
+    { n: 'EDTF', en: 'EDTF (FREIBURG)',  lat: 48.02265, lon: 7.83258, e: 244, t: 'AD',  cat: 'AD-GLD',
+      freq: [{ k: 'inf', s: 'ATIS', f: '127.150' },
+             { k: 'com', s: 'FREIBURG INFO', f: '120.775' }] },
     { n: 'KIRCHZARTEN',                  lat: 47.96667, lon: 7.95000,         t: 'WP',  cat: 'WP' },
-    { n: 'EDSB', en: 'EDSB (KARLSRUHE)', lat: 48.77939, lon: 8.08049, e: 122, t: 'AD',  cat: 'AD' },
-    { n: 'EDTL', en: 'EDTL (LAHR)',      lat: 48.36917, lon: 7.82778, e: 156, t: 'AD',  cat: 'AD' },
+    { n: 'EDSB', en: 'EDSB (KARLSRUHE)', lat: 48.77939, lon: 8.08049, e: 122, t: 'AD',  cat: 'AD',
+      freq: [{ k: 'inf', s: 'ATIS', f: '126.575' },
+             { k: 'com', s: 'KARLSRUHE TOWER', f: '119.850' },
+             { k: 'com', s: 'KARLSRUHE GROUND', f: '121.905' },
+             // A station the app knows without a number, which a client must show
+             // rather than drop: it is not the same as the station not existing.
+             { k: 'nav', s: 'KARLSRUHE NDB' }] },
+    { n: 'EDTL', en: 'EDTL (LAHR)',      lat: 48.36917, lon: 7.82778, e: 156, t: 'AD',  cat: 'AD',
+      freq: [{ k: 'com', s: 'LAHR RADIO', f: '122.850' }] },
 ];
 
 // A synthetic long route, for load-testing a client's route rendering.
@@ -350,6 +359,7 @@ function routeDocument() {
             if (w.e !== undefined) { out.e = w.e; }
             out.t = w.t;
             out.cat = w.cat;
+            if (w.freq) { out.freq = w.freq; }
             return out;
         }),
         legs: legs(),
@@ -395,6 +405,15 @@ function navDocument(withFmt) {
             tt: Number(flight.track.toFixed(1)),
             vs: Number(flight.verticalSpeedMps.toFixed(1)),
         };
+
+        // Two stacked sectors, because that is what a real one looks like over southern
+        // Germany and because a client that renders only the first would look right
+        // until the day it mattered. Only with a position, as on the phone.
+        doc.fis = [
+            { s: 'LANGEN INFORMATION', f: '120.650', a: 'LANGEN', bot: 'GND', top: 'FL 100' },
+            { s: 'LANGEN INFORMATION', f: '126.950', a: 'ALPINE AREA LANGEN',
+              bot: 'FL 100', top: 'FL 130' },
+        ];
     }
 
     // next and final appear only while onRoute: RemainingRouteInfo guarantees its
