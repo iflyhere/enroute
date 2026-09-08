@@ -56,12 +56,22 @@
         <!-- singleTop keeps one instance and is what makes onNewIntent fire: with
              the default launch mode, starting the already running task only brings
              it to the front and delivers no intent at all. -->
+        <!--
+             The face never turns. A watch has no landscape, and this activity used to
+             ask for nothing, so it followed the accelerometer like any phone app: tilt
+             the wrist far enough and a navigation display rolls over. Confirmed on the
+             watch, where the system reported requestedOrientation=UNSPECIFIED against
+             an auto-rotate that is on by default. nosensor rather than locked, because
+             locked pins whatever rotation happened to be current when the app started,
+             which can be the wrong one.
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:label="@string/app_name"
             android:taskAffinity=""
+            android:screenOrientation="nosensor"
             android:theme="@style/EnrouteWearSplash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
