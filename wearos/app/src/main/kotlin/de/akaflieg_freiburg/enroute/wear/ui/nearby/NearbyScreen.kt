@@ -43,6 +43,8 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyListState
 import androidx.wear.compose.material3.Text
 import de.akaflieg_freiburg.enroute.wear.domain.NearbyBoard
 import de.akaflieg_freiburg.enroute.wear.domain.NearbyPlace
+import androidx.compose.ui.res.stringResource
+import de.akaflieg_freiburg.enroute.wear.R
 import de.akaflieg_freiburg.enroute.wear.ui.theme.CockpitColors
 
 /**
@@ -70,7 +72,7 @@ fun NearbyScreen(
     ) {
         if (board == null) {
             Text(
-                text = "Waiting for the phone",
+                text = stringResource(R.string.nearby_waiting),
                 color = CockpitColors.Muted,
                 fontSize = 15.sp,
                 textAlign = TextAlign.Center,
@@ -83,7 +85,7 @@ fun NearbyScreen(
             // Not an empty list: the phone does not know where the aircraft is, and
             // an empty list would read as "nothing around here".
             Text(
-                text = "Position unknown",
+                text = stringResource(R.string.nearby_position_unknown),
                 color = CockpitColors.Caution,
                 fontSize = 15.sp,
                 textAlign = TextAlign.Center,
@@ -99,7 +101,7 @@ fun NearbyScreen(
         ) {
             item {
                 Text(
-                    text = "NEARBY",
+                    text = stringResource(R.string.nearby_title),
                     color = CockpitColors.OnBackground,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
@@ -107,20 +109,24 @@ fun NearbyScreen(
                 )
             }
 
+            // Resource ids rather than resolved text: the content of a lazy list is
+            // not a composable scope, so the heading is looked up inside the item that
+            // draws it. The key stays the identifier, which does not move with the
+            // display language.
             listOf(
-                "Aerodromes" to board.aerodromes,
-                "Navaids" to board.navaids,
-                "Waypoints" to board.waypoints,
-            ).forEach { (title, places) ->
+                Triple("ad", R.string.nearby_aerodromes, board.aerodromes),
+                Triple("nav", R.string.nearby_navaids, board.navaids),
+                Triple("wp", R.string.nearby_waypoints, board.waypoints),
+            ).forEach { (key, titleId, places) ->
                 if (places.isEmpty()) {
                     return@forEach
                 }
-                item(key = "head-" + title) { SectionTitle(title) }
+                item(key = "head-" + key) { SectionTitle(stringResource(titleId)) }
                 places.forEachIndexed { index, place ->
                     // The index is in the key as well as the name: two reporting
                     // points can share a name, and a duplicate key crashes a lazy
                     // list outright.
-                    item(key = title + "-" + place.name + "-" + index) { PlaceCard(place) }
+                    item(key = key + "-" + place.name + "-" + index) { PlaceCard(place) }
                 }
             }
 
@@ -130,7 +136,7 @@ fun NearbyScreen(
             ) {
                 item {
                     Text(
-                        text = "Nothing in the phone's map data near here.",
+                        text = stringResource(R.string.nearby_none),
                         color = CockpitColors.Muted,
                         fontSize = 12.sp,
                         textAlign = TextAlign.Center,

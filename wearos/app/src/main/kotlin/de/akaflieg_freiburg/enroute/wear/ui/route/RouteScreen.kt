@@ -53,6 +53,8 @@ import de.akaflieg_freiburg.enroute.wear.domain.NotamCategory
 import de.akaflieg_freiburg.enroute.wear.domain.OwnPosition
 import de.akaflieg_freiburg.enroute.wear.domain.RouteWaypoint
 import de.akaflieg_freiburg.enroute.wear.domain.WaypointType
+import androidx.compose.ui.res.stringResource
+import de.akaflieg_freiburg.enroute.wear.R
 import de.akaflieg_freiburg.enroute.wear.ui.theme.CockpitColors
 import kotlin.math.abs
 import kotlin.math.hypot
@@ -106,7 +108,7 @@ fun RouteScreen(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "No route",
+                text = stringResource(R.string.map_no_route),
                 color = CockpitColors.Muted,
                 fontSize = 15.sp,
                 modifier = Modifier.testTag(TAG_NO_ROUTE),
@@ -186,7 +188,7 @@ fun RouteScreen(
                 // black disc with three names and a line on it deserves to be told that
                 // once -- and to be told the map is missing rather than left to wonder
                 // whether this is all there ever was.
-                text = "ROUTE ONLY\nno map data from the phone",
+                text = stringResource(R.string.map_route_only),
                 color = CockpitColors.Muted,
                 fontSize = 11.sp,
                 textAlign = TextAlign.Center,

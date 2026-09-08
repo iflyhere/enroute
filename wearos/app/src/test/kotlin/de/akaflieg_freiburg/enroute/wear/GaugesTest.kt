@@ -21,6 +21,7 @@ package de.akaflieg_freiburg.enroute.wear
 
 import de.akaflieg_freiburg.enroute.wear.data.ConnectionState
 import de.akaflieg_freiburg.enroute.wear.transport.FailureReason
+import de.akaflieg_freiburg.enroute.wear.R
 import de.akaflieg_freiburg.enroute.wear.ui.data.connectionMessage
 import de.akaflieg_freiburg.enroute.wear.ui.instruments.Instrument
 import de.akaflieg_freiburg.enroute.wear.ui.instruments.altitudeDigits
@@ -140,25 +141,25 @@ class GaugesTest {
             FailureReason.Unreachable,
         )
         assertEquals(whileFailed, whileRetrying)
-        assertEquals("No connection", whileFailed)
+        assertEquals(R.string.state_no_connection, whileFailed)
     }
 
     @Test
     fun `a refused code says so and keeps saying so`() {
         assertEquals(
-            "Wrong pairing code",
+            R.string.state_wrong_code,
             connectionMessage(ConnectionState.Rejected, null),
         )
         assertEquals(
-            "Wrong pairing code",
+            R.string.state_wrong_code,
             connectionMessage(ConnectionState.Connecting, FailureReason.Unauthorized),
         )
     }
 
     @Test
     fun `before anything has happened it says so plainly`() {
-        assertEquals("Not connected", connectionMessage(ConnectionState.Idle, null))
-        assertEquals("Connecting", connectionMessage(ConnectionState.Connecting, null))
+        assertEquals(R.string.state_not_connected, connectionMessage(ConnectionState.Idle, null))
+        assertEquals(R.string.state_connecting, connectionMessage(ConnectionState.Connecting, null))
     }
 
     @Test

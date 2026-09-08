@@ -36,6 +36,8 @@ import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.Text
 import de.akaflieg_freiburg.enroute.wear.data.DiscoveredPhone
+import androidx.compose.ui.res.stringResource
+import de.akaflieg_freiburg.enroute.wear.R
 import de.akaflieg_freiburg.enroute.wear.ui.theme.CockpitColors
 
 /**
@@ -65,7 +67,7 @@ fun ConnectScreen(
             .background(CockpitColors.Background),
     ) {
         item {
-            ListHeader { Text(text = "Phone") }
+            ListHeader { Text(text = stringResource(R.string.connect_phone)) }
         }
 
         if (phones.isEmpty()) {
@@ -79,8 +81,7 @@ fun ConnectScreen(
                         // shared network there is nothing for this link to run over,
                         // and the phone's own hotspot is the one thing a pilot can do
                         // about it without another network to join.
-                        ?: "Searching. Both devices need one Wi-Fi network. " +
-                        "Away from home, switch the phone's hotspot on and join it.",
+                        ?: stringResource(R.string.connect_searching),
                     color = if (discoveryError == null) {
                         CockpitColors.Muted
                     } else {
@@ -108,7 +109,7 @@ fun ConnectScreen(
         }
 
         item {
-            ListHeader { Text(text = "Using") }
+            ListHeader { Text(text = stringResource(R.string.connect_using)) }
         }
         item {
             Text(
@@ -129,7 +130,7 @@ fun ConnectScreen(
                     .fillMaxWidth()
                     .testTag(TAG_ENTER_CODE),
             ) {
-                Text(text = "Pairing code", fontSize = 15.sp)
+                Text(text = stringResource(R.string.connect_pairing_code), fontSize = 15.sp)
             }
         }
     }

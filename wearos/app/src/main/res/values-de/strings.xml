@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  German.
+
+  Short on purpose. This is a round 480 pixel face read at arm's length with the hands
+  on the controls, and German runs longer than English almost everywhere – so several
+  of these are not literal translations but the shortest wording that says the same
+  thing. "Fluginformationsdienst" is correct and does not fit; "Flugleitung" does.
+
+  The aviation vocabulary is deliberately left alone. NOTAM, METAR, ATIS, GS, ALT and
+  the rest are the same words in a German cockpit, and translating them would make the
+  screen harder to read rather than easier.
+-->
+<resources>
+    <!-- The foreground service that keeps the link alive -->
+    <string name="session_channel_name">Flugsitzung</string>
+    <string name="session_notification_text">Mit dem Telefon verbunden</string>
+    <string name="session_stop">Beenden</string>
+
+    <!-- Page names, as the settings screen lists them -->
+    <string name="page_data">Daten</string>
+    <string name="page_map">Karte</string>
+    <string name="page_instruments">Instrumente</string>
+    <string name="page_traffic">Verkehr</string>
+    <string name="page_nearby">In der Nähe</string>
+    <string name="page_weather">Wetter</string>
+    <string name="page_frequencies">Frequenzen</string>
+    <string name="page_log">Flugbuch</string>
+    <string name="page_settings">Einstellungen</string>
+
+    <!-- What the bezel does, and whether an approach chart is drawn -->
+    <string name="bezel_pages">Seiten wechseln</string>
+    <string name="bezel_content">Zoomen und scrollen</string>
+    <string name="chart_automatic">Automatisch</string>
+    <string name="chart_off">Aus</string>
+    <!-- "Auto" and not "Automatisch": the link row is three buttons across a
+         454 pixel face, and the long word is cut off at "Automatis...". The
+         chart row has two buttons and keeps the full word. -->
+    <string name="link_automatic">Auto</string>
+
+    <!-- Pairing with a phone -->
+    <string name="connect_phone">Telefon</string>
+    <string name="connect_searching">Suche. Beide Geräte brauchen dasselbe WLAN. Unterwegs den Hotspot des Telefons einschalten und beitreten.</string>
+    <string name="connect_using">Verbunden mit</string>
+    <string name="connect_pairing_code">Kopplungscode</string>
+    <string name="connect_digit">Ziffer %1$d</string>
+    <string name="connect_done">Fertig</string>
+
+    <!-- The data screen, and the link states every screen can show -->
+    <string name="state_no_connection">Keine Verbindung</string>
+    <string name="state_connecting">Verbinde</string>
+    <string name="state_not_connected">Nicht verbunden</string>
+    <string name="state_waiting">Warte auf Daten</string>
+    <string name="state_reconnecting">verbinde neu</string>
+    <string name="state_bluetooth_denied">Bluetooth nicht erlaubt</string>
+    <string name="state_bluetooth_hint">Bluetooth in den\nUhr-Einstellungen erlauben</string>
+    <string name="state_wrong_code">Falscher Kopplungscode</string>
+    <string name="state_repair_hint">Lange drücken zum Neukoppeln</string>
+    <string name="route_none_on_phone">Keine Route auf dem Telefon</string>
+    <string name="route_near_destination">Nahe am Ziel.</string>
+    <string name="route_position_unknown">Position unbekannt.</string>
+    <string name="route_off">Abseits der Route.</string>
+    <string name="route_unsupported_status">Unbekannter Status vom Telefon</string>
+
+    <!-- The map, and the route view it falls back to -->
+    <string name="map_no_route">Keine Route</string>
+    <string name="map_route_only">NUR ROUTE\nkeine Kartendaten vom Telefon</string>
+
+    <!-- The instrument faces -->
+    <string name="instrument_no_position">Keine Position\nvom Telefon</string>
+    <string name="instrument_altitude_note">GPS, AMSL</string>
+    <string name="instrument_speed_note">Geschwindigkeit über Grund</string>
+    <string name="instrument_vertical_speed_note">aus GPS</string>
+
+    <!-- Frequencies -->
+    <string name="freq_title">FREQUENZEN</string>
+    <string name="freq_information_service">Flugleitung</string>
+    <string name="freq_information">Information</string>
+    <string name="freq_none">Keine Frequenzen\nfür diese Position oder Route</string>
+    <string name="freq_kind_other">SONST</string>
+
+    <!-- NOTAM -->
+    <string name="notam_waiting">Warte auf das Telefon</string>
+    <string name="notam_no_route">keine Route</string>
+    <string name="notam_listed">%1$d gelistet</string>
+    <string name="notam_not_shown">%1$d passten nicht und fehlen</string>
+    <string name="notam_scope_title">Keine Luftraumprüfung</string>
+    <string name="notam_scope_text">Nur im Umkreis von %1$s um die Wegpunkte der Route, ohne Höhenfilter. NOTAMs neben einem Schenkel fehlen.</string>
+
+    <!-- Weather -->
+    <string name="weather_title">WETTER</string>
+    <string name="weather_waiting">Warte auf Wetter</string>
+    <string name="weather_fetching">Hole Meldungen</string>
+    <string name="weather_none">Das Telefon hat keine Meldungen.</string>
+    <string name="weather_stations">%1$d Stationen</string>
+
+    <!-- Nearby waypoints -->
+    <string name="nearby_title">IN DER NÄHE</string>
+    <string name="nearby_waiting">Warte auf das Telefon</string>
+    <string name="nearby_position_unknown">Position unbekannt</string>
+    <string name="nearby_aerodromes">Flugplätze</string>
+    <string name="nearby_navaids">Navigationsanlagen</string>
+    <string name="nearby_waypoints">Wegpunkte</string>
+    <string name="nearby_none">Nichts in den Kartendaten des Telefons hier in der Nähe.</string>
+
+    <!-- Traffic -->
+    <string name="traffic_title">VERKEHR</string>
+    <string name="traffic_none_from_phone">Keine Verkehrsdaten\nvom Telefon</string>
+    <string name="traffic_range_hint">Oben oder unten tippen, um die Reichweite zu ändern.</string>
+    <string name="traffic_none_reported">Kein Verkehr gemeldet.</string>
+    <string name="traffic_none_near">%1$d Ziele, keines binnen 20 nm und 5000 ft</string>
+    <string name="traffic_no_receiver">Kein Verkehrsempfänger</string>
+    <string name="traffic_no_heartbeat">Das Telefon empfängt kein Lebenszeichen.</string>
+    <string name="traffic_no_signal">kein Signal</string>
+    <string name="traffic_warning">Warnung</string>
+    <string name="traffic_alarm">ALARM %1$d</string>
+    <string name="traffic_bearing_unknown">Peilung unbekannt</string>
+    <string name="traffic_off_display">Nicht im Bild</string>
+    <string name="traffic_distance_unknown">Entfernung unbekannt</string>
+    <string name="traffic_level">gleiche Höhe</string>
+    <string name="traffic_oclock">%1$d Uhr</string>
+
+    <!-- The flight log -->
+    <string name="log_title">FLUGBUCH</string>
+    <string name="log_waiting">Warte auf das Telefon</string>
+    <string name="log_none">Das Telefon hat keine aufgezeichneten Flüge.</string>
+
+    <!-- Settings -->
+    <string name="settings_title">EINSTELLUNGEN</string>
+    <string name="settings_charts">Anflugkarten</string>
+    <string name="settings_charts_note">Automatisch legt die Karte, die das Flugzeug abdeckt, auf die Karte — so, wie das Telefon eine auswählt. Karten werden auf dem Telefon importiert.</string>
+    <string name="settings_alarm">Verkehrsalarm</string>
+    <string name="settings_alarm_vibrate">Vibrieren</string>
+    <string name="settings_alarm_silent">Still</string>
+    <string name="settings_alarm_note">Ein Kollisionsalarm vibriert am Handgelenk, egal welche Seite offen ist, und nur wenn das Telefon die Alarmstufe hebt.</string>
+    <string name="settings_display">Anzeige</string>
+    <string name="settings_display_always_on">Immer an</string>
+    <string name="settings_display_normal">Normal</string>
+    <string name="settings_display_note">Immer an ist das, was dies im Flug lesbar macht: eine Uhr kehrt nach Sekunden ohne Berührung zum Zifferblatt zurück, und Hände an den Rudern berühren nichts. Es ist auch der größte Batterieposten dieser App.</string>
+    <string name="settings_bezel">Lünette</string>
+    <string name="settings_bezel_note">Zoomen auf der Karte geht auch durch Ziehen nach oben und unten, unabhängig von dieser Wahl.</string>
+    <string name="settings_screens">Seiten</string>
+    <string name="settings_screens_pinned">fest</string>
+    <string name="settings_link">Verbindung</string>
+    <string name="settings_link_note">WLAN braucht beide Geräte im selben Netz und ist viel schneller. Bluetooth braucht gar kein Netz, und das ist es, was es in den meisten Flugzeugen gibt. Automatisch versucht beides.</string>
+    <string name="settings_phone">Telefon</string>
+    <string name="settings_phone_note">Tippen, um ein anderes Telefon zu koppeln.</string>
+    <string name="settings_stop_session">Sitzung beenden</string>
+    <string name="settings_start_session">Sitzung starten</string>
+    <string name="settings_session_note">Die App zu verlassen beendet sie nicht: Verbindung und Anzeige müssen einen Blick zur Seite überleben, darum geht es im Flug. Am Boden lohnt sich das Beenden.</string>
+    <string name="settings_about">Über</string>
+    <string name="settings_about_version">Enroute Flight Navigation, Wear-OS-Begleiter %1$s</string>
+    <string name="settings_about_maps">Kartendaten werden gemäß ihren Lizenzen genutzt, die nichtkommerzielle Verwendung mit Namensnennung erlauben. Luftfahrtdaten sind für sich allein nicht zur Navigation bestimmt; das Telefon bleibt das Hauptinstrument.</string>
+    <string name="settings_about_licence">Freie Software unter der GNU General Public License, Version 3 oder später. Quelltext: github.com/Akaflieg-Freiburg/enroute</string>
+
+    <!-- The flight log's own wording -->
+    <string name="log_waiting_full">Warte auf das Flugbuch</string>
+    <string name="log_no_flights">Keine Flüge aufgezeichnet.</string>
+    <string name="log_dropped">%1$d ältere Flüge nicht gesendet</string>
+    <string name="log_flights">%1$d Flüge</string>
+    <string name="log_takeoff">Start erkannt</string>
+    <string name="log_in_flight">Im Flug</string>
+    <string name="log_in_flight_recording">Im Flug, zeichnet auf</string>
+    <string name="log_landing">Landung erkannt</string>
+    <string name="log_unknown_state">Zustand unbekannt</string>
+    <string name="log_recording">Zeichnet Spur auf</string>
+    <string name="log_landings">%1$d Ldg</string>
+    <string name="log_no_time">Keine Zeitangabe</string>
+
+    <!-- Wording the instruments and the NOTAM and traffic lists still needed -->
+    <string name="instrument_no_altitude">keine Höhe</string>
+    <string name="instrument_no_speed">keine Geschwindigkeit</string>
+    <string name="instrument_no_vertical_speed">kein Steigen</string>
+    <string name="notam_waiting_full">Warte auf NOTAMs</string>
+    <string name="notam_more_not_sent">%1$d weitere nicht gesendet</string>
+    <string name="notam_none_here">Keine NOTAMs</string>
+    <string name="notam_no_data">Keine Daten</string>
+    <string name="notam_fixed_radius">einem festen Umkreis</string>
+</resources>

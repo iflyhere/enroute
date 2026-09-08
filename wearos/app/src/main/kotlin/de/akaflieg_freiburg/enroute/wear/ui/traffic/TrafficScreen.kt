@@ -51,6 +51,8 @@ import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
 import de.akaflieg_freiburg.enroute.wear.domain.TrafficBoard
 import de.akaflieg_freiburg.enroute.wear.domain.TrafficTarget
 import de.akaflieg_freiburg.enroute.wear.domain.TrafficWarning
+import androidx.compose.ui.res.stringResource
+import de.akaflieg_freiburg.enroute.wear.R
 import de.akaflieg_freiburg.enroute.wear.ui.theme.CockpitColors
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -99,7 +101,7 @@ fun TrafficScreen(
             // No frame at all. Not "no traffic": the link is what is missing, and the
             // difference is the whole point of this screen.
             Text(
-                text = "No traffic data\nfrom the phone",
+                text = stringResource(R.string.traffic_none_from_phone),
                 color = CockpitColors.Warning,
                 fontSize = 15.sp,
                 textAlign = TextAlign.Center,
@@ -137,7 +139,7 @@ fun TrafficScreen(
             Header(board)
 
             if (board.receiving && board.hasDrawable) {
-                Note("Tap the top or bottom of the display to change the range.")
+                Note(stringResource(R.string.traffic_range_hint))
             }
 
             board.warning?.let { warning -> WarningCard(warning) }
@@ -156,10 +158,9 @@ fun TrafficScreen(
                     // outside the band the phone draws, or nothing is listening. The
                     // last case is the card above.
                     text = if (board.targets.isEmpty()) {
-                        "No traffic reported."
+                        stringResource(R.string.traffic_none_reported)
                     } else {
-                        board.targets.size.toString() +
-                            " contacts, none within 20 nm and 5000 ft"
+                        stringResource(R.string.traffic_none_near, board.targets.size)
                     },
                     color = CockpitColors.Good,
                     fontSize = 13.sp,
@@ -194,7 +195,7 @@ private fun Header(board: TrafficBoard) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "TRAFFIC",
+            text = stringResource(R.string.traffic_title),
             color = CockpitColors.OnBackground,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
@@ -202,10 +203,10 @@ private fun Header(board: TrafficBoard) {
         Text(
             // Drawn out of seen, so the number on the radar and the length of the
             // list below it never look like a contradiction.
-            text = when {
-                !board.receiving -> "no signal"
-                else -> board.drawable.size.toString() + " of " +
-                    board.targets.size.toString()
+            text = if (board.receiving) {
+                stringResource(R.string.traffic_drawn, board.drawable.size, board.targets.size)
+            } else {
+                stringResource(R.string.traffic_no_signal)
             },
             color = if (board.receiving) CockpitColors.Muted else CockpitColors.Warning,
             fontSize = 12.sp,
@@ -231,14 +232,14 @@ private fun ReceiverSilent(board: TrafficBoard) {
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Text(
-            text = "No traffic receiver",
+            text = stringResource(R.string.traffic_no_receiver),
             color = CockpitColors.Warning,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
         )
         Text(
             // The app's own sentence, which names what it tried.
-            text = board.status ?: "The phone is not receiving a heartbeat.",
+            text = board.status ?: stringResource(R.string.traffic_no_heartbeat),
             color = CockpitColors.Muted,
             fontSize = 11.sp,
         )
@@ -273,14 +274,18 @@ private fun WarningBanner(
 ) {
     val colour = if (warning.alarmLevel >= 2) CockpitColors.Warning else CockpitColors.Caution
     val worst = mostAlarming(radarFixes(board.targets, ownPosition, ownTrackDeg))
-    val direction = if (ownTrackDeg != null && worst != null) {
-        " " + clockPosition(worst.screenBearingDeg) + " o'clock"
+    val warningText = if (ownTrackDeg != null && worst != null) {
+        stringResource(
+            R.string.traffic_warning_direction,
+            stringResource(R.string.traffic_warning),
+            stringResource(R.string.traffic_oclock, clockPosition(worst.screenBearingDeg)),
+        )
     } else {
-        ""
+        stringResource(R.string.traffic_warning)
     }
 
     Text(
-        text = "Warning" + direction,
+        text = warningText,
         color = CockpitColors.Background,
         fontSize = 14.sp,
         fontWeight = FontWeight.Bold,
@@ -310,7 +315,7 @@ private fun WarningCard(warning: TrafficWarning) {
         verticalArrangement = Arrangement.spacedBy(1.dp),
     ) {
         Text(
-            text = "ALARM " + warning.alarmLevel,
+            text = stringResource(R.string.traffic_alarm, warning.alarmLevel),
             color = CockpitColors.Background,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
@@ -319,7 +324,12 @@ private fun WarningCard(warning: TrafficWarning) {
             Text(text = description, color = CockpitColors.Background, fontSize = 12.sp)
         }
         Text(
-            text = separation(warning.horizontalDistanceM, warning.verticalDistanceM),
+            text = separation(
+                warning.horizontalDistanceM,
+                warning.verticalDistanceM,
+                stringResource(R.string.traffic_level),
+                stringResource(R.string.traffic_distance_unknown),
+            ),
             color = CockpitColors.Background,
             fontSize = 12.sp,
         )
@@ -362,7 +372,12 @@ private fun TargetCard(target: TrafficTarget, bearingUnknown: Boolean = false) {
         }
 
         Text(
-            text = separation(target.horizontalDistanceM, target.verticalDistanceM),
+            text = separation(
+                target.horizontalDistanceM,
+                target.verticalDistanceM,
+                stringResource(R.string.traffic_level),
+                stringResource(R.string.traffic_distance_unknown),
+            ),
             color = CockpitColors.Primary,
             fontSize = 12.sp,
         )
@@ -379,7 +394,7 @@ private fun TargetCard(target: TrafficTarget, bearingUnknown: Boolean = false) {
 
         if (bearingUnknown) {
             Text(
-                text = "Bearing unknown",
+                text = stringResource(R.string.traffic_bearing_unknown),
                 color = CockpitColors.Caution,
                 fontSize = 11.sp,
             )
@@ -390,7 +405,7 @@ private fun TargetCard(target: TrafficTarget, bearingUnknown: Boolean = false) {
         // each other.
         if (!target.relevant) {
             Text(
-                text = "Not on the display",
+                text = stringResource(R.string.traffic_off_display),
                 color = CockpitColors.Muted,
                 fontSize = 10.sp,
             )
@@ -406,7 +421,12 @@ private fun TargetCard(target: TrafficTarget, bearingUnknown: Boolean = false) {
  * metres because a map needs numbers, and the phone composes no separation line of its
  * own to copy. Nautical miles and feet are what a traffic display uses.
  */
-private fun separation(horizontalM: Double?, verticalM: Double?): String {
+private fun separation(
+    horizontalM: Double?,
+    verticalM: Double?,
+    levelText: String,
+    unknownText: String,
+): String {
     val parts = mutableListOf<String>()
     if (horizontalM != null && horizontalM.isFinite()) {
         val nauticalMiles = horizontalM / METRES_PER_NM
@@ -420,12 +440,12 @@ private fun separation(horizontalM: Double?, verticalM: Double?): String {
         val feet = (verticalM / METRES_PER_FOOT).roundToInt()
         val rounded = (feet / 100.0).roundToInt() * 100
         parts += when {
-            abs(rounded) < 100 -> "level"
+            abs(rounded) < 100 -> levelText
             rounded > 0 -> "+" + rounded + " ft"
             else -> rounded.toString() + " ft"
         }
     }
-    return if (parts.isEmpty()) "distance unknown" else parts.joinToString(" · ")
+    return if (parts.isEmpty()) unknownText else parts.joinToString(" · ")
 }
 
 private const val METRES_PER_NM = 1852.0

@@ -19,8 +19,11 @@
 
 package de.akaflieg_freiburg.enroute.wear.transport
 
+import androidx.annotation.StringRes
+import de.akaflieg_freiburg.enroute.wear.R
+
 /** Which link to the phone the pilot wants. */
-enum class TransportMode(val id: String, val label: String) {
+enum class TransportMode(val id: String, @StringRes val label: Int) {
     /**
      * Wi-Fi when it works, Bluetooth when it does not.
      *
@@ -28,13 +31,13 @@ enum class TransportMode(val id: String, val label: String) {
      * walks out of the door, and a setting they have to remember to change is a
      * setting that will be wrong exactly when it matters.
      */
-    Automatic("auto", "Automatic"),
+    Automatic("auto", R.string.link_automatic),
 
     /** Wi-Fi only. Faster, and needs both devices on one network. */
-    WiFi("wifi", "Wi-Fi"),
+    WiFi("wifi", R.string.link_wifi),
 
     /** Bluetooth only. Slower, and needs no network at all. */
-    Bluetooth("ble", "Bluetooth"),
+    Bluetooth("ble", R.string.link_bluetooth),
     ;
 
     /**

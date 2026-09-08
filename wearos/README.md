@@ -122,6 +122,35 @@ four-waypoint route is arranged so that all four of the knowledge states appear 
 listed, NOTAMs listed, nothing known, and confirmed empty. `debug/notams?m=cap` then adds the fifth
 case, a group the document's cap emptied, which must never render as "no NOTAMs here".
 
+## Translating it
+
+The strings live in `app/src/main/res/values/strings.xml`, in English, which is the
+source language for the same reason it is on the phone: it is the language the code is
+written in. A translation is one file, `app/src/main/res/values-<code>/strings.xml`,
+with the same identifiers. Nothing else changes, and a string a translation does not
+carry falls back to English rather than breaking.
+
+`TranslationTest` is what keeps that fallback from becoming a hiding place. It fails
+when a translation is missing a string, when it carries one the source no longer has,
+and when it drops a placeholder -- `%1$d listed` translated without the `%1$d` throws at
+the moment a pilot opens the page. Strings that are deliberately the same in every
+language are named in that test, so leaving one alone is a decision somebody wrote down.
+
+Two things to know before translating:
+
+- **Keep it short.** This is a round 480 pixel face read at arm's length. German needed
+  "Auto" where English has "Automatic", because three buttons across that face cut the
+  long word off at "Automatis...". Check the result on a watch or the emulator; a per-app
+  locale needs no reboot:
+
+  ```
+  adb -s <serial> shell cmd locale set-app-locales de.akaflieg_freiburg.enroute.wear.debug --locales de-DE
+  ```
+
+- **Leave the aviation vocabulary alone.** NOTAM, METAR, ATIS, FIS, ALT, GS and the
+  frequencies are the same words in every cockpit. Translating them makes the display
+  harder to read, not easier.
+
 ## What the emulator can and cannot tell you
 
 The Wear OS emulator is enough for layout, the status and freshness renderings, ambient-mode

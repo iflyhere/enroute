@@ -52,6 +52,8 @@ import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material3.Text
 import de.akaflieg_freiburg.enroute.wear.domain.WeatherBoard
 import de.akaflieg_freiburg.enroute.wear.domain.WeatherStation
+import androidx.compose.ui.res.stringResource
+import de.akaflieg_freiburg.enroute.wear.R
 import de.akaflieg_freiburg.enroute.wear.ui.theme.CockpitColors
 
 /**
@@ -86,7 +88,7 @@ fun WeatherScreen(
     ) {
         if (board == null) {
             Text(
-                text = "Waiting for weather",
+                text = stringResource(R.string.weather_waiting),
                 color = CockpitColors.Muted,
                 fontSize = 15.sp,
                 textAlign = TextAlign.Center,
@@ -139,7 +141,7 @@ private fun Header(board: WeatherBoard) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "WEATHER",
+            text = stringResource(R.string.weather_title),
             color = CockpitColors.OnBackground,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
@@ -175,11 +177,11 @@ private fun InfoRow(text: String, color: Color) {
 private fun EmptyRow(downloading: Boolean) {
     Text(
         text = if (downloading) {
-            "Fetching reports"
+            stringResource(R.string.weather_fetching)
         } else {
             // Not "no weather": the phone reports what it has downloaded, and an
             // empty list means nothing was downloaded, which is a different claim.
-            "The phone has no reports."
+            stringResource(R.string.weather_none)
         },
         color = CockpitColors.Muted,
         fontSize = 13.sp,

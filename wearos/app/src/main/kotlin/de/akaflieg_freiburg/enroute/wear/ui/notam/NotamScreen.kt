@@ -50,6 +50,8 @@ import de.akaflieg_freiburg.enroute.wear.domain.NotamBoard
 import de.akaflieg_freiburg.enroute.wear.domain.NotamCategory
 import de.akaflieg_freiburg.enroute.wear.domain.NotamGroup
 import de.akaflieg_freiburg.enroute.wear.domain.NotamKnowledge
+import androidx.compose.ui.res.stringResource
+import de.akaflieg_freiburg.enroute.wear.R
 import de.akaflieg_freiburg.enroute.wear.ui.theme.CockpitColors
 
 /**
@@ -87,7 +89,7 @@ fun NotamScreen(
     ) {
         if (board == null) {
             Text(
-                text = "Waiting for NOTAMs",
+                text = stringResource(R.string.notam_waiting_full),
                 color = CockpitColors.Muted,
                 fontSize = 15.sp,
                 textAlign = TextAlign.Center,
@@ -124,7 +126,7 @@ fun NotamScreen(
                         if (group.cut > 0) {
                             item(key = "cut-" + group.waypointIndex) {
                                 StatementRow(
-                                    text = group.cut.toString() + " more not sent",
+                                    text = stringResource(R.string.notam_more_not_sent, group.cut),
                                     color = CockpitColors.Caution,
                                 )
                             }
@@ -132,14 +134,14 @@ fun NotamScreen(
                     }
 
                     NotamKnowledge.ConfirmedNone -> item(key = "none-" + group.waypointIndex) {
-                        StatementRow(text = "No NOTAMs", color = CockpitColors.Muted)
+                        StatementRow(text = stringResource(R.string.notam_none_here), color = CockpitColors.Muted)
                     }
 
                     // Deliberately not the same rendering as ConfirmedNone, and in the
                     // colour reserved for something the pilot should notice. This is the
                     // one confusion the whole document is shaped to avoid.
                     NotamKnowledge.Unknown -> item(key = "unknown-" + group.waypointIndex) {
-                        StatementRow(text = "No data", color = CockpitColors.Caution)
+                        StatementRow(text = stringResource(R.string.notam_no_data), color = CockpitColors.Caution)
                     }
                 }
             }
@@ -156,13 +158,17 @@ private fun Header(board: NotamBoard) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = "NOTAM",
+            text = stringResource(R.string.notam_title),
             color = CockpitColors.OnBackground,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
         )
         Text(
-            text = if (board.groups.isEmpty()) "no route" else board.total.toString() + " listed",
+            text = if (board.groups.isEmpty()) {
+                stringResource(R.string.notam_no_route)
+            } else {
+                stringResource(R.string.notam_listed, board.total)
+            },
             color = CockpitColors.Muted,
             fontSize = 12.sp,
         )
@@ -267,7 +273,7 @@ private fun NotamCard(notam: Notam, expanded: Boolean, onToggle: () -> Unit) {
 private fun FilterNote(board: NotamBoard) {
     val radius = board.filter.radiusM
         ?.let { (it / M_PER_NM).toInt().toString() + " NM" }
-        ?: "a fixed radius"
+        ?: stringResource(R.string.notam_fixed_radius)
 
     Column(
         modifier = Modifier
@@ -276,21 +282,20 @@ private fun FilterNote(board: NotamBoard) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = "Not an airspace check",
+            text = stringResource(R.string.notam_scope_title),
             color = CockpitColors.Caution,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
         )
         Text(
-            text = "Within " + radius + " of route waypoints only, with no altitude " +
-                "filter. NOTAMs beside a leg are not listed.",
+            text = stringResource(R.string.notam_scope_text, radius),
             color = CockpitColors.Muted,
             fontSize = 11.sp,
             textAlign = TextAlign.Center,
         )
         if (board.dropped > 0) {
             Text(
-                text = board.dropped.toString() + " did not fit and are not shown",
+                text = stringResource(R.string.notam_not_shown, board.dropped),
                 color = CockpitColors.Caution,
                 fontSize = 11.sp,
                 textAlign = TextAlign.Center,

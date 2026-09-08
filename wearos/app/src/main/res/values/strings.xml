@@ -1,8 +1,194 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  The watch app's own strings, in the source language.
+
+  English is the source here for the same reason it is on the phone: it is the language
+  the code is written in, and every other language is a translation of it. A translator
+  adds res/values-<code>/strings.xml and fills in the same identifiers; nothing else
+  needs to change. See wearos/README.md.
+
+  Two rules that matter more here than on a phone. Keep it short – this is a round
+  480 pixel face read at arm's length, and a label that wraps to three lines is a label
+  that is not read. And leave the aviation vocabulary alone: NOTAM, METAR, FIS, QNH and
+  the frequencies are the same words in every cockpit, and a pilot looking for "NOTAM"
+  is not helped by a translation of it.
+-->
 <resources>
     <string name="app_name">Enroute</string>
+
+    <!-- The foreground service that keeps the link alive -->
     <string name="session_channel_name">Flight session</string>
     <string name="session_notification_title">Enroute</string>
     <string name="session_notification_text">Connected to your phone</string>
     <string name="session_stop">Stop</string>
+
+    <!-- Page names, as the settings screen lists them -->
+    <string name="page_data">Data</string>
+    <string name="page_map">Map</string>
+    <string name="page_instruments">Instruments</string>
+    <string name="page_traffic">Traffic</string>
+    <string name="page_notam">NOTAM</string>
+    <string name="page_nearby">Nearby</string>
+    <string name="page_weather">Weather</string>
+    <string name="page_frequencies">Frequencies</string>
+    <string name="page_log">Log</string>
+    <string name="page_settings">Settings</string>
+
+    <!-- What the bezel does, and whether an approach chart is drawn -->
+    <string name="bezel_pages">Switch screens</string>
+    <string name="bezel_content">Zoom and scroll</string>
+    <string name="chart_automatic">Automatic</string>
+    <string name="chart_off">Off</string>
+    <string name="link_automatic">Automatic</string>
+    <string name="link_wifi">Wi-Fi</string>
+    <string name="link_bluetooth">Bluetooth</string>
+
+    <!-- Pairing with a phone -->
+    <string name="connect_phone">Phone</string>
+    <string name="connect_searching">Searching. Both devices need one Wi-Fi network. Away from home, switch the phone\'s hotspot on and join it.</string>
+    <string name="connect_using">Using</string>
+    <string name="connect_pairing_code">Pairing code</string>
+    <string name="connect_digit">digit %1$d</string>
+    <string name="connect_done">Done</string>
+
+    <!-- The data screen, and the link states every screen can show -->
+    <string name="state_no_connection">No connection</string>
+    <string name="state_connecting">Connecting</string>
+    <string name="state_not_connected">Not connected</string>
+    <string name="state_waiting">Waiting for data</string>
+    <string name="state_reconnecting">reconnecting</string>
+    <string name="state_bluetooth_denied">Bluetooth not allowed</string>
+    <string name="state_bluetooth_hint">Allow Bluetooth in\nthe watch settings</string>
+    <string name="state_wrong_code">Wrong pairing code</string>
+    <string name="state_repair_hint">Long press to re-pair</string>
+    <string name="route_none_on_phone">No route set on the phone</string>
+    <string name="route_near_destination">Near destination.</string>
+    <string name="route_position_unknown">Position unknown.</string>
+    <string name="route_off">Off route.</string>
+    <string name="route_unsupported_status">Unsupported status from phone</string>
+
+    <!-- The map, and the route view it falls back to -->
+    <string name="map_no_route">No route</string>
+    <string name="map_route_only">ROUTE ONLY\nno map data from the phone</string>
+
+    <!-- The instrument faces -->
+    <string name="instrument_no_position">No position\nfrom the phone</string>
+    <string name="instrument_altitude">ALT</string>
+    <string name="instrument_altitude_note">GPS, AMSL</string>
+    <string name="instrument_speed">GS</string>
+    <string name="instrument_speed_note">ground speed</string>
+    <string name="instrument_vertical_speed">VS</string>
+    <string name="instrument_vertical_speed_note">from GPS</string>
+
+    <!-- Frequencies -->
+    <string name="freq_title">FREQUENCIES</string>
+    <string name="freq_information_service">Information service</string>
+    <string name="freq_information">Information</string>
+    <string name="freq_none">No frequencies\nfor this position or route</string>
+    <string name="freq_kind_information">INFO</string>
+    <string name="freq_kind_communication">COM</string>
+    <string name="freq_kind_navaid">NAV</string>
+    <string name="freq_kind_other">OTHER</string>
+    <string name="freq_unknown">---.---</string>
+
+    <!-- NOTAM -->
+    <string name="notam_title">NOTAM</string>
+    <string name="notam_waiting">Waiting for the phone</string>
+    <string name="notam_no_route">no route</string>
+    <string name="notam_listed">%1$d listed</string>
+    <string name="notam_not_shown">%1$d did not fit and are not shown</string>
+    <string name="notam_scope_title">Not an airspace check</string>
+    <string name="notam_scope_text">Within %1$s of route waypoints only, with no altitude filter. NOTAMs beside a leg are not listed.</string>
+
+    <!-- Weather -->
+    <string name="weather_title">WEATHER</string>
+    <string name="weather_waiting">Waiting for weather</string>
+    <string name="weather_fetching">Fetching reports</string>
+    <string name="weather_none">The phone has no reports.</string>
+    <string name="weather_stations">%1$d stations</string>
+
+    <!-- Nearby waypoints -->
+    <string name="nearby_title">NEARBY</string>
+    <string name="nearby_waiting">Waiting for the phone</string>
+    <string name="nearby_position_unknown">Position unknown</string>
+    <string name="nearby_aerodromes">Aerodromes</string>
+    <string name="nearby_navaids">Navaids</string>
+    <string name="nearby_waypoints">Waypoints</string>
+    <string name="nearby_none">Nothing in the phone\'s map data near here.</string>
+
+    <!-- Traffic -->
+    <string name="traffic_title">TRAFFIC</string>
+    <string name="traffic_none_from_phone">No traffic data\nfrom the phone</string>
+    <string name="traffic_range_hint">Tap the top or bottom of the display to change the range.</string>
+    <string name="traffic_none_reported">No traffic reported.</string>
+    <string name="traffic_none_near">%1$d contacts, none within 20 nm and 5000 ft</string>
+    <string name="traffic_no_receiver">No traffic receiver</string>
+    <string name="traffic_no_heartbeat">The phone is not receiving a heartbeat.</string>
+    <string name="traffic_no_signal">no signal</string>
+    <string name="traffic_warning">Warning</string>
+    <string name="traffic_alarm">ALARM %1$d</string>
+    <string name="traffic_bearing_unknown">Bearing unknown</string>
+    <string name="traffic_off_display">Not on the display</string>
+    <string name="traffic_distance_unknown">distance unknown</string>
+    <string name="traffic_level">level</string>
+    <string name="traffic_oclock">%1$d o\'clock</string>
+
+    <!-- The flight log -->
+    <string name="log_title">FLIGHT LOG</string>
+    <string name="log_waiting">Waiting for the phone</string>
+    <string name="log_none">The phone has no recorded flights.</string>
+
+    <!-- Settings -->
+    <string name="settings_title">SETTINGS</string>
+    <string name="settings_charts">Approach charts</string>
+    <string name="settings_charts_note">Automatic puts the chart covering the aircraft on the map, the way the phone picks one. Charts are imported on the phone.</string>
+    <string name="settings_alarm">Traffic alarm</string>
+    <string name="settings_alarm_vibrate">Vibrate</string>
+    <string name="settings_alarm_silent">Silent</string>
+    <string name="settings_alarm_note">A collision alarm buzzes the wrist whichever screen is open, and only when the phone raises the alarm level.</string>
+    <string name="settings_display">Display</string>
+    <string name="settings_display_always_on">Always on</string>
+    <string name="settings_display_normal">Normal</string>
+    <string name="settings_display_note">Always on is what makes this readable in flight: a watch returns to its face after seconds without touch, and hands on the controls touch nothing. It is also the largest thing this app costs in battery.</string>
+    <string name="settings_bezel">Bezel</string>
+    <string name="settings_bezel_note">Zoom on the map also works by dragging up and down, whichever is chosen here.</string>
+    <string name="settings_screens">Screens</string>
+    <string name="settings_screens_pinned">pinned</string>
+    <string name="settings_link">Link</string>
+    <string name="settings_link_note">Wi-Fi needs both devices on one network and is much faster. Bluetooth needs no network at all, which is what there is in most aircraft. Automatic tries both.</string>
+    <string name="settings_phone">Phone</string>
+    <string name="settings_phone_note">Tap to pair with a different phone.</string>
+    <string name="settings_stop_session">Stop session</string>
+    <string name="settings_start_session">Start session</string>
+    <string name="settings_session_note">Leaving the app does not stop it: the link and the screen have to survive a glance away, which is the whole point in flight. On the ground it is worth stopping.</string>
+    <string name="settings_about">About</string>
+    <string name="settings_about_version">Enroute Flight Navigation, Wear OS companion %1$s</string>
+    <string name="settings_about_maps">Map data is used under the terms of its licences, which permit non-commercial use with attribution. Aviation data is not for navigation on its own; the phone remains the primary instrument.</string>
+    <string name="settings_about_licence">Free software under the GNU General Public License, version 3 or later. Source: github.com/Akaflieg-Freiburg/enroute</string>
+
+    <!-- The flight log's own wording -->
+    <string name="log_waiting_full">Waiting for the flight log</string>
+    <string name="log_no_flights">No flights logged.</string>
+    <string name="log_dropped">%1$d older flights not sent</string>
+    <string name="log_flights">%1$d flights</string>
+    <string name="log_takeoff">Takeoff detected</string>
+    <string name="log_in_flight">In flight</string>
+    <string name="log_in_flight_recording">In flight, recording</string>
+    <string name="log_landing">Landing detected</string>
+    <string name="log_unknown_state">Unknown state</string>
+    <string name="log_recording">Recording track</string>
+    <string name="log_landings">%1$d ldg</string>
+    <string name="log_no_time">No time data</string>
+
+    <!-- Wording the instruments and the NOTAM and traffic lists still needed -->
+    <string name="instrument_no_altitude">no altitude</string>
+    <string name="instrument_no_speed">no speed</string>
+    <string name="instrument_no_vertical_speed">no vertical speed</string>
+    <string name="notam_waiting_full">Waiting for NOTAMs</string>
+    <string name="notam_more_not_sent">%1$d more not sent</string>
+    <string name="notam_none_here">No NOTAMs</string>
+    <string name="notam_no_data">No data</string>
+    <string name="notam_fixed_radius">a fixed radius</string>
+    <string name="traffic_drawn">%1$d of %2$d</string>
+    <string name="traffic_warning_direction">%1$s %2$s</string>
 </resources>

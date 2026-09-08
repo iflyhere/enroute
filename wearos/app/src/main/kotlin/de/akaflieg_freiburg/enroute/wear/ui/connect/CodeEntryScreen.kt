@@ -43,6 +43,8 @@ import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.PickerGroup
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.rememberPickerState
+import androidx.compose.ui.res.stringResource
+import de.akaflieg_freiburg.enroute.wear.R
 import de.akaflieg_freiburg.enroute.wear.ui.theme.CockpitColors
 
 private const val CODE_DIGITS = 6
@@ -87,7 +89,7 @@ fun CodeEntryScreen(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "Pairing code",
+            text = stringResource(R.string.connect_pairing_code),
             color = CockpitColors.Muted,
             fontSize = 13.sp,
         )
@@ -107,13 +109,16 @@ fun CodeEntryScreen(
             autoCenter = false,
         ) {
             states.forEachIndexed { index, state ->
+                // Resolved out here: the description lambda is not a composable scope,
+                // and a screen reader is exactly the reader who needs the translation.
+                val digitDescription = stringResource(R.string.connect_digit, index + 1)
                 PickerGroupItem(
                     pickerState = state,
                     selected = selectedDigit == index,
                     onSelected = { selectedDigit = index },
                     modifier = Modifier.width(26.dp),
                     focusRequester = focusRequesters[index],
-                    contentDescription = { "digit " + (index + 1) },
+                    contentDescription = { digitDescription },
                 ) { optionIndex, pickerSelected ->
                     Text(
                         text = optionIndex.toString(),
@@ -137,7 +142,7 @@ fun CodeEntryScreen(
             },
             modifier = Modifier.testTag(TAG_CODE_CONFIRM),
         ) {
-            Text(text = "Done", fontSize = 15.sp)
+            Text(text = stringResource(R.string.connect_done), fontSize = 15.sp)
         }
     }
 }
