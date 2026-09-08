@@ -46,6 +46,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material3.Text
 import de.akaflieg_freiburg.enroute.wear.domain.NavFrame
+import androidx.compose.ui.res.stringResource
+import de.akaflieg_freiburg.enroute.wear.R
 import de.akaflieg_freiburg.enroute.wear.ui.theme.CockpitColors
 import kotlin.math.abs
 import kotlin.math.cos
@@ -97,7 +99,7 @@ fun InstrumentScreen(
     ) {
         if (position == null || !position.hasFix) {
             Text(
-                text = "No position\nfrom the phone",
+                text = stringResource(R.string.instrument_no_position),
                 color = CockpitColors.Muted,
                 fontSize = 15.sp,
                 textAlign = TextAlign.Center,
@@ -108,6 +110,19 @@ fun InstrumentScreen(
 
         val speedUnit = speedUnitFor(horizontalUnit)
 
+        // Resolved here because a Canvas is not a composable scope, and the subtitle
+        // for the same reason.
+        val noAltitude = stringResource(R.string.instrument_no_altitude)
+        val noSpeed = stringResource(R.string.instrument_no_speed)
+        val noVerticalSpeed = stringResource(R.string.instrument_no_vertical_speed)
+        val subtitle = "  " + stringResource(
+            when (showing) {
+                Instrument.Altimeter -> R.string.instrument_altitude_note
+                Instrument.Speed -> R.string.instrument_speed_note
+                Instrument.Variometer -> R.string.instrument_vertical_speed_note
+            },
+        )
+
         Canvas(modifier = Modifier.fillMaxSize()) {
             val centre = Offset(size.width / 2f, size.height / 2f)
             val radius = minOf(size.width, size.height) / 2f * DIAL_FRACTION
@@ -117,18 +132,21 @@ fun InstrumentScreen(
                     centre, radius, measurer,
                     altitudeM = position.altitudeAmsl.si,
                     unit = verticalUnit,
+                    nothingToShow = noAltitude,
                 )
 
                 Instrument.Speed -> drawSpeed(
                     centre, radius, measurer,
                     speedMps = position.groundSpeed.si,
                     unit = speedUnit,
+                    nothingToShow = noSpeed,
                 )
 
                 Instrument.Variometer -> drawVariometer(
                     centre, radius, measurer,
                     verticalSpeedMps = position.verticalSpeedMps,
                     unit = verticalUnit,
+                    nothingToShow = noVerticalSpeed,
                 )
             }
 
@@ -137,7 +155,7 @@ fun InstrumentScreen(
             // needle passes through it -- and a needle crossing the words that say
             // what the needle means is the one place this label must not be.
             centreText(
-                centre, measurer, showing.title + subtitle(showing),
+                centre, measurer, showing.title + subtitle,
                 10.sp.value, TICK_LABEL, offsetY = radius * 0.45f,
             )
 
@@ -151,13 +169,6 @@ fun InstrumentScreen(
         }
 
     }
-}
-
-/** What the dial is fed, said in three words, because it is not what the dial's name suggests. */
-private fun subtitle(showing: Instrument): String = when (showing) {
-    Instrument.Altimeter -> "  GPS, AMSL"
-    Instrument.Speed -> "  ground speed"
-    Instrument.Variometer -> "  from GPS"
 }
 
 /**
@@ -212,6 +223,7 @@ private fun DrawScope.drawAltimeter(
     measurer: TextMeasurer,
     altitudeM: Double?,
     unit: String,
+    nothingToShow: String,
 ) {
     drawFace(centre, radius)
 
@@ -229,7 +241,7 @@ private fun DrawScope.drawAltimeter(
     }
 
     if (!isUsable(altitudeM)) {
-        centreText(centre, measurer, "no altitude", 12.sp.value, CockpitColors.Muted)
+        centreText(centre, measurer, nothingToShow, 12.sp.value, CockpitColors.Muted)
         return
     }
     val value = if (unit == "m") altitudeM!! else altitudeM!! / METRES_PER_FOOT
@@ -258,6 +270,7 @@ private fun DrawScope.drawSpeed(
     measurer: TextMeasurer,
     speedMps: Double?,
     unit: String,
+    nothingToShow: String,
 ) {
     drawFace(centre, radius)
 
@@ -287,7 +300,7 @@ private fun DrawScope.drawSpeed(
     }
 
     if (!isUsable(speedMps)) {
-        centreText(centre, measurer, "no speed", 12.sp.value, CockpitColors.Muted)
+        centreText(centre, measurer, nothingToShow, 12.sp.value, CockpitColors.Muted)
         return
     }
     centreText(
@@ -308,6 +321,7 @@ private fun DrawScope.drawVariometer(
     measurer: TextMeasurer,
     verticalSpeedMps: Double?,
     unit: String,
+    nothingToShow: String,
 ) {
     drawFace(centre, radius)
 
@@ -342,7 +356,7 @@ private fun DrawScope.drawVariometer(
     }
 
     if (!isUsable(verticalSpeedMps)) {
-        centreText(centre, measurer, "no vertical speed", 11.sp.value, CockpitColors.Muted)
+        centreText(centre, measurer, nothingToShow, 11.sp.value, CockpitColors.Muted)
         return
     }
     centreText(

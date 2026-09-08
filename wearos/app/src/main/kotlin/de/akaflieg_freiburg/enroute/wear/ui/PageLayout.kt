@@ -19,6 +19,9 @@
 
 package de.akaflieg_freiburg.enroute.wear.ui
 
+import androidx.annotation.StringRes
+import de.akaflieg_freiburg.enroute.wear.R
+
 /**
  * The pages the pager can show, and their default order.
  *
@@ -26,16 +29,16 @@ package de.akaflieg_freiburg.enroute.wear.ui
  * has to survive a version that adds a page or drops one, and an index would silently
  * come back meaning something else.
  */
-enum class WearPage(val id: String, val label: String) {
-    Data("data", "Data"),
-    Map("map", "Map"),
-    Instruments("instruments", "Instruments"),
-    Traffic("traffic", "Traffic"),
-    Notam("notam", "NOTAM"),
-    Nearby("nearby", "Nearby"),
-    Weather("weather", "Weather"),
-    Frequencies("freq", "Frequencies"),
-    Log("log", "Log"),
+enum class WearPage(val id: String, @StringRes val label: Int) {
+    Data("data", R.string.page_data),
+    Map("map", R.string.page_map),
+    Instruments("instruments", R.string.page_instruments),
+    Traffic("traffic", R.string.page_traffic),
+    Notam("notam", R.string.page_notam),
+    Nearby("nearby", R.string.page_nearby),
+    Weather("weather", R.string.page_weather),
+    Frequencies("freq", R.string.page_frequencies),
+    Log("log", R.string.page_log),
 
     /**
      * Always last, never hidden, never moved.
@@ -44,7 +47,7 @@ enum class WearPage(val id: String, val label: String) {
      * reach the screen that unhides them, and one who reorders their way into a corner
      * must still be able to get out. Pinning it is what makes the rest safe to change.
      */
-    Settings("settings", "Settings"),
+    Settings("settings", R.string.page_settings),
     ;
 
     val canBeHidden: Boolean get() = this != Settings
@@ -138,12 +141,12 @@ fun movePage(order: List<WearPage>, page: WearPage, delta: Int): List<String> {
 }
 
 /** What a turn of the bezel does. */
-enum class BezelAction(val id: String, val label: String) {
+enum class BezelAction(val id: String, @StringRes val label: Int) {
     /** Move between pages. */
-    Pages("pages", "Switch screens"),
+    Pages("pages", R.string.bezel_pages),
 
     /** Zoom the map, scroll a list -- what the bezel did before it could do both. */
-    Content("content", "Zoom and scroll"),
+    Content("content", R.string.bezel_content),
     ;
 
     companion object {
@@ -153,12 +156,12 @@ enum class BezelAction(val id: String, val label: String) {
 }
 
 /** Whether, and how, an approach chart is put on the map. */
-enum class ChartMode(val id: String, val label: String) {
+enum class ChartMode(val id: String, @StringRes val label: Int) {
     /** Show the chart covering the aircraft, the way the app selects one. */
-    Automatic("auto", "Automatic"),
+    Automatic("auto", R.string.chart_automatic),
 
     /** Never put a chart on the map. */
-    Off("off", "Off"),
+    Off("off", R.string.chart_off),
     ;
 
     companion object {

@@ -45,6 +45,9 @@ import androidx.compose.ui.unit.sp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.ScalingLazyListState
 import androidx.wear.compose.material3.Text
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.stringResource
+import de.akaflieg_freiburg.enroute.wear.R
 import de.akaflieg_freiburg.enroute.wear.ui.BezelAction
 import de.akaflieg_freiburg.enroute.wear.ui.ChartMode
 import de.akaflieg_freiburg.enroute.wear.transport.TransportMode
@@ -101,7 +104,7 @@ fun SettingsScreen(
         ) {
             item {
                 Text(
-                    text = "SETTINGS",
+                    text = stringResource(R.string.settings_title),
                     color = CockpitColors.OnBackground,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
@@ -109,7 +112,7 @@ fun SettingsScreen(
                 )
             }
 
-            item { SectionTitle("Approach charts") }
+            item { SectionTitle(stringResource(R.string.settings_charts)) }
             item {
                 ChoiceRow(
                     options = ChartMode.entries.map { mode -> mode.label },
@@ -118,45 +121,37 @@ fun SettingsScreen(
                 )
             }
             item {
-                Note(
-                    "Automatic puts the chart covering the aircraft on the map, the way " +
-                        "the phone picks one. Charts are imported on the phone.",
-                )
+                Note(stringResource(R.string.settings_charts_note))
             }
 
-            item { SectionTitle("Traffic alarm") }
+            item { SectionTitle(stringResource(R.string.settings_alarm)) }
             item {
                 ChoiceRow(
-                    options = listOf("Vibrate", "Silent"),
+                    options = listOf(R.string.settings_alarm_vibrate, R.string.settings_alarm_silent),
                     selected = if (alarmVibration) 0 else 1,
                     onSelect = { index -> onAlarmVibration(index == 0) },
                 )
             }
             item {
-                Note(
-                    "A collision alarm buzzes the wrist whichever screen is open, and " +
-                        "only when the phone raises the alarm level.",
-                )
+                Note(stringResource(R.string.settings_alarm_note))
             }
 
-            item { SectionTitle("Display") }
+            item { SectionTitle(stringResource(R.string.settings_display)) }
             item {
                 ChoiceRow(
-                    options = listOf("Always on", "Normal"),
+                    options = listOf(
+                        R.string.settings_display_always_on,
+                        R.string.settings_display_normal,
+                    ),
                     selected = if (keepScreenOn) 0 else 1,
                     onSelect = { index -> onKeepScreenOn(index == 0) },
                 )
             }
             item {
-                Note(
-                    "Always on is what makes this readable in flight: a watch returns " +
-                        "to its face after seconds without touch, and hands on the " +
-                        "controls touch nothing. It is also the largest thing this app " +
-                        "costs in battery.",
-                )
+                Note(stringResource(R.string.settings_display_note))
             }
 
-            item { SectionTitle("Bezel") }
+            item { SectionTitle(stringResource(R.string.settings_bezel)) }
             item {
                 ChoiceRow(
                     options = BezelAction.entries.map { action -> action.label },
@@ -165,13 +160,10 @@ fun SettingsScreen(
                 )
             }
             item {
-                Note(
-                    "Zoom on the map also works by dragging up and down, whichever is " +
-                        "chosen here.",
-                )
+                Note(stringResource(R.string.settings_bezel_note))
             }
 
-            item { SectionTitle("Screens") }
+            item { SectionTitle(stringResource(R.string.settings_screens)) }
             // Settings itself is in the list but shows no controls: seeing it pinned
             // at the end explains why it cannot be moved better than its absence would.
             pages.forEach { page ->
@@ -187,7 +179,7 @@ fun SettingsScreen(
                 }
             }
 
-            item { SectionTitle("Link") }
+            item { SectionTitle(stringResource(R.string.settings_link)) }
             item {
                 ChoiceRow(
                     options = TransportMode.entries.map { mode -> mode.label },
@@ -196,14 +188,10 @@ fun SettingsScreen(
                 )
             }
             item {
-                Note(
-                    "Wi-Fi needs both devices on one network and is much faster. " +
-                        "Bluetooth needs no network at all, which is what there is in " +
-                        "most aircraft. Automatic tries both.",
-                )
+                Note(stringResource(R.string.settings_link_note))
             }
 
-            item { SectionTitle("Phone") }
+            item { SectionTitle(stringResource(R.string.settings_phone)) }
             item {
                 Row(
                     modifier = Modifier
@@ -223,7 +211,7 @@ fun SettingsScreen(
                     )
                 }
             }
-            item { Note("Tap to pair with a different phone.") }
+            item { Note(stringResource(R.string.settings_phone_note)) }
 
             item {
                 Row(
@@ -236,23 +224,25 @@ fun SettingsScreen(
                         .padding(horizontal = 10.dp, vertical = 8.dp),
                 ) {
                     Text(
-                        text = if (sessionRunning) "Stop session" else "Start session",
+                        text = stringResource(
+                            if (sessionRunning) {
+                                R.string.settings_stop_session
+                            } else {
+                                R.string.settings_start_session
+                            },
+                        ),
                         color = if (sessionRunning) CockpitColors.Warning else CockpitColors.OnBackground,
                         fontSize = 12.sp,
                     )
                 }
             }
             item {
-                Note(
-                    "Leaving the app does not stop it: the link and the screen have to " +
-                        "survive a glance away, which is the whole point in flight. On " +
-                        "the ground it is worth stopping.",
-                )
+                Note(stringResource(R.string.settings_session_note))
             }
 
-            item { SectionTitle("About") }
+            item { SectionTitle(stringResource(R.string.settings_about)) }
             item {
-                Note("Enroute Flight Navigation, Wear OS companion " + appVersion)
+                Note(stringResource(R.string.settings_about_version, appVersion))
             }
             if (attribution.isNotBlank()) {
                 item {
@@ -269,17 +259,10 @@ fun SettingsScreen(
                 }
             }
             item {
-                Note(
-                    "Map data is used under the terms of its licences, which permit " +
-                        "non-commercial use with attribution. Aviation data is not for " +
-                        "navigation on its own; the phone remains the primary instrument.",
-                )
+                Note(stringResource(R.string.settings_about_maps))
             }
             item {
-                Note(
-                    "Free software under the GNU General Public License, version 3 or " +
-                        "later. Source: github.com/Akaflieg-Freiburg/enroute",
-                )
+                Note(stringResource(R.string.settings_about_licence))
             }
         }
     }
@@ -318,12 +301,16 @@ private fun Note(text: String) {
  * the bezel needs.
  */
 @Composable
-private fun ChoiceRow(options: List<String>, selected: Int, onSelect: (Int) -> Unit) {
+private fun ChoiceRow(
+    @Suppress("ComposableNaming") options: List<Int>,
+    selected: Int,
+    onSelect: (Int) -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        options.forEachIndexed { index, label ->
+        options.forEachIndexed { index, labelId ->
             val active = index == selected
             Box(
                 modifier = Modifier
@@ -335,7 +322,7 @@ private fun ChoiceRow(options: List<String>, selected: Int, onSelect: (Int) -> U
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = label,
+                    text = stringResource(labelId),
                     color = if (active) CockpitColors.Background else CockpitColors.OnBackground,
                     fontSize = 11.sp,
                     maxLines = 1,
@@ -376,7 +363,7 @@ private fun PageRow(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = page.label,
+            text = stringResource(page.label),
             color = if (visible) CockpitColors.OnBackground else CockpitColors.Muted,
             fontSize = 12.sp,
             modifier = Modifier.weight(1f),
@@ -388,7 +375,11 @@ private fun PageRow(
             Spacer(modifier = Modifier.width(4.dp))
             MoveButton("↓", enabled = !last) { onMove(1) }
         } else {
-            Text(text = "pinned", color = CockpitColors.Muted, fontSize = 10.sp)
+            Text(
+                text = stringResource(R.string.settings_screens_pinned),
+                color = CockpitColors.Muted,
+                fontSize = 10.sp,
+            )
         }
     }
 }

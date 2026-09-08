@@ -43,6 +43,8 @@ import de.akaflieg_freiburg.enroute.wear.domain.FisStation
 import de.akaflieg_freiburg.enroute.wear.domain.Frequency
 import de.akaflieg_freiburg.enroute.wear.domain.FrequencyKind
 import de.akaflieg_freiburg.enroute.wear.domain.RouteWaypoint
+import androidx.compose.ui.res.stringResource
+import de.akaflieg_freiburg.enroute.wear.R
 import de.akaflieg_freiburg.enroute.wear.ui.theme.CockpitColors
 
 /**
@@ -88,7 +90,7 @@ fun FrequencyScreen(
             // whose waypoints carry no radio -- because none of them is actionable in
             // the air and a pilot only needs to know not to keep looking.
             Text(
-                text = "No frequencies\nfor this position or route",
+                text = stringResource(R.string.freq_none),
                 color = CockpitColors.Muted,
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center,
@@ -104,7 +106,7 @@ fun FrequencyScreen(
         ) {
             item {
                 Text(
-                    text = "FREQUENCIES",
+                    text = stringResource(R.string.freq_title),
                     color = CockpitColors.OnBackground,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
@@ -113,7 +115,7 @@ fun FrequencyScreen(
             }
 
             if (fis.isNotEmpty()) {
-                item(key = "fis-head") { SectionTitle("Information service") }
+                item(key = "fis-head") { SectionTitle(stringResource(R.string.freq_information_service)) }
                 fis.forEachIndexed { index, station ->
                     item(key = "fis-" + index) { FisCard(station) }
                 }
@@ -154,7 +156,7 @@ private fun SectionTitle(text: String, colour: Color = CockpitColors.Primary) {
 @Composable
 private fun FisCard(station: FisStation) {
     Card {
-        Label(station.station.ifBlank { "Information" }, CockpitColors.Muted)
+        Label(station.station.ifBlank { stringResource(R.string.freq_information) }, CockpitColors.Muted)
         Number(station.value, CockpitColors.Good)
 
         val band = listOfNotNull(station.area, verticalBand(station))
@@ -226,7 +228,7 @@ private fun Number(value: String?, colour: Color) {
         // A station the app knows without a number is still worth showing: it tells a
         // pilot the service exists and that the phone has no frequency for it, which
         // is different from the app not knowing the place at all.
-        text = value ?: "---.---",
+        text = value ?: stringResource(R.string.freq_unknown),
         color = if (value == null) CockpitColors.Muted else colour,
         fontSize = 22.sp,
         fontWeight = FontWeight.Medium,

@@ -45,6 +45,8 @@ import androidx.wear.compose.material3.Text
 import de.akaflieg_freiburg.enroute.wear.domain.DetectionState
 import de.akaflieg_freiburg.enroute.wear.domain.FlightEntry
 import de.akaflieg_freiburg.enroute.wear.domain.FlightLogBoard
+import androidx.compose.ui.res.stringResource
+import de.akaflieg_freiburg.enroute.wear.R
 import de.akaflieg_freiburg.enroute.wear.ui.theme.CockpitColors
 import java.time.Instant
 import java.time.ZoneOffset
@@ -76,7 +78,7 @@ fun FlightLogScreen(
     ) {
         if (board == null) {
             Text(
-                text = "Waiting for the flight log",
+                text = stringResource(R.string.log_waiting_full),
                 color = CockpitColors.Muted,
                 fontSize = 15.sp,
                 textAlign = TextAlign.Center,
@@ -99,7 +101,7 @@ fun FlightLogScreen(
             if (board.entries.isEmpty()) {
                 item {
                     Text(
-                        text = "No flights logged.",
+                        text = stringResource(R.string.log_no_flights),
                         color = CockpitColors.Muted,
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center,
@@ -115,7 +117,7 @@ fun FlightLogScreen(
             if (board.dropped > 0) {
                 item {
                     Text(
-                        text = board.dropped.toString() + " older flights not sent",
+                        text = stringResource(R.string.log_dropped, board.dropped),
                         color = CockpitColors.Muted,
                         fontSize = 11.sp,
                         textAlign = TextAlign.Center,
@@ -137,13 +139,13 @@ private fun Header(board: FlightLogBoard) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "LOG",
+            text = stringResource(R.string.log_title),
             color = CockpitColors.OnBackground,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
         )
         Text(
-            text = board.total.toString() + " flights",
+            text = stringResource(R.string.log_flights, board.total),
             color = CockpitColors.Muted,
             fontSize = 12.sp,
         )
@@ -169,11 +171,13 @@ private fun StatusBanner(board: FlightLogBoard) {
         else -> CockpitColors.Muted
     }
     val text = when (board.state) {
-        DetectionState.TakeoffPhase -> "Takeoff detected"
-        DetectionState.InFlight -> if (board.recording) "In flight, recording" else "In flight"
-        DetectionState.LandingPhase -> "Landing detected"
-        DetectionState.Unknown -> "Unknown state"
-        DetectionState.Idle -> if (board.recording) "Recording track" else ""
+        DetectionState.TakeoffPhase -> stringResource(R.string.log_takeoff)
+        DetectionState.InFlight -> stringResource(
+            if (board.recording) R.string.log_in_flight_recording else R.string.log_in_flight,
+        )
+        DetectionState.LandingPhase -> stringResource(R.string.log_landing)
+        DetectionState.Unknown -> stringResource(R.string.log_unknown_state)
+        DetectionState.Idle -> if (board.recording) stringResource(R.string.log_recording) else ""
     }
     if (text.isEmpty()) {
         return
@@ -211,16 +215,18 @@ private fun EntryCard(entry: FlightEntry) {
         )
 
         Text(
-            text = timeLine(entry),
+            text = timeLine(entry, stringResource(R.string.log_no_time)),
             color = CockpitColors.Muted,
             fontSize = 11.sp,
         )
 
+        // Resolved before the list is built, which is a plain function scope.
+        val landings = stringResource(R.string.log_landings, entry.landings)
         val details = buildList {
             entry.callsign?.let { callsign -> add(callsign) }
             entry.flightTime?.let { time -> add(time) }
             if (entry.landings > 1) {
-                add(entry.landings.toString() + " ldg")
+                add(landings)
             }
         }
         if (details.isNotEmpty()) {
@@ -240,8 +246,8 @@ private fun EntryCard(entry: FlightEntry) {
  * time zone would otherwise disagree with the entry the phone shows for the same
  * flight.
  */
-private fun timeLine(entry: FlightEntry): String {
-    val start = entry.startEpochSeconds ?: return "No time data"
+private fun timeLine(entry: FlightEntry, noTimeData: String): String {
+    val start = entry.startEpochSeconds ?: return noTimeData
     val startAt = Instant.ofEpochSecond(start).atOffset(ZoneOffset.UTC)
     val landing = entry.landingEpochSeconds
         ?.let { seconds -> Instant.ofEpochSecond(seconds).atOffset(ZoneOffset.UTC) }
