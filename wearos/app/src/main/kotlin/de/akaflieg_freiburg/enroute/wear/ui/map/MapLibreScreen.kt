@@ -56,6 +56,8 @@ import de.akaflieg_freiburg.enroute.wear.domain.OwnPosition
 import de.akaflieg_freiburg.enroute.wear.domain.TrafficBoard
 import de.akaflieg_freiburg.enroute.wear.domain.VacBoard
 import de.akaflieg_freiburg.enroute.wear.ui.route.ZoomLevel
+import androidx.compose.ui.res.stringResource
+import de.akaflieg_freiburg.enroute.wear.R
 import de.akaflieg_freiburg.enroute.wear.ui.theme.CockpitColors
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
@@ -246,7 +248,7 @@ fun MapLibreScreen(
 
         if (route == null || route.waypoints.isEmpty()) {
             MapText(
-                text = "No route",
+                text = stringResource(R.string.map_no_route),
                 labelColour = labelColour,
                 haloColour = haloColour,
                 fontSize = 13.sp,

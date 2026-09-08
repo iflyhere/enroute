@@ -46,6 +46,9 @@ import de.akaflieg_freiburg.enroute.wear.domain.Measured
 import de.akaflieg_freiburg.enroute.wear.transport.FailureReason
 import de.akaflieg_freiburg.enroute.wear.domain.RouteStatus
 import de.akaflieg_freiburg.enroute.wear.domain.WaypointLeg
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.stringResource
+import de.akaflieg_freiburg.enroute.wear.R
 import de.akaflieg_freiburg.enroute.wear.ui.theme.CockpitColors
 
 /**
@@ -91,9 +94,11 @@ fun DataScreen(
                 // following it made this line alternate once per backoff period --
                 // which is what a pilot saw as a flicker every ten seconds.
                 Text(
-                    text = connectionMessage(
-                        state.session.connection,
-                        state.session.lastFailure,
+                    text = stringResource(
+                        connectionMessage(
+                            state.session.connection,
+                            state.session.lastFailure,
+                        ),
                     ),
                     color = CockpitColors.Muted,
                     fontSize = 15.sp,
@@ -105,9 +110,9 @@ fun DataScreen(
                         // permission is granted in the watch's own settings, not here,
                         // and re-pairing would not help.
                         text = if (state.session.lastFailure == FailureReason.PermissionMissing) {
-                            "Allow Bluetooth in\nthe watch settings"
+                            stringResource(R.string.state_bluetooth_hint)
                         } else {
-                            "Long press to re-pair"
+                            stringResource(R.string.state_repair_hint)
                         },
                         color = CockpitColors.Muted,
                         fontSize = 11.sp,
@@ -212,7 +217,7 @@ private fun LinkRow(state: DataUiState) {
         // would be the app claiming to work on a problem only the pilot can fix.
         if (state.session.connection is ConnectionState.Retrying) {
             Text(
-                text = "  reconnecting",
+                text = "  " + stringResource(R.string.state_reconnecting),
                 color = CockpitColors.Warning,
                 fontSize = 12.sp,
                 modifier = Modifier.testTag(TAG_RECONNECT),
@@ -332,6 +337,7 @@ private class Banner(val text: String, val color: Color)
  * its translation match the phone's own display exactly. The fallbacks only apply when
  * the frame arrived without the formatted block.
  */
+@Composable
 private fun statusBanner(status: RouteStatus, statusText: String, note: String): Banner? =
     when (status) {
         RouteStatus.OnRoute -> note.takeIf { it.isNotEmpty() }?.let {
@@ -339,29 +345,29 @@ private fun statusBanner(status: RouteStatus, statusText: String, note: String):
         }
 
         RouteStatus.NoRoute -> Banner(
-            statusText.ifEmpty { "No route set on the phone" },
+            statusText.ifEmpty { stringResource(R.string.route_none_on_phone) },
             CockpitColors.Muted,
         )
 
         RouteStatus.NearDestination -> Banner(
-            statusText.ifEmpty { "Near destination." },
+            statusText.ifEmpty { stringResource(R.string.route_near_destination) },
             CockpitColors.Good,
         )
 
         RouteStatus.PositionUnknown -> Banner(
-            statusText.ifEmpty { "Position unknown." },
+            statusText.ifEmpty { stringResource(R.string.route_position_unknown) },
             CockpitColors.Caution,
         )
 
         RouteStatus.OffRoute -> Banner(
-            statusText.ifEmpty { "Off route." },
+            statusText.ifEmpty { stringResource(R.string.route_off) },
             CockpitColors.Caution,
         )
 
         // A status value this build has never heard of. Say so plainly instead of
         // guessing what it might mean.
         RouteStatus.Unknown -> Banner(
-            "Unsupported status from phone",
+            stringResource(R.string.route_unsupported_status),
             CockpitColors.Caution,
         )
     }
@@ -408,14 +414,15 @@ const val TAG_EMPTY = "empty"
  * message must not change while the link is merely retrying, because the connection
  * state legitimately passes through Connecting on every attempt.
  */
-fun connectionMessage(connection: ConnectionState, lastFailure: FailureReason?): String = when {
+@StringRes
+fun connectionMessage(connection: ConnectionState, lastFailure: FailureReason?): Int = when {
     // Before the Rejected case below, which it shares: the state says the link will not
     // come back on its own, and only this says why, which is the half a pilot can act on.
-    lastFailure == FailureReason.PermissionMissing -> "Bluetooth not allowed"
-    connection == ConnectionState.Rejected -> "Wrong pairing code"
-    lastFailure == FailureReason.Unauthorized -> "Wrong pairing code"
-    lastFailure != null -> "No connection"
-    connection == ConnectionState.Connecting -> "Connecting"
-    connection == ConnectionState.Idle -> "Not connected"
-    else -> "Waiting for data"
+    lastFailure == FailureReason.PermissionMissing -> R.string.state_bluetooth_denied
+    connection == ConnectionState.Rejected -> R.string.state_wrong_code
+    lastFailure == FailureReason.Unauthorized -> R.string.state_wrong_code
+    lastFailure != null -> R.string.state_no_connection
+    connection == ConnectionState.Connecting -> R.string.state_connecting
+    connection == ConnectionState.Idle -> R.string.state_not_connected
+    else -> R.string.state_waiting
 }
