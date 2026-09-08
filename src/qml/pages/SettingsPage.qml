@@ -339,6 +339,30 @@ Page {
                 }
             }
 
+            WordWrappingItemDelegate {
+                id: companionDevices
+                text: qsTr("Companion Devices") +
+                        `<br><font color="#606060" size="2">` +
+                        CompanionServer.statusString +
+                        `</font>`
+                icon.source: "/icons/material/ic_watch.svg"
+                Layout.fillWidth: true
+                onClicked: {
+                    PlatformAdaptor.vibrateBrief()
+                    stackView.push("CompanionPage.qml")
+                }
+            }
+            ToolButton {
+                icon.source: "/icons/material/ic_info_outline.svg"
+                onClicked: {
+                    PlatformAdaptor.vibrateBrief()
+                    helpDialog.title = qsTr("Companion Devices")
+                    helpDialog.text = "<p>" + qsTr("Enroute Flight Navigation can publish your flight route and your current position, so that a companion device such as a smartwatch can display them. This is switched off by default.") + "</p>"
+                            + "<p>" + qsTr("A companion device must know a pairing code, which is shown on this page. Anybody on the same Wi-Fi network who knows that code can read your route and your position, so do not switch this on while connected to a public network.") + "</p>"
+                    helpDialog.open()
+                }
+            }
+
             WordWrappingSwitchDelegate {
                 id: ignoreSSL
                 text: qsTr("Ignore Network Security Errors")
