@@ -111,6 +111,7 @@
     <string name="traffic_none_near">%1$d Ziele, keines binnen 20 nm und 5000 ft</string>
     <string name="traffic_no_receiver">Kein Verkehrsempfänger</string>
     <string name="traffic_no_heartbeat">Das Telefon empfängt kein Lebenszeichen.</string>
+    <string name="traffic_drawn">%1$d von %2$d</string>
     <string name="traffic_no_signal">kein Signal</string>
     <string name="traffic_warning">Warnung</string>
     <string name="traffic_alarm">ALARM %1$d</string>
