@@ -732,6 +732,7 @@ void DemoRunner::runSmokeTest()
     const QStringList pages = {u"AircraftLibrary.qml"_s,
                                u"AircraftPage.qml"_s,
                                u"BugReportPage.qml"_s,
+                               u"CompanionPage.qml"_s,
                                u"ConnectionManager.qml"_s,
                                u"DataManagerPage.qml"_s,
                                u"DonatePage.qml"_s,
