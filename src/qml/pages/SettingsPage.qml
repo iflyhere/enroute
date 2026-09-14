@@ -345,7 +345,7 @@ Page {
                 Layout.fillWidth: true
                 onClicked: {
                     PlatformAdaptor.vibrateBrief()
-                    stackView.push("CompanionPage.qml")
+                    Global.stackView.push("CompanionPage.qml")
                 }
             }
             ToolButton {
