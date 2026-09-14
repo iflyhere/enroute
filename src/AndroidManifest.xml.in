@@ -240,10 +240,13 @@ ${FLIGHTLOG_ANDROID_PERMISSIONS}
       after the app is suspended, so C++ objects can continue to record GPS data.
       The associated crash risk (rendering after the Android Surface is destroyed)
       is mitigated in main.cpp by hiding the QQuickWindow on
-      Qt::ApplicationSuspended. The value is "true" only in builds with the
-      CMake option FLIGHTLOG set, see src/CMakeLists.txt.
+      Qt::ApplicationSuspended.
+
+      The companion link needs the same thing for the same reason, and it is not
+      behind the FLIGHTLOG option, so the value is computed separately – see
+      src/CMakeLists.txt.
       -->
-      <meta-data android:name="android.app.background_running" android:value="${FLIGHTLOG_ANDROID_BACKGROUND_RUNNING}"/>
+      <meta-data android:name="android.app.background_running" android:value="${ANDROID_BACKGROUND_RUNNING}"/>
       <!-- Background running -->
       
       <!-- auto screen scale factor -->

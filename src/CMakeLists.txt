@@ -18,7 +18,6 @@ if(FLIGHTLOG)
       android:name="de.akaflieg_freiburg.enroute.FlightLogService"
       android:foregroundServiceType="location"
       android:exported="false"/>]])
-    set(FLIGHTLOG_ANDROID_BACKGROUND_RUNNING true)
     set(FLIGHTLOG_IOS_BACKGROUND_MODES [[<key>UIBackgroundModes</key>
     <array>
         <string>location</string>
@@ -26,9 +25,23 @@ if(FLIGHTLOG)
 else()
     set(FLIGHTLOG_ANDROID_PERMISSIONS "")
     set(FLIGHTLOG_ANDROID_SERVICE "")
-    set(FLIGHTLOG_ANDROID_BACKGROUND_RUNNING false)
     set(FLIGHTLOG_IOS_BACKGROUND_MODES "")
 endif()
+
+# Background running belongs to two features, not one, which is why the block above no
+# longer decides it and its FLIGHTLOG_ANDROID_BACKGROUND_RUNNING is gone.
+#
+# The flight log needs the Qt event loop alive to record a track while the app is away.
+# The companion link needs exactly the same thing: its setting "keep publishing while
+# this app is not on screen" holds a connectedDevice foreground service open, and a
+# foreground service does not help if Qt has suspended the loop behind it. The server
+# simply stops answering, the watch goes dark, and nothing on either device says why.
+#
+# The companion is compiled unconditionally and gated at runtime by a setting that is
+# off by default, so the answer here is always yes. It is a variable of its own rather
+# than a literal in the manifest, so that a build option for the companion, if one is
+# ever wanted, has a single place to change.
+set(ANDROID_BACKGROUND_RUNNING true)
 
 #
 # Configure files
