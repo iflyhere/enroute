@@ -27,6 +27,7 @@
 #include "GlobalSettings.h"
 #include "Librarian.h"
 #include "Sensors.h"
+#include "companion/CompanionServer.h"
 #include "dataManagement/DataManager.h"
 #include "dataManagement/SSLErrorHandler.h"
 #include "geomaps/GeoMapProvider.h"
@@ -57,6 +58,7 @@ QPointer<Traffic::FlarmnetDB> g_flarmnetDB {};
 QPointer<GeoMaps::GeoMapProvider> g_geoMapProvider {};
 QPointer<Librarian> g_librarian {};
 QPointer<Platform::PlatformAdaptor> g_platformAdaptor {};
+QPointer<Companion::CompanionServer> g_companionServer {};
 QPointer<Flightlog::FlightLog> g_flightLog {};
 QPointer<Navigation::Navigator> g_navigator {};
 QPointer<NOTAM::NOTAMProvider> g_notamProvider {};
@@ -108,6 +110,12 @@ void GlobalObject::clear()
 
     isConstructingOrDeconstructing = true;
 
+    // First, because it is the only object here that observes several of the
+    // others. It holds QPropertyNotifiers into Navigator, PositionProvider and
+    // NOTAMProvider, and there is no order for those three that is safe unless
+    // this one goes before all of them.
+    delete g_companionServer;
+
     delete g_notamProvider;
 
     delete g_notificationManager;
@@ -129,8 +137,10 @@ void GlobalObject::clear()
     delete g_waypointLibrary;
     delete g_weatherDataProvider;
     delete g_sensors;
+    delete g_clock;
 
     delete g_networkAccessManager;
+
 
     isConstructingOrDeconstructing = false;
 }
@@ -162,6 +172,11 @@ auto GlobalObject::flarmnetDB() -> Traffic::FlarmnetDB*
 auto GlobalObject::flightLog() -> Flightlog::FlightLog*
 {
     return allocateInternal<Flightlog::FlightLog>(g_flightLog);
+}
+
+auto GlobalObject::companionServer() -> Companion::CompanionServer*
+{
+    return allocateInternal<Companion::CompanionServer>(g_companionServer);
 }
 
 auto GlobalObject::geoMapProvider() -> GeoMaps::GeoMapProvider*

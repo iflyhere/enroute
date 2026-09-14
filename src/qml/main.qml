@@ -20,7 +20,8 @@
 
 import QtCore
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls.Material
+import QtQuick.Templates as T
 import QtQuick.Layouts
 
 import akaflieg_freiburg.enroute
@@ -35,6 +36,7 @@ AppWindow {
     flags: ((Qt.platform.os === "android") || (Qt.platform.os === "ios")) ? Qt.ExpandedClientAreaHint | Qt.NoTitleBarBackgroundHint | Qt.Window : Qt.Window
 
     Component.onCompleted: {
+        Global.appWindow = this
         Application.styleHints.colorScheme = Qt.ColorScheme.Dark
     }
 
@@ -52,9 +54,9 @@ AppWindow {
     // PlatformAdaptor.safeInsets, see below.)
     SafeArea.additionalMargins.bottom: {
         if (Qt.platform.os === "ios") {
-            if (!Qt.inputMethod.visible)
+            if (!Qt.inputMethod.visible) // qmllint disable missing-property
                 return 0
-            var kr = Qt.inputMethod.keyboardRectangle
+            var kr = Qt.inputMethod.keyboardRectangle // qmllint disable missing-property
             if (kr.height <= 0) // Empty rectangle, not trustworthy
                 return 0
             return Math.max(0, view.height - kr.y)
@@ -98,6 +100,10 @@ AppWindow {
     Drawer {
         id: drawer
 
+        // Take focus while open, so that the Android Back key closes the drawer
+        // instead of falling through to the page below.
+        focus: true
+
         height: parent.height
         width: col.implicitWidth
         Material.roundedScale: Material.NotRounded
@@ -111,6 +117,16 @@ AppWindow {
         // when it opened, stealing it back from a freshly-pushed page. Re-assert
         // the current page's preferred focus once the drawer has fully closed.
         onClosed: stackView.focusCurrentPage()
+
+        // The submenus are non-modal popups stacked above the modal drawer. A
+        // tap outside is grabbed by the drawer on press, so the release never
+        // reaches the menus and their CloseOnReleaseOutside policy never fires.
+        // Close them explicitly whenever the drawer starts to hide.
+        onAboutToHide: {
+            libraryMenu.close()
+            aboutMenu.close()
+            manualMenu.close()
+        }
 
         DecoratedScrollView {
             anchors.fill: parent
@@ -181,7 +197,7 @@ AppWindow {
                     onClicked: {
                         PlatformAdaptor.vibrateBrief()
                         stackView.pop()
-                        stackView.push("pages/AircraftPage.qml", {"stackView": stackView})
+                        stackView.push("pages/AircraftPage.qml")
                         drawer.close()
                     }
                 }
@@ -217,7 +233,7 @@ AppWindow {
                     onClicked: {
                         PlatformAdaptor.vibrateBrief()
                         stackView.pop()
-                        stackView.push("pages/VAC.qml", {"dialogLoader": dialogLoader, "stackView": stackView})
+                        stackView.push("pages/VAC.qml")
                         drawer.close()
                     }
                 }
@@ -267,6 +283,7 @@ AppWindow {
 
                     text: qsTr("Flight Log")
                     icon.source: "/icons/material/ic_flight_takeoff.svg"
+                    visible: GlobalSettings.flightLogEnabled
 
                     onClicked: {
                         PlatformAdaptor.vibrateBrief()
@@ -335,7 +352,7 @@ AppWindow {
                             enabled: Navigator.flightStatus !== Navigator.Flight
                             onClicked: {
                                 PlatformAdaptor.vibrateBrief()
-                                stackView.push("pages/DataManagerPage.qml", {"dialogLoader": dialogLoader, "stackView": stackView})
+                                stackView.push("pages/DataManagerPage.qml")
                                 libraryMenu.close()
                                 drawer.close()
                             }
@@ -429,7 +446,7 @@ AppWindow {
                             onClicked: {
                                 PlatformAdaptor.vibrateBrief()
                                 stackView.pop()
-                                stackView.push("pages/TrafficReceiver.qml", {"appWindow": view})
+                                stackView.push("pages/TrafficReceiver.qml")
                                 aboutMenu.close()
                                 drawer.close()
                             }
@@ -472,7 +489,7 @@ AppWindow {
                             onClicked: {
                                 PlatformAdaptor.vibrateBrief()
                                 stackView.pop()
-                                stackView.push("pages/InfoPage.qml", {"stackView": stackView, "toast": toast})
+                                stackView.push("pages/InfoPage.qml")
                                 aboutMenu.close()
                                 drawer.close()
                             }
@@ -719,9 +736,9 @@ AppWindow {
         // specific control focused on appearance expose it as defaultFocusItem;
         // focus it here whenever the current page changes (push/pop).
         function focusCurrentPage() {
-            if (currentItem && currentItem.defaultFocusItem &&
+            if (currentItem && currentItem.defaultFocusItem && // qmllint disable missing-property
                 (Qt.platform.os !== "android") && (Qt.platform.os !== "ios"))
-                currentItem.defaultFocusItem.forceActiveFocus()
+                currentItem.defaultFocusItem.forceActiveFocus() // qmllint disable missing-property
         }
         onCurrentItemChanged: focusCurrentPage()
 
@@ -733,6 +750,7 @@ AppWindow {
         focus: true
 
         Component.onCompleted: {
+            Global.stackView = this
             PlatformAdaptor.onGUISetupCompleted()
 
             if (!DataManager.aviationMaps.hasFile ||
@@ -808,12 +826,30 @@ AppWindow {
             function onRequestClosePages() {
                 stackView.pop()
                 if (Global.dialogLoader.item)
-                    Global.dialogLoader.item.close()
+                    (Global.dialogLoader.item as T.Popup).close()
+            }
+
+            function onRequestOpenDrawer(open) {
+                if (open)
+                    drawer.open()
+                else
+                    drawer.close()
+            }
+
+            function onRequestOpenDialog(url, properties) {
+                Global.dialogLoader.active = false
+                Global.dialogLoader.setSource(url, properties)
+                Global.dialogLoader.active = true
+            }
+
+            function onRequestOpenPage(url) {
+                stackView.pop(null)
+                stackView.push(url)
             }
 
             function onRequestOpenAircraftPage() {
                 stackView.pop()
-                stackView.push("pages/AircraftPage.qml", {"stackView": stackView})
+                stackView.push("pages/AircraftPage.qml")
             }
 
             function onRequestOpenNearbyPage() {
@@ -834,7 +870,8 @@ AppWindow {
             function onRequestOpenWeatherDialog(station) {
                 Global.dialogLoader.setSource("dialogs/MetarTafDialog.qml",
                                               {"weatherStation": station})
-                Global.dialogLoader.item.open()
+                var dialog = Global.dialogLoader.item as T.Popup
+                dialog.open()
             }
 
             function onRequestVAC(vacName) {
@@ -863,44 +900,8 @@ AppWindow {
                    }
     }
 
-    Label {
+    Toast {
         id: toast
-
-        width: Math.min(parent.width-4*view.font.pixelSize, 40*view.font.pixelSize)
-        x: (parent.width-width)/2.0
-        y: parent.height*(3.0/4.0)-height/2.0
-
-        text: "Lirum Larum, Löffelstiel"
-        wrapMode: Text.Wrap
-
-        color: "white"
-        bottomInset: -5
-        topInset: -5
-        leftInset: -5
-        rightInset: -5
-
-        horizontalAlignment: Text.AlignHCenter
-        background: Rectangle {
-            color: "teal"
-            radius: 5
-        }
-
-        opacity: 0
-        SequentialAnimation {
-            id: seqA
-
-            NumberAnimation { target: toast; property: "opacity"; to: 1; duration: 400 }
-            PauseAnimation { duration: 1000 }
-            NumberAnimation { target: toast; property: "opacity"; to: 0; duration: 400 }
-        }
-
-        function doToast(string) {
-            if (seqA.running) {
-                toast.text = string + " • " + toast.text
-            } else
-                toast.text = string
-            seqA.start()
-        }
 
         Component.onCompleted: Global.toast = this
 
@@ -925,37 +926,20 @@ AppWindow {
         }
     }
 
-    Loader {
+    DialogLoader {
         id: dialogLoader
         anchors.fill: parent
 
-        property string title
-        property string text
-        property var dialogArgs: undefined
-
-        onLoaded: {
-            item.anchors.centerIn = Overlay.overlay
-            item.modal = true
-            if (dialogArgs && item.hasOwnProperty('dialogArgs')) {
-                item.dialogArgs = dialogArgs
-            }
-            item.open()
-        }
-
+        Component.onCompleted: Global.textDialogLoader = this
     }
 
     Loader {
-        onLoaded: item.open()
+        onLoaded: (item as T.Popup).open()
         Component.onCompleted: Global.dialogLoader = this
     }
 
     ImportManager {
         id: importMgr
-
-        // Repeater properties
-        stackView: stackView
-        toast: toast
-        view: view
     }
 
     LongTextDialog {
@@ -1024,6 +1008,16 @@ AppWindow {
                                               title: qsTr("Flight log error"),
                                               text: qsTr("The flight log could not be saved to storage. Recent changes will be lost when the app closes.")
                                                     + "<br><br>" + qsTr("Reason: %1").arg(message),
+                                              standardButtons: Dialog.Close
+                                          })
+            Global.dialogLoader.active = true
+        }
+
+        function onBackgroundLocationUnavailable(message) {
+            Global.dialogLoader.active = false
+            Global.dialogLoader.setSource("dialogs/LongTextDialog.qml", {
+                                              title: qsTr("Background location access"),
+                                              text: message,
                                               standardButtons: Dialog.Close
                                           })
             Global.dialogLoader.active = true
@@ -1124,7 +1118,7 @@ AppWindow {
     // solution from
     // see https://stackoverflow.com/questions/25968661/android-back-button-press-doesnt-trigger-keys-onreleased-qml
     //
-    function onClosing (close) {
+    onClosing: (close) => {
         // Use this hack only on the Android platform
         if (Qt.platform.os !== "android")
             return
@@ -1135,15 +1129,5 @@ AppWindow {
         }
     }
 
-    function openManual(pageUrl) {
-
-        if ((Qt.platform.os === "ios") ||
-                ((Qt.platform.os === "android") && (Qt.application.version < "6.7.0")))
-        {
-            stackView.push("pages/Manual.qml", {"fileName": pageUrl})
-            return
-        }
-        Qt.openUrlExternally("https://akaflieg-freiburg.github.io/enrouteManual/"+pageUrl)
-    }
 }
 

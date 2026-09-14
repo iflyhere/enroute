@@ -216,10 +216,16 @@ QString Platform::PlatformAdaptor::systemInfo()
     result += u"<h3>Device</h3>\n"_s;
     result += stringObject.toString();
 
-    // System Log
+    // System Log. This runs on the GUI thread, so bound the wait instead of
+    // accepting QProcess's default of 30 seconds.
     QProcess proc;
     proc.startCommand(u"logcat -t 300"_s);
-    proc.waitForFinished();
+    if (!proc.waitForFinished(3000))
+    {
+        proc.kill();
+        proc.waitForFinished(500);
+    }
+
     result += u"<h3>System Log</h3>\n"_s;
     result += u"<pre>\n"_s + proc.readAllStandardOutput() + u"\n</pre>\n"_s;
 
@@ -245,8 +251,18 @@ extern "C" {
 
 JNIEXPORT void JNICALL Java_de_akaflieg_1freiburg_enroute_MobileAdaptor_onLanguageChanged(JNIEnv* /*unused*/, jobject /*unused*/)
 {
+    // Called on the Android UI thread from a broadcast receiver. The app
+    // terminates, so that it comes up in the new language when the user
+    // returns to it. Quit through the Qt event loop rather than calling
+    // exit(), so that pending QSettings writes reach the disk first.
+    if (GlobalObject::canConstruct())
+    {
+        QMetaObject::invokeMethod(QCoreApplication::instance(), []() { QCoreApplication::quit(); }, Qt::QueuedConnection);
+        return;
+    }
     exit(0);
 }
+
 
 JNIEXPORT void JNICALL Java_de_akaflieg_1freiburg_enroute_MobileAdaptor_onWifiConnected(JNIEnv* /*unused*/, jobject /*unused*/)
 {

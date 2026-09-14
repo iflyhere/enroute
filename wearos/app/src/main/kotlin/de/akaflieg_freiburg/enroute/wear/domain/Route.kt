@@ -1,0 +1,116 @@
+/***************************************************************************
+ *   Copyright (C) 2026 by Soeren Gutbrod                                  *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 3 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+package de.akaflieg_freiburg.enroute.wear.domain
+
+/** A geographic position. Degrees, as they arrive on the wire. */
+data class GeoPoint(val latDeg: Double, val lonDeg: Double)
+
+/**
+ * Waypoint type, from the protocol's three-letter codes.
+ *
+ * [Unknown] exists so that a phone which learns a new code does not break an older
+ * watch: an unrecognised type renders with the neutral marker instead of throwing.
+ */
+enum class WaypointType {
+    Aerodrome, Navaid, Waypoint, Unknown;
+
+    companion object {
+        fun fromWire(code: String?): WaypointType = when (code) {
+            "AD" -> Aerodrome
+            "NAV" -> Navaid
+            "WP" -> Waypoint
+            else -> Unknown
+        }
+    }
+}
+
+data class RouteWaypoint(
+    val index: Int,
+    val name: String,
+    val extendedName: String?,
+    val point: GeoPoint,
+    val type: WaypointType,
+    val category: String?,
+    val elevationM: Double?,
+    val frequencies: List<Frequency> = emptyList(),
+)
+
+/**
+ * One radio frequency a waypoint carries.
+ *
+ * Split by the phone into the station and the number, because a watch wants the number
+ * large and the station small underneath, and because the phone is where the app's own
+ * text lives.
+ */
+data class Frequency(
+    val kind: FrequencyKind,
+    val station: String,
+    val value: String?,
+)
+
+/** Which group the app filed a frequency under. */
+enum class FrequencyKind(val id: String, val label: String) {
+    /** Recorded information: ATIS and the like. Listen, do not call. */
+    Information("inf", "INFO"),
+
+    /** What a pilot calls: tower, ground, radio. */
+    Communication("com", "COM"),
+
+    /** A navaid's frequency, which is dialled into a receiver rather than a radio. */
+    Navaid("nav", "NAV"),
+
+    /** Everything the app files under none of the above. */
+    Other("oth", "OTHER"),
+    ;
+
+    companion object {
+        fun fromWire(id: String?): FrequencyKind =
+            entries.firstOrNull { it.id == id } ?: Other
+    }
+}
+
+/**
+ * A flight information service sector the aircraft is inside.
+ *
+ * The frequency is the point of it; the area and the band are what let a pilot check
+ * that it is the sector they think it is before pressing the button.
+ */
+data class FisStation(
+    val station: String,
+    val value: String?,
+    val area: String?,
+    val bottom: String?,
+    val top: String?,
+)
+
+/** Connects waypoint [from] to waypoint [from] + 1. [trueCourseDeg] is absent on very short legs. */
+data class RouteLeg(
+    val from: Int,
+    val distanceM: Double,
+    val trueCourseDeg: Double?,
+)
+
+data class FlightRoute(
+    val revision: Long,
+    val name: String,
+    val summary: String,
+    val waypoints: List<RouteWaypoint>,
+    val legs: List<RouteLeg>,
+)

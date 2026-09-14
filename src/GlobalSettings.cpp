@@ -32,9 +32,8 @@
 GlobalSettings::GlobalSettings(QObject *parent)
     : QObject(parent)
 {
-    QCoreApplication::processEvents();
-
     // Save some values
+
     m_settings.setValue(QStringLiteral("lastVersion"), ENROUTE_VERSION_STRING);
 
     // Read values
@@ -67,6 +66,26 @@ auto GlobalSettings::airspaceAltitudeLimit() const -> Units::Distance
         aspAlttLimit = Units::Distance::fromFT( qInf() );
     }
     return aspAlttLimit;
+}
+
+
+auto GlobalSettings::autoFlightDetection() const -> bool
+{
+    // Single choke point for the flight log's background activity. Every path
+    // in FlightLog.cpp that starts the Android foreground service, requests
+    // "always" location on iOS or feeds the flight detector reads this getter.
+    // Builds without the flight log must never do any of that, even if a test
+    // build has persisted the setting as true.
+    if (!flightLogEnabled()) {
+        return false;
+    }
+    return m_settings.value(QStringLiteral("FlightLog/autoFlightDetection"), false).toBool();
+}
+
+
+auto GlobalSettings::flightLogEnabled() const -> bool
+{
+    return FLIGHTLOG != 0;
 }
 
 
@@ -210,6 +229,149 @@ void GlobalSettings::setPrivacyHash(Units::ByteSize newHash)
 }
 
 
+void GlobalSettings::setCompanionNetworkEnabled(bool newCompanionNetworkEnabled)
+{
+    if (newCompanionNetworkEnabled == companionNetworkEnabled())
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/networkEnabled"), newCompanionNetworkEnabled);
+    m_companionNetworkEnabled = newCompanionNetworkEnabled;
+    emit companionNetworkEnabledChanged();
+}
+
+
+void GlobalSettings::setCompanionBluetoothEnabled(bool newCompanionBluetoothEnabled)
+{
+    if (newCompanionBluetoothEnabled == companionBluetoothEnabled())
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/bluetoothEnabled"), newCompanionBluetoothEnabled);
+    m_companionBluetoothEnabled = newCompanionBluetoothEnabled;
+    emit companionBluetoothEnabledChanged();
+}
+
+
+void GlobalSettings::setCompanionPageOrder(const QString& newCompanionPageOrder)
+{
+    if (newCompanionPageOrder == m_companionPageOrder)
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/pageOrder"), newCompanionPageOrder);
+    m_companionPageOrder = newCompanionPageOrder;
+    emit companionPreferencesChanged();
+}
+
+
+void GlobalSettings::setCompanionHiddenPages(const QString& newCompanionHiddenPages)
+{
+    if (newCompanionHiddenPages == m_companionHiddenPages)
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/hiddenPages"), newCompanionHiddenPages);
+    m_companionHiddenPages = newCompanionHiddenPages;
+    emit companionPreferencesChanged();
+}
+
+
+void GlobalSettings::setCompanionBezelAction(const QString& newCompanionBezelAction)
+{
+    if (newCompanionBezelAction == m_companionBezelAction)
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/bezelAction"), newCompanionBezelAction);
+    m_companionBezelAction = newCompanionBezelAction;
+    emit companionPreferencesChanged();
+}
+
+
+void GlobalSettings::setCompanionChartMode(const QString& newCompanionChartMode)
+{
+    if (newCompanionChartMode == m_companionChartMode)
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/chartMode"), newCompanionChartMode);
+    m_companionChartMode = newCompanionChartMode;
+    emit companionPreferencesChanged();
+}
+
+
+void GlobalSettings::setCompanionTransportMode(const QString& newCompanionTransportMode)
+{
+    if (newCompanionTransportMode == m_companionTransportMode)
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/transportMode"), newCompanionTransportMode);
+    m_companionTransportMode = newCompanionTransportMode;
+    emit companionPreferencesChanged();
+}
+
+
+void GlobalSettings::setCompanionKeepScreenOn(bool newCompanionKeepScreenOn)
+{
+    if (newCompanionKeepScreenOn == m_companionKeepScreenOn)
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/keepScreenOn"), newCompanionKeepScreenOn);
+    m_companionKeepScreenOn = newCompanionKeepScreenOn;
+    emit companionPreferencesChanged();
+}
+
+
+void GlobalSettings::setCompanionAlarmVibration(bool newCompanionAlarmVibration)
+{
+    if (newCompanionAlarmVibration == m_companionAlarmVibration)
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/alarmVibration"), newCompanionAlarmVibration);
+    m_companionAlarmVibration = newCompanionAlarmVibration;
+    emit companionPreferencesChanged();
+}
+
+
+void GlobalSettings::setCompanionInBackground(bool newCompanionInBackground)
+{
+    if (newCompanionInBackground == m_companionInBackground)
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/inBackground"), newCompanionInBackground);
+    m_companionInBackground = newCompanionInBackground;
+    emit companionInBackgroundChanged();
+}
+
+
+void GlobalSettings::setCompanionPairingCode(const QString& newCompanionPairingCode)
+{
+    if (newCompanionPairingCode == m_companionPairingCode)
+    {
+        return;
+    }
+
+    m_settings.setValue(QStringLiteral("companion/pairingCode"), newCompanionPairingCode);
+    m_companionPairingCode = newCompanionPairingCode;
+    emit companionPairingCodeChanged();
+}
+
+
 void GlobalSettings::setNightMode(bool newNightMode)
 {
     if (newNightMode == nightMode())
@@ -225,7 +387,9 @@ void GlobalSettings::setNightMode(bool newNightMode)
 
 void GlobalSettings::setAutoFlightDetection(bool newAutoFlightDetection)
 {
-    if (newAutoFlightDetection == autoFlightDetection())
+    // Without the flight log, the setting is read-only false. The stored value
+    // is left alone, so a developer switching back to a FLIGHTLOG build keeps it.
+    if (!flightLogEnabled() || (newAutoFlightDetection == autoFlightDetection()))
     {
         return;
     }

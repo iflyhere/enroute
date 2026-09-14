@@ -1,4 +1,49 @@
 #
+# Flight log feature flag (option FLIGHTLOG in the top-level CMakeLists.txt)
+#
+# The flight log is work in progress. Its sources (src/flightlog, the Android
+# FlightLogService, the flight log QML files and Qt Sql) are always compiled, so
+# that all QML references stay valid. The option only decides whether the
+# feature is reachable by the user: it sets GlobalSettings.flightLogEnabled
+# (hides the menu entry and forces autoFlightDetection to false, which is the
+# single choke point for the Android foreground service and for "always"
+# location on iOS), and it decides whether the store-facing declarations below
+# end up in the generated AndroidManifest.xml and Info.plist.
+#
+
+if(FLIGHTLOG)
+    set(FLIGHTLOG_ANDROID_PERMISSIONS [[  <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>]])
+    set(FLIGHTLOG_ANDROID_SERVICE [[<service
+      android:name="de.akaflieg_freiburg.enroute.FlightLogService"
+      android:foregroundServiceType="location"
+      android:exported="false"/>]])
+    set(FLIGHTLOG_IOS_BACKGROUND_MODES [[<key>UIBackgroundModes</key>
+    <array>
+        <string>location</string>
+    </array>]])
+else()
+    set(FLIGHTLOG_ANDROID_PERMISSIONS "")
+    set(FLIGHTLOG_ANDROID_SERVICE "")
+    set(FLIGHTLOG_IOS_BACKGROUND_MODES "")
+endif()
+
+# Background running belongs to two features, not one, which is why the block above no
+# longer decides it and its FLIGHTLOG_ANDROID_BACKGROUND_RUNNING is gone.
+#
+# The flight log needs the Qt event loop alive to record a track while the app is away.
+# The companion link needs exactly the same thing: its setting "keep publishing while
+# this app is not on screen" holds a connectedDevice foreground service open, and a
+# foreground service does not help if Qt has suspended the loop behind it. The server
+# simply stops answering, the watch goes dark, and nothing on either device says why.
+#
+# The companion is compiled unconditionally and gated at runtime by a setting that is
+# off by default, so the answer here is always yes. It is a variable of its own rather
+# than a literal in the manifest, so that a build option for the companion, if one is
+# ever wanted, has a single place to change.
+set(ANDROID_BACKGROUND_RUNNING true)
+
+#
 # Configure files
 #
 
@@ -32,6 +77,12 @@ set(SOURCES
     ../3rdParty/KDSingleApplication/src/kdsingleapplication_lib.h
     ../3rdParty/KDSingleApplication/src/kdsingleapplication_localsocket_p.h
     ../3rdParty/sunset/src/sunset.h
+    companion/BleTransport.h
+    companion/CompanionServer.h
+    companion/HttpTransport.h
+    companion/MapAssets.h
+    companion/Protocol.h
+    companion/Snapshot.h
     dataManagement/DataManager.h
     dataManagement/Downloadable_Abstract.h
     dataManagement/Downloadable_MultiFile.h
@@ -145,6 +196,11 @@ set(SOURCES
 
     # C++ files
     ../3rdParty/sunset/src/sunset.cpp
+    companion/BleTransport.cpp
+    companion/CompanionServer.cpp
+    companion/HttpTransport.cpp
+    companion/MapAssets.cpp
+    companion/Snapshot.cpp
     dataManagement/DataManager.cpp
     dataManagement/Downloadable_Abstract.cpp
     dataManagement/Downloadable_MultiFile.cpp
@@ -256,8 +312,6 @@ set(SOURCES
     weather/TAF.cpp
     weather/WeatherDataProvider.cpp
     weather/Wind.cpp
-
-    ${HEADERS}
 )
 
 #
@@ -318,6 +372,7 @@ if(ANDROID)
         platform/FileExchange_Android.cpp
         platform/PlatformAdaptor_Android.h
         platform/PlatformAdaptor_Android.cpp
+        android/src/de/akaflieg_freiburg/enroute/FlightLogService.java
         android/src/de/akaflieg_freiburg/enroute/MobileAdaptor.java
         android/src/de/akaflieg_freiburg/enroute/ShareActivity.java
         android/src/de/akaflieg_freiburg/enroute/UsbSerialHelper.java
@@ -325,7 +380,7 @@ if(ANDROID)
     )
 
     # Copy manual and other files into the Android directories
-    file(COPY ${CMAKE_SOURCE_DIR}/3rdParty/enrouteManual DESTINATION android/assets)
+    file(COPY ${CMAKE_SOURCE_DIR}/3rdParty/enrouteManual DESTINATION android/assets PATTERN ".git*" EXCLUDE)
     file(COPY ${CMAKE_SOURCE_DIR}/generatedSources/src/android DESTINATION .)
     file(COPY ${CMAKE_SOURCE_DIR}/src/android DESTINATION .)
 
@@ -421,7 +476,7 @@ target_precompile_headers(${PROJECT_NAME}
 )
 
 # Install (the executable itself is installed by the shared rule near the end of this file)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/3rdParty/enrouteManual DESTINATION ${CMAKE_INSTALL_DOCDIR})
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/3rdParty/enrouteManual DESTINATION ${CMAKE_INSTALL_DOCDIR} PATTERN ".git*" EXCLUDE)
 endif()
 
 
@@ -526,6 +581,7 @@ if (IOS)
     #Resources
     set(bundle_resources
         "ios/Assets.xcassets"
+        "ios/cs.lproj"
         "ios/de.lproj"
         "ios/en.lproj"
         "ios/es.lproj"
@@ -555,6 +611,7 @@ target_include_directories(${PROJECT_NAME}
     ${CMAKE_SOURCE_DIR}/3rdParty/sunset/src
     ${CMAKE_SOURCE_DIR}/3rdParty/GSL/include
     ${CMAKE_SOURCE_DIR}/3rdParty/enrouteOGN/lib
+    companion
     dataManagement
     fileFormats
     flightlog
@@ -568,10 +625,13 @@ target_include_directories(${PROJECT_NAME}
     ui
     units
     weather
-    nunicode/include
 )
 
 set_source_files_properties(qml/items/Global.qml qml/items/SafeInsets.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+# The flight log is under active development; its QML is not linted until it is
+# done. Remove this when pages/FlightLogPage.qml and dialogs/FlightLogEntryEditor.qml
+# are clean under `cmake --build <dir> --target all_qmllint`.
+set_source_files_properties(qml/dialogs/FlightLogEntryEditor.qml qml/pages/FlightLogPage.qml PROPERTIES QT_QML_SKIP_QMLLINT TRUE)
 qt_add_qml_module(${PROJECT_NAME}
     URI akaflieg_freiburg.enroute
     VERSION 1.0
@@ -579,6 +639,7 @@ qt_add_qml_module(${PROJECT_NAME}
     DEPENDENCIES
     QtPositioning
     QtQuick
+    QtTextToSpeech
     QML_FILES
     qml/main.qml
     qml/dialogs/AddBTDeviceDialog.qml
@@ -600,23 +661,20 @@ qt_add_qml_module(${PROJECT_NAME}
     qml/dialogs/WaypointDescription.qml
     qml/dialogs/WaypointEditor.qml
     qml/items/AppWindow.qml
-    qml/items/+Material/AppWindow.qml
     qml/items/AutoSizingMenu.qml
     qml/items/DecoratedListView.qml
     qml/items/DecoratedScrollView.qml
     qml/items/DegreeInput.qml
+    qml/items/DialogLoader.qml
     qml/items/ElevationInput.qml
     qml/items/FilterField.qml
     qml/items/FlightMap.qml
     qml/items/FlightVector.qml
     qml/items/Footer.qml
-    qml/items/+Material/Footer.qml
     qml/items/Global.qml
     qml/items/Icon.qml
-    qml/items/+Material/Icon.qml
     qml/items/ImportManager.qml
     qml/items/MapButton.qml
-    qml/items/+Material/MapButton.qml
     qml/items/MapSet.qml
     qml/items/MFM.qml
     qml/items/MyTextField.qml
@@ -624,12 +682,12 @@ qt_add_qml_module(${PROJECT_NAME}
     qml/items/NotificationArea.qml
     qml/items/NotificationButton.qml
     qml/items/PageHeader.qml
-    qml/items/+Material/PageHeader.qml
     qml/items/RemainingRouteBar.qml
     qml/items/SafeInsets.qml
     qml/items/Sideview.qml
     qml/items/StandardHeader.qml
     qml/items/SwipeToDeleteDelegate.qml
+    qml/items/Toast.qml
     qml/items/Traffic.qml
     qml/items/TrafficLabel.qml
     qml/items/WaypointDelegate.qml
@@ -655,6 +713,7 @@ qt_add_qml_module(${PROJECT_NAME}
     qml/pages/Positioning.qml
     qml/pages/PressureAltitude.qml
     qml/pages/PrivacyPage.qml
+    qml/pages/CompanionPage.qml
     qml/pages/SettingsPage.qml
     qml/pages/TrafficReceiver.qml
     qml/pages/WaypointLibraryPage.qml
