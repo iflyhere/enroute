@@ -19,7 +19,8 @@
  ***************************************************************************/
 
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls.Material
+import QtQuick.Templates as T
 import QtQuick.Layouts
 import QtTextToSpeech
 
@@ -49,7 +50,7 @@ Page {
 
             onClicked: {
                 PlatformAdaptor.vibrateBrief()
-                stackView.pop()
+                Global.stackView.pop()
             }
         }
 
@@ -62,7 +63,7 @@ Page {
             anchors.leftMargin: 72
             anchors.right: headerMenuToolButton.left
 
-            text: stackView.currentItem.title
+            text: (Global.stackView.currentItem as T.Page).title
             elide: Label.ElideRight
             font.pixelSize: 20
             verticalAlignment: Qt.AlignVCenter
@@ -77,7 +78,7 @@ Page {
             icon.source: "/icons/material/ic_info_outline.svg"
             onClicked: {
                 PlatformAdaptor.vibrateBrief()
-                openManual("forward.html#settings-page")
+                Global.openManual("forward.html#settings-page")
             }
         }
 
@@ -159,7 +160,6 @@ Page {
                     glidingSectors.checked = !GlobalSettings.hideGlidingSectors
                 }
                 onToggled: {
-                    PlatformAdaptor.vibrateBrief()
                     GlobalSettings.hideGlidingSectors = !glidingSectors.checked
                 }
             }
@@ -210,7 +210,6 @@ Page {
                     nightMode.checked = GlobalSettings.nightMode
                 }
                 onToggled: {
-                    PlatformAdaptor.vibrateBrief()
                     GlobalSettings.nightMode = nightMode.checked
                 }
             }
@@ -325,7 +324,7 @@ Page {
                 Layout.fillWidth: true
                 onClicked: {
                     PlatformAdaptor.vibrateBrief()
-                    stackView.push("ConnectionManager.qml", {"appWindow": view})
+                    Global.stackView.push("ConnectionManager.qml")
                 }
             }
             ToolButton {
@@ -335,6 +334,30 @@ Page {
                     helpDialog.title = qsTr("Data Connections")
                     helpDialog.text = "<p>" + qsTr("Configure data connections to peripheral devices.") + "</p>"
                             + "<p>" + qsTr("Use this item to register traffic data receivers that connect via Bluetooth.") + "</p>"
+                    helpDialog.open()
+                }
+            }
+
+            WordWrappingItemDelegate {
+                id: companionDevices
+                text: qsTr("Companion Devices") +
+                        `<br><font color="#606060" size="2">` +
+                        CompanionServer.statusString +
+                        `</font>`
+                icon.source: "/icons/material/ic_watch.svg"
+                Layout.fillWidth: true
+                onClicked: {
+                    PlatformAdaptor.vibrateBrief()
+                    Global.stackView.push("CompanionPage.qml")
+                }
+            }
+            ToolButton {
+                icon.source: "/icons/material/ic_info_outline.svg"
+                onClicked: {
+                    PlatformAdaptor.vibrateBrief()
+                    helpDialog.title = qsTr("Companion Devices")
+                    helpDialog.text = "<p>" + qsTr("Enroute Flight Navigation can publish your flight route and your current position, so that a companion device such as a smartwatch can display them. This is switched off by default.") + "</p>"
+                            + "<p>" + qsTr("A companion device must know a pairing code, which is shown on this page. Anybody on the same Wi-Fi network who knows that code can read your route and your position, so do not switch this on while connected to a public network.") + "</p>"
                     helpDialog.open()
                 }
             }
@@ -349,7 +372,6 @@ Page {
                     ignoreSSL.checked = GlobalSettings.ignoreSSLProblems
                 }
                 onToggled: {
-                    PlatformAdaptor.vibrateBrief()
                     GlobalSettings.ignoreSSLProblems = ignoreSSL.checked
                 }
             }
@@ -368,7 +390,10 @@ Page {
                 Layout.fillWidth: true
                 icon.source: "/icons/material/ic_lock.svg"
                 text: qsTr("Clear Password Storage")
-                onClicked: clearPasswordDialog.open()
+                onClicked: {
+                    PlatformAdaptor.vibrateBrief()
+                    clearPasswordDialog.open()
+                }
                 visible: !PasswordDB.empty
             }
             ToolButton {
@@ -395,7 +420,10 @@ Page {
                 Layout.columnSpan: 2
                 icon.source: "/icons/material/ic_info_outline.svg"
                 text: qsTr("Connect to a traffic receiver…")
-                onClicked: openManual("forward.html#senseandavoid")
+                onClicked: {
+                    PlatformAdaptor.vibrateBrief()
+                    Global.openManual("forward.html#senseandavoid")
+                }
             }
 
             WordWrappingItemDelegate {
@@ -403,7 +431,10 @@ Page {
                 Layout.columnSpan: 2
                 icon.source: "/icons/material/ic_info_outline.svg"
                 text: qsTr("Connect to a flight simulator…")
-                onClicked: openManual("forward.html#simulator-tutorial")
+                onClicked: {
+                    PlatformAdaptor.vibrateBrief()
+                    Global.openManual("forward.html#simulator-tutorial")
+                }
             }
 
             Item { // Spacer
@@ -446,7 +477,7 @@ Page {
 
         onAccepted: {
             PasswordDB.clear()
-            toast.doToast(qsTr("Password storage cleared"))
+            Global.toast.doToast(qsTr("Password storage cleared"))
         }
 
     }
@@ -473,6 +504,7 @@ Page {
                 snapMode: Slider.SnapAlways
                 value: GlobalSettings.fontSize
                 onValueChanged: GlobalSettings.fontSize = fontSlider.value
+                onPressedChanged: if (!pressed) PlatformAdaptor.vibrateBrief()
             }
             Label {
                 Layout.fillWidth: true
@@ -512,12 +544,14 @@ Page {
                 enabled: slider.from < slider.to
                 text: qsTr("Set altitude limit")
                 Layout.fillWidth: true
+                onClicked: PlatformAdaptor.vibrateBrief()
             }
 
             Slider {
                 id: slider
                 Layout.fillWidth: true
                 enabled: (from < to) && (altLimitCheck.checked)
+                onPressedChanged: if (!pressed) PlatformAdaptor.vibrateBrief()
                 from: {
                     var positionInfo = PositionProvider.positionInfo
                     if (!positionInfo.isValid())
@@ -679,26 +713,31 @@ Page {
                 SwitchDelegate {
                     id: sd1
                     Layout.fillWidth: true
+                    onClicked: PlatformAdaptor.vibrateBrief()
                     text: qsTr("Information • Generic")
                 }
                 SwitchDelegate {
                     id: sd2
                     Layout.fillWidth: true
+                    onClicked: PlatformAdaptor.vibrateBrief()
                     text: qsTr("Information • Navigation")
                 }
                 SwitchDelegate {
                     id: sd3
                     Layout.fillWidth: true
+                    onClicked: PlatformAdaptor.vibrateBrief()
                     text: qsTr("Warning • Generic")
                 }
                 SwitchDelegate {
                     id: sd4
                     Layout.fillWidth: true
+                    onClicked: PlatformAdaptor.vibrateBrief()
                     text: qsTr("Warning • Navigation")
                 }
                 SwitchDelegate {
                     id: sd5
                     Layout.fillWidth: true
+                    onClicked: PlatformAdaptor.vibrateBrief()
                     text: qsTr("Alert")
                 }
             }

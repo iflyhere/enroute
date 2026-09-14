@@ -18,6 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QCoreApplication>
 #include <QNetworkAccessManager>
 #include <QStandardPaths>
 #include <QSysInfo>
@@ -426,7 +427,7 @@ auto Librarian::exists(Librarian::Library library, const QString &baseName) -> b
 }
 
 
-auto Librarian::get(Librarian::Library library, const QString &baseName) -> QObject *
+auto Librarian::get(Librarian::Library library, const QString &baseName) -> Navigation::FlightRoute *
 {
     if (library == Routes)
     {
@@ -445,6 +446,16 @@ auto Librarian::get(Librarian::Library library, const QString &baseName) -> QObj
     }
 
     return nullptr;
+}
+
+
+auto Librarian::manualLocation() -> QString
+{
+#if defined(Q_OS_IOS)
+    return QCoreApplication::applicationDirPath()+u"/enrouteManual/"_s;
+#else
+    return QStringLiteral(MANUAL_LOCATION);
+#endif
 }
 
 

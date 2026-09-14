@@ -18,11 +18,14 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+pragma ComponentBehavior: Bound
+
 import QtPositioning
 import QtQml
 import QtQml.Models
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls.Material
+import QtQuick.Templates as T
 import QtQuick.Dialogs
 import QtQuick.Effects
 import QtQuick.Layouts
@@ -58,7 +61,7 @@ Page {
 
             onClicked: {
                 PlatformAdaptor.vibrateBrief()
-                stackView.pop()
+                Global.stackView.pop()
             }
         }
 
@@ -71,7 +74,7 @@ Page {
             anchors.leftMargin: 72
             anchors.right: headerMenuToolButton.left
 
-            text: stackView.currentItem.title
+            text: (Global.stackView.currentItem as T.Page).title
             elide: Label.ElideRight
             font.pixelSize: 20
             verticalAlignment: Qt.AlignVCenter
@@ -107,7 +110,7 @@ Page {
                     onTriggered: {
                         PlatformAdaptor.vibrateBrief()
                         highlighted = false
-                        stackView.push("FlightRouteLibrary.qml")
+                        Global.stackView.push("FlightRouteLibrary.qml")
                     }
                 }
 
@@ -133,14 +136,14 @@ Page {
                     onTriggered: {
                         PlatformAdaptor.vibrateBrief()
                         highlighted = false
-                        if (isIos) {
+                        if (flightRoutePage.isIos) {
                             Global.dialogLoader.active = false
                             Global.dialogLoader.setSource("../dialogs/LongTextDialog.qml", {
                                                               title: qsTr("Import files"),
                                                               text: qsTr("Locate your file in the browser, then select 'Open with' from the share menu, and choose Enroute"),
                                                               standardButtons: Dialog.Ok})
                             Global.dialogLoader.active = true
-                        } else if (isAndroid) {
+                        } else if (flightRoutePage.isAndroid) {
                             FileExchange.openFilePicker("")
                         } else {
                             importFileDialog.open()
@@ -175,7 +178,7 @@ Page {
                 }
 
                 AutoSizingMenu {
-                    title: isAndroidOrIos ? qsTr("Share…") : qsTr("Export…")
+                    title: flightRoutePage.isAndroidOrIos ? qsTr("Share…") : qsTr("Export…")
                     enabled: (Navigator.flightRoute.size > 0) && (sv.currentIndex === 0)
 
                     MenuItem {
@@ -187,7 +190,7 @@ Page {
                             parent.highlighted = false
                             var errorString = FileExchange.shareContent(Navigator.flightRoute.toGeoJSON(), "application/geo+json", "geojson", Navigator.flightRoute.suggestedFilename())
                             if (errorString === "abort") {
-                                toast.doToast(qsTr("Aborted"))
+                                Global.toast.doToast(qsTr("Aborted"))
                                 return
                             }
                             if (errorString !== "") {
@@ -195,10 +198,10 @@ Page {
                                 shareErrorDialog.open()
                                 return
                             }
-                            if (isAndroid)
-                                toast.doToast(qsTr("Flight route shared"))
-                            else (!isIos)
-                                toast.doToast(qsTr("Flight route exported"))
+                            if (flightRoutePage.isAndroid)
+                                Global.toast.doToast(qsTr("Flight route shared"))
+                            else (!flightRoutePage.isIos)
+                                Global.toast.doToast(qsTr("Flight route exported"))
                         }
                     }
 
@@ -211,7 +214,7 @@ Page {
                             parent.highlighted = false
                             var errorString = FileExchange.shareContent(Navigator.flightRoute.toGpx(), "application/gpx+xml", "gpx", Navigator.flightRoute.suggestedFilename())
                             if (errorString === "abort") {
-                                toast.doToast(qsTr("Aborted"))
+                                Global.toast.doToast(qsTr("Aborted"))
                                 return
                             }
                             if (errorString !== "") {
@@ -219,10 +222,10 @@ Page {
                                 shareErrorDialog.open()
                                 return
                             }
-                            if (isAndroid)
-                                toast.doToast(qsTr("Flight route shared"))
+                            if (flightRoutePage.isAndroid)
+                                Global.toast.doToast(qsTr("Flight route shared"))
                             else
-                                toast.doToast(qsTr("Flight route exported"))
+                                Global.toast.doToast(qsTr("Flight route exported"))
                         }
                     }
 
@@ -235,7 +238,7 @@ Page {
                             parent.highlighted = false
                             var errorString = FileExchange.shareContent(Navigator.flightRoute.toFpl(), "application/xml", "fpl", Navigator.flightRoute.suggestedFilename())
                             if (errorString === "abort") {
-                                toast.doToast(qsTr("Aborted"))
+                                Global.toast.doToast(qsTr("Aborted"))
                                 return
                             }
                             if (errorString !== "") {
@@ -243,10 +246,10 @@ Page {
                                 shareErrorDialog.open()
                                 return
                             }
-                            if (isAndroid)
-                                toast.doToast(qsTr("Flight route shared"))
+                            if (flightRoutePage.isAndroid)
+                                Global.toast.doToast(qsTr("Flight route shared"))
                             else
-                                toast.doToast(qsTr("Flight route exported"))
+                                Global.toast.doToast(qsTr("Flight route exported"))
                         }
                     }
 
@@ -259,7 +262,7 @@ Page {
                             parent.highlighted = false
                             var errorString = FileExchange.shareContent(Navigator.flightRoute.toPln(), "application/xml", "pln", Navigator.flightRoute.suggestedFilename())
                             if (errorString === "abort") {
-                                toast.doToast(qsTr("Aborted"))
+                                Global.toast.doToast(qsTr("Aborted"))
                                 return
                             }
                             if (errorString !== "") {
@@ -267,10 +270,10 @@ Page {
                                 shareErrorDialog.open()
                                 return
                             }
-                            if (isAndroid)
-                                toast.doToast(qsTr("Flight route shared"))
+                            if (flightRoutePage.isAndroid)
+                                Global.toast.doToast(qsTr("Flight route shared"))
                             else
-                                toast.doToast(qsTr("Flight route exported"))
+                                Global.toast.doToast(qsTr("Flight route exported"))
                         }
                     }
                 }
@@ -342,7 +345,7 @@ Page {
                                 shareErrorDialogLabel.text = errorString
                                 shareErrorDialog.open()
                             } else
-                                toast.doToast(qsTr("Flight route opened in other app"))
+                                Global.toast.doToast(qsTr("Flight route opened in other app"))
                         }
                     }
 
@@ -359,7 +362,7 @@ Page {
                                 shareErrorDialogLabel.text = errorString
                                 shareErrorDialog.open()
                             } else
-                                toast.doToast(qsTr("Flight route opened in other app"))
+                                Global.toast.doToast(qsTr("Flight route opened in other app"))
                         }
                     }
 
@@ -376,7 +379,7 @@ Page {
                                 shareErrorDialogLabel.text = errorString
                                 shareErrorDialog.open()
                             } else
-                                toast.doToast(qsTr("Flight route opened in other app"))
+                                Global.toast.doToast(qsTr("Flight route opened in other app"))
                         }
                     }
 
@@ -393,7 +396,7 @@ Page {
                                 shareErrorDialogLabel.text = errorString
                                 shareErrorDialog.open()
                             } else
-                                toast.doToast(qsTr("Flight route opened in other app"))
+                                Global.toast.doToast(qsTr("Flight route opened in other app"))
                         }
                     }
 
@@ -411,12 +414,12 @@ Page {
                         if (flightPlanText !== "") {
                             var success = PlatformAdaptor.setClipboardText(flightPlanText)
                             if (success) {
-                                toast.doToast(qsTr("Flight plan copied to clipboard"))
+                                Global.toast.doToast(qsTr("Flight plan copied to clipboard"))
                             } else {
-                                toast.doToast(qsTr("Failed to copy flight plan"))
+                                Global.toast.doToast(qsTr("Failed to copy flight plan"))
                             }
                         } else {
-                            toast.doToast(qsTr("No flight route to copy"))
+                            Global.toast.doToast(qsTr("No flight route to copy"))
                         }
                     }
                 }
@@ -432,7 +435,7 @@ Page {
                         highlighted = false
                         if (Librarian.contains(Navigator.flightRoute)) {
                             Navigator.flightRoute.clear()
-                            toast.doToast(qsTr("Flight route cleared"))
+                            Global.toast.doToast(qsTr("Flight route cleared"))
                         } else
                             clearDialog.open()
                     }
@@ -446,7 +449,7 @@ Page {
                         PlatformAdaptor.vibrateBrief()
                         highlighted = false
                         Navigator.flightRoute.reverse()
-                        toast.doToast(qsTr("Flight route reversed"))
+                        Global.toast.doToast(qsTr("Flight route reversed"))
                     }
                 }
 
@@ -464,8 +467,8 @@ Page {
         rightPadding: SafeInsets.right
 
         currentIndex: sv.currentIndex
-        TabButton { text: qsTr("Route") }
-        TabButton { text: qsTr("Wind") }
+        TabButton { text: qsTr("Route"); onClicked: PlatformAdaptor.vibrateBrief() }
+        TabButton { text: qsTr("Wind"); onClicked: PlatformAdaptor.vibrateBrief() }
     }
 
     SwipeView{
@@ -759,7 +762,7 @@ Page {
                                                     wpMenu.close() // Necessary on some devices, or else menu will stay open
 
                                                     WaypointLibrary.add(dragItem.modelData)
-                                                    toast.doToast(qsTr("Added %1 to waypoint library.").arg(dragItem.modelData.extendedName))
+                                                    Global.toast.doToast(qsTr("Added %1 to waypoint library.").arg(dragItem.modelData.extendedName))
                                                 }
                                             }
 
@@ -803,9 +806,9 @@ Page {
 
             GridLayout {
                 anchors.left: parent.left
-                anchors.leftMargin: font.pixelSize
+                anchors.leftMargin: flightRoutePage.font.pixelSize
                 anchors.right: parent.right
-                anchors.rightMargin: font.pixelSize
+                anchors.rightMargin: flightRoutePage.font.pixelSize
 
                 columns: 3
 
@@ -1011,6 +1014,7 @@ Page {
             id: waypointDelegate
 
             WordWrappingItemDelegate {
+                required property var model
                 text: model.modelData.twoLineTitle
                 icon.source: model.modelData.icon
 
@@ -1101,7 +1105,10 @@ Page {
                     text: (textInput.filter === "")
                           ? qsTr("<h3>Sorry!</h3><p>No waypoints available. Please make sure that an aviation map is installed.</p>")
                           : qsTr("<h3>Sorry!</h3><p>No waypoints match your filter criteria.</p>")
-                    onLinkActivated: Qt.openUrlExternally(link)
+                    onLinkActivated: (link) => {
+                        PlatformAdaptor.vibrateBrief()
+                        Qt.openUrlExternally(link)
+                    }
                 }
 
             }
@@ -1127,7 +1134,6 @@ Page {
         modal: true
 
         onAccepted: {
-            PlatformAdaptor.vibrateBrief()
             let newWP = waypoint.copy()
             newWP.name = newName
             newWP.notes = newNotes
@@ -1147,13 +1153,11 @@ Page {
         text: qsTr("Once erased, the current flight route cannot be restored.")
 
         onAccepted: {
-            PlatformAdaptor.vibrateBrief()
             Navigator.flightRoute.clear()
-            toast.doToast(qsTr("Flight route cleared"))
+            Global.toast.doToast(qsTr("Flight route cleared"))
         }
 
         onRejected: {
-            PlatformAdaptor.vibrateBrief()
             clearDialog.close()
         }
     }
@@ -1163,8 +1167,9 @@ Page {
         anchors.fill: parent
 
         onLoaded: {
-            item.modal = true
-            item.open()
+            var dialog = item as Popup
+            dialog.modal = true
+            dialog.open()
         }
     }
 
@@ -1198,8 +1203,6 @@ Page {
         property int index: -1 // Index of waypoint in flight route
 
         onAccepted: {
-            PlatformAdaptor.vibrateBrief()
-
             var newWP = waypoint.copy()
             newWP.name = newName
             newWP.notes = newNotes

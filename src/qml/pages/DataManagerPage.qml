@@ -19,7 +19,8 @@
  ***************************************************************************/
 
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls.Material
+import QtQuick.Templates as T
 import QtQuick.Dialogs
 import QtQuick.Layouts
 
@@ -29,8 +30,6 @@ Page {
     id: pg
     objectName: "DataManagerPage"
 
-    required property var dialogLoader
-    required property var stackView
     property bool isIos: Qt.platform.os === "ios"
     property bool isAndroid: Qt.platform.os === "android"
 
@@ -163,7 +162,7 @@ Page {
 
             onClicked: {
                 PlatformAdaptor.vibrateBrief()
-                pg.stackView.pop()
+                Global.stackView.pop()
             }
         }
 
@@ -176,7 +175,7 @@ Page {
             anchors.leftMargin: 72
             anchors.right: headerMenuToolButton.left
 
-            text: pg.stackView.currentItem.title
+            text: (Global.stackView.currentItem as T.Page).title
             elide: Label.ElideRight
             font.pixelSize: 20
             verticalAlignment: Qt.AlignVCenter
@@ -310,12 +309,15 @@ Page {
         currentIndex: sv.currentIndex
         TabButton {
             text: qsTr("Maps")
+            onClicked: PlatformAdaptor.vibrateBrief()
         }
         TabButton {
             text: "VAC"
+            onClicked: PlatformAdaptor.vibrateBrief()
         }
         TabButton {
             text: qsTr("Data")
+            onClicked: PlatformAdaptor.vibrateBrief()
         }
     }
 
@@ -361,7 +363,7 @@ Page {
                 // DecoratedListView must keep working. The field is reached by
                 // tap or by Tab.
                 focus: mapsTab.SwipeView.isCurrentItem
-                model: Array.from(DataManager.mapSets.downloadables)
+                model: Array.from(DataManager.mapSets.downloadables) // qmllint disable unresolved-type
                             .filter((mapSet) => Librarian.matches(mapSet.objectName, mapsFilter.filter))
                 delegate: MapSet {}
 
@@ -461,7 +463,10 @@ Page {
                     text: VACLibrary.isEmpty
                           ? Global.withLinkColor("<p>" + qsTr("There are no approach charts installed. The <a href='x'>manual</a> explains how to install and use them.") + "</p>")
                           : qsTr("<h3>Sorry!</h3><p>No approach charts match your filter.</p>")
-                    onLinkActivated: openManual("forward.html#vac-tutorial")
+                    onLinkActivated: {
+                        PlatformAdaptor.vibrateBrief()
+                        Global.openManual("forward.html#vac-tutorial")
+                    }
 
                 }
             }
@@ -472,7 +477,7 @@ Page {
             Layout.fillWidth: true
             clip: true
             focus: SwipeView.isCurrentItem
-            model: DataManager.databases.downloadables
+            model: DataManager.databases.downloadables // qmllint disable unresolved-type
             delegate: MapSet {}
 
             section.property: "section"
@@ -636,11 +641,11 @@ Page {
     Connections {
         target: DataManager
         function onError (message) {
-            pg.dialogLoader.active = false
-            pg.dialogLoader.title = qsTr("Download Error")
-            pg.dialogLoader.text = qsTr("<p>Failed to download the list of aviation maps.</p><p>Reason: %1.</p>").arg(message)
-            pg.dialogLoader.source = "dialogs/ErrorDialog.qml"
-            pg.dialogLoader.active = true
+            Global.textDialogLoader.active = false
+            Global.textDialogLoader.title = qsTr("Download Error")
+            Global.textDialogLoader.text = qsTr("<p>Failed to download the list of aviation maps.</p><p>Reason: %1.</p>").arg(message)
+            Global.textDialogLoader.source = "dialogs/ErrorDialog.qml"
+            Global.textDialogLoader.active = true
         }
     }
 
@@ -654,7 +659,6 @@ Page {
               + qsTr("Charts from downloaded collections are not affected; remove them by deleting the corresponding maps.")
 
         onAccepted: {
-            PlatformAdaptor.vibrateBrief()
             VACLibrary.clear()
             Global.toast.doToast(qsTr("Approach chart library cleared"))
         }

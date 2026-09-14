@@ -28,6 +28,13 @@
 #include <QQmlEngine>
 
 
+// The companion protocol encoder reads the members below. They are exposed to QML as
+// MEMBER properties, which generates no getter functions, so this friendship is what
+// gives the encoder compile-time-checked access.
+namespace Companion {
+struct SnapshotAccess;
+} // namespace Companion
+
 namespace Navigation {
 
 class Navigator;
@@ -49,6 +56,7 @@ class RemainingRouteInfo {
     /*! \brief Comparison */
     friend bool operator==(const Navigation::RemainingRouteInfo&, const Navigation::RemainingRouteInfo&) = default;
     friend class Navigation::Navigator;
+    friend struct Companion::SnapshotAccess;
 
 public:
     /*! \brief Status */
