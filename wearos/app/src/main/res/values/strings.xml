@@ -7,6 +7,12 @@
   adds res/values-<code>/strings.xml and fills in the same identifiers; nothing else
   needs to change. See wearos/README.md.
 
+  Strings marked translatable="false" are deliberately the same in every language:
+  proper nouns, brand names, instrument markings and radio abbreviations. A pilot
+  looking for "NOTAM" is not helped by a translation of it, and Android Lint fails the
+  build on anything else that is missing, which is what keeps a real gap from hiding
+  behind the fallback to this file.
+
   Two rules that matter more here than on a phone. Keep it short – this is a round
   480 pixel face read at arm's length, and a label that wraps to three lines is a label
   that is not read. And leave the aviation vocabulary alone: NOTAM, METAR, FIS, QNH and
@@ -14,11 +20,11 @@
   is not helped by a translation of it.
 -->
 <resources>
-    <string name="app_name">Enroute</string>
+    <string name="app_name" translatable="false">Enroute</string>
 
     <!-- The foreground service that keeps the link alive -->
     <string name="session_channel_name">Flight session</string>
-    <string name="session_notification_title">Enroute</string>
+    <string name="session_notification_title" translatable="false">Enroute</string>
     <string name="session_notification_text">Connected to your phone</string>
     <string name="session_stop">Stop</string>
 
@@ -27,7 +33,7 @@
     <string name="page_map">Map</string>
     <string name="page_instruments">Instruments</string>
     <string name="page_traffic">Traffic</string>
-    <string name="page_notam">NOTAM</string>
+    <string name="page_notam" translatable="false">NOTAM</string>
     <string name="page_nearby">Nearby</string>
     <string name="page_weather">Weather</string>
     <string name="page_frequencies">Frequencies</string>
@@ -40,8 +46,8 @@
     <string name="chart_automatic">Automatic</string>
     <string name="chart_off">Off</string>
     <string name="link_automatic">Automatic</string>
-    <string name="link_wifi">Wi-Fi</string>
-    <string name="link_bluetooth">Bluetooth</string>
+    <string name="link_wifi" translatable="false">Wi-Fi</string>
+    <string name="link_bluetooth" translatable="false">Bluetooth</string>
 
     <!-- Pairing with a phone -->
     <string name="connect_phone">Phone</string>
@@ -73,11 +79,11 @@
 
     <!-- The instrument faces -->
     <string name="instrument_no_position">No position\nfrom the phone</string>
-    <string name="instrument_altitude">ALT</string>
+    <string name="instrument_altitude" translatable="false">ALT</string>
     <string name="instrument_altitude_note">GPS, AMSL</string>
-    <string name="instrument_speed">GS</string>
+    <string name="instrument_speed" translatable="false">GS</string>
     <string name="instrument_speed_note">ground speed</string>
-    <string name="instrument_vertical_speed">VS</string>
+    <string name="instrument_vertical_speed" translatable="false">VS</string>
     <string name="instrument_vertical_speed_note">from GPS</string>
 
     <!-- Frequencies -->
@@ -85,14 +91,14 @@
     <string name="freq_information_service">Information service</string>
     <string name="freq_information">Information</string>
     <string name="freq_none">No frequencies\nfor this position or route</string>
-    <string name="freq_kind_information">INFO</string>
-    <string name="freq_kind_communication">COM</string>
-    <string name="freq_kind_navaid">NAV</string>
+    <string name="freq_kind_information" translatable="false">INFO</string>
+    <string name="freq_kind_communication" translatable="false">COM</string>
+    <string name="freq_kind_navaid" translatable="false">NAV</string>
     <string name="freq_kind_other">OTHER</string>
-    <string name="freq_unknown">---.---</string>
+    <string name="freq_unknown" translatable="false">---.---</string>
 
     <!-- NOTAM -->
-    <string name="notam_title">NOTAM</string>
+    <string name="notam_title" translatable="false">NOTAM</string>
     <string name="notam_waiting">Waiting for the phone</string>
     <string name="notam_no_route">no route</string>
     <string name="notam_listed">%1$d listed</string>
@@ -190,5 +196,5 @@
     <string name="notam_no_data">No data</string>
     <string name="notam_fixed_radius">a fixed radius</string>
     <string name="traffic_drawn">%1$d of %2$d</string>
-    <string name="traffic_warning_direction">%1$s %2$s</string>
+    <string name="traffic_warning_direction" translatable="false">%1$s %2$s</string>
 </resources>

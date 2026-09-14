@@ -34,35 +34,28 @@ import org.junit.Test
  *
  * Not every string wants translating. NOTAM, ATIS, ALT, GS, Wi-Fi and the frequencies
  * are the same words in a German cockpit, and translating them would make the display
- * harder to read. Those are listed here by name, so that leaving one alone is a decision
- * somebody wrote down rather than an omission nobody noticed.
+ * harder to read. Those carry translatable="false" in the source file, which is where
+ * Android Lint and a translator's tooling look too, so this test reads the same
+ * declaration rather than keeping a list of its own beside it.
+ *
+ * It kept a list once, and "%1$d of %2$d" was on it -- a string with an English word
+ * in the middle. Only Lint noticed, because a list and a file can disagree.
  */
 class TranslationTest {
 
-    /**
-     * Identifiers that are deliberately the same in every language.
-     *
-     * Aviation vocabulary, unit abbreviations and proper nouns.
-     */
-    private val sameEverywhere = setOf(
-        "app_name",
-        "session_notification_title",
-        "page_notam",
-        "notam_title",
-        "link_wifi",
-        "link_bluetooth",
-        "instrument_altitude",
-        "instrument_speed",
-        "instrument_vertical_speed",
-        "freq_kind_information",
-        "freq_kind_communication",
-        "freq_kind_navaid",
-        "freq_unknown",
-        "traffic_drawn",
-        "traffic_warning_direction",
-    )
-
     private val resources = File("src/main/res")
+
+    /**
+     * The identifiers the source file declares as the same in every language.
+     *
+     * Read from translatable="false" rather than listed here: one declaration, seen by
+     * this test, by Android Lint and by whoever translates the file next.
+     */
+    private val sameEverywhere: Set<String>
+        get() = UNTRANSLATABLE
+            .findAll(File(resources, "values/strings.xml").readText())
+            .map { match -> match.groupValues[1] }
+            .toSet()
 
     @Test
     fun `the source language exists and is not empty`() {
@@ -119,13 +112,21 @@ class TranslationTest {
     }
 
     @Test
-    fun `every string that is left untranslated is one that was named`() {
-        // The other direction of the same rule: a name on the list that has since been
-        // translated, or deleted, is a stale exemption hiding the next real omission.
-        val source = ids(File(resources, "values/strings.xml"))
-        val unknown = (sameEverywhere - source).sorted()
-        assertEquals("the exemption list names strings that no longer exist: " + unknown,
-            emptyList<String>(), unknown)
+    fun `nothing is marked untranslatable and translated at the same time`() {
+        // A contradiction rather than a gap: the source says a string is the same in
+        // every language and a translation disagrees. One of them is wrong, and a
+        // reader has no way to tell which.
+        val exempt = sameEverywhere
+        assertTrue("no string is marked translatable=false at all", exempt.isNotEmpty())
+        for (translation in translations()) {
+            val both = (ids(translation) intersect exempt).sorted()
+            assertEquals(
+                translation.parentFile.name +
+                    " translates strings the source marks untranslatable: " + both,
+                emptyList<String>(),
+                both,
+            )
+        }
     }
 
     private fun translations(): List<File> =
@@ -147,6 +148,8 @@ class TranslationTest {
         PLACEHOLDER.findAll(text).map { match -> match.value }.toList()
 
     private companion object {
+        val UNTRANSLATABLE =
+            Regex("""<string name="([^"]+)"[^>]*translatable="false"""")
         val NAMED = Regex("""<string name="([^"]+)"[^>]*>(.*?)</string>""", RegexOption.DOT_MATCHES_ALL)
         val PLACEHOLDER = Regex("""%\d+\$[sd]""")
     }
