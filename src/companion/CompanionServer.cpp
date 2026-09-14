@@ -25,8 +25,12 @@
 #include <QRandomGenerator>
 
 #if defined(Q_OS_ANDROID)
+// QCoreApplication, not a private header: QNativeInterface::QAndroidApplication is
+// public API and comes with it, which is how FlightLog and FileExchange_Android reach
+// the same context. The private include worked against a local Qt that happened to
+// ship private headers and failed everywhere else.
+#include <QCoreApplication>
 #include <QJniObject>
-#include <QtCore/private/qandroidextras_p.h>
 #endif
 
 #include "GlobalSettings.h"
