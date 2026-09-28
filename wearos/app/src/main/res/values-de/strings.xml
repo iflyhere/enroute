@@ -65,6 +65,7 @@
     <!-- The map, and the route view it falls back to -->
     <string name="map_no_route">Keine Route</string>
     <string name="map_route_only">NUR ROUTE\nkeine Kartendaten vom Telefon</string>
+    <string name="map_no_position">Keine Position\nvom Telefon</string>
 
     <!-- The instrument faces -->
     <string name="instrument_no_position">Keine Position\nvom Telefon</string>

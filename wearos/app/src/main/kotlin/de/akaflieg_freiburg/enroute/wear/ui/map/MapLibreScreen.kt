@@ -256,6 +256,21 @@ fun MapLibreScreen(
             )
         }
 
+        // Said in words, and where the aircraft would be. Without a position the map
+        // stays where the aircraft was last seen, on purpose (see cameraCentre()), and
+        // a map standing still looks exactly like a map following an aircraft that is
+        // standing still. The symbol going missing is too quiet a way to tell them
+        // apart at a glance.
+        if (ownPosition?.point == null) {
+            MapText(
+                text = stringResource(R.string.map_no_position),
+                labelColour = labelColour,
+                haloColour = haloColour,
+                fontSize = 13.sp,
+                modifier = Modifier.align(Alignment.Center),
+            )
+        }
+
     }
 
     // The address inside every tile URL comes from the style, and the style is loaded
