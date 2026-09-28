@@ -408,6 +408,14 @@ private class MapHolder {
     var style: Style? = null
 
     /**
+     * Where the aircraft was the last time the phone knew.
+     *
+     * Kept so that a dropout leaves the map where the aircraft was rather than sending
+     * it back to the departure; see cameraCentre().
+     */
+    var lastKnownPosition: GeoPoint? = null
+
+    /**
      * The style this map is currently showing.
      *
      * Kept because the view now outlives the page, and the style carries the phone's
@@ -582,16 +590,21 @@ private class MapHolder {
     ) {
         val currentMap = map ?: return
 
+        position?.point?.let { lastKnownPosition = it }
+
         // With neither a position nor a route there is still something better to do
         // than nothing: the phone says where its maps are. Doing nothing leaves the
         // renderer at its own default of zero north, zero east, at zoom zero, which
         // is a grey screen because no aviation map covers it.
-        val centre = position?.point
-            ?: route?.waypoints?.firstOrNull()?.point
-            ?: fallbackCentre
-            ?: return
+        val centre = cameraCentre(
+            position = position?.point,
+            lastKnown = lastKnownPosition,
+            routeStart = route?.waypoints?.firstOrNull()?.point,
+            fallback = fallbackCentre,
+        ) ?: return
 
         val useFallbackZoom = position?.point == null &&
+            lastKnownPosition == null &&
             route?.waypoints.isNullOrEmpty() &&
             fallbackZoom > 0.0
 

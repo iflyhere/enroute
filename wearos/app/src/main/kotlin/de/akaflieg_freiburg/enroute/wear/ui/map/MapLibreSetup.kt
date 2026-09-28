@@ -21,6 +21,7 @@ package de.akaflieg_freiburg.enroute.wear.ui.map
 
 import android.content.Context
 import android.util.Log
+import de.akaflieg_freiburg.enroute.wear.domain.GeoPoint
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -188,6 +189,30 @@ fun zoomForHalfSpan(halfSpanMetres: Double, radiusPixels: Float, latitudeDeg: Do
     val zoom = ln(equatorial / metresPerPixel) / ln(2.0)
     return min(MAX_ZOOM, max(MIN_ZOOM, zoom))
 }
+
+/**
+ * Where the map is centred, in order of preference.
+ *
+ * The aircraft when the phone knows where it is. Where it was last known to be when the
+ * fix has dropped out -- not the departure, which is where this used to fall back to,
+ * so that a lost fix in flight snapped the map back to the aerodrome the pilot took off
+ * from and left it there. The route's first waypoint only before there has ever been a
+ * fix, and the phone's own map centre when there is no route either.
+ *
+ * @param position The aircraft now, or null when the phone has no current fix
+ *
+ * @param lastKnown Where the aircraft was the last time there was one
+ *
+ * @param routeStart The route's first waypoint
+ *
+ * @param fallback The centre of the phone's downloaded maps
+ */
+fun cameraCentre(
+    position: GeoPoint?,
+    lastKnown: GeoPoint?,
+    routeStart: GeoPoint?,
+    fallback: GeoPoint?,
+): GeoPoint? = position ?: lastKnown ?: routeStart ?: fallback
 
 // Metres per pixel at zoom 0 on the equator, for a 256 pixel tile.
 private const val EQUATOR_METRES_PER_PIXEL = 156543.03392804097
