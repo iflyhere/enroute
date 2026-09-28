@@ -19,6 +19,7 @@
 
 package de.akaflieg_freiburg.enroute;
 
+import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -26,6 +27,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.IBinder;
@@ -41,17 +43,28 @@ import android.os.PowerManager;
  * minutes and eventually none at all. A phone that has gone to sleep in a cockpit mount
  * is exactly the case this feature exists for.
  *
+ * A location service as well as a connected-device one. A link that stays up is worth
+ * nothing if what travels over it stops changing: Android gives an app that is not on
+ * screen no position at all unless a foreground service of type location runs, so with
+ * the phone in a pocket the frames kept reaching the watch while the aircraft in them
+ * stood still, and twenty seconds later the phone stopped sending a position at all.
+ * That was found after a real flight, as a map that did not follow the aircraft.
+ *
  * Deliberately a service of its own rather than a second job for FlightLogService. That
- * one is a location service started by the flight log, and its type says so; this one
- * neither reads a position nor belongs to the flight log, and joining them would mean
- * either the companion holding a location service open or the flight log claiming to be
- * a connected device.
+ * one belongs to the flight log, which starts and stops it and posts notifications of its
+ * own through it; the companion has to run while the flight log is off, and it is the one
+ * with a connected device to keep.
  */
 public class CompanionService extends Service {
 
     private static final String CHANNEL_ID = "companion_link";
     private static final int NOTIFICATION_ID = 4711;
     private static final String WAKE_TAG = "enroute:companion";
+
+    // Whether the service runs, and whether it runs with the location type. Written by
+    // the service on the main thread and read by refresh() on Qt's, hence volatile.
+    private static volatile boolean running = false;
+    private static volatile boolean withLocation = false;
 
     private PowerManager.WakeLock wakeLock;
 
@@ -65,6 +78,7 @@ public class CompanionService extends Service {
         createNotificationChannel();
         startInForeground();
         acquireWakeLock();
+        running = true;
 
         // Not sticky: if the system kills this, bringing it back behind the pilot's back
         // would silently reopen a link they can no longer see they have open.
@@ -73,6 +87,8 @@ public class CompanionService extends Service {
 
     @Override
     public void onDestroy() {
+        running = false;
+        withLocation = false;
         if (wakeLock != null && wakeLock.isHeld()) {
             wakeLock.release();
         }
@@ -113,12 +129,42 @@ public class CompanionService extends Service {
         // connectedDevice, never dataSync: the platform caps a dataSync foreground
         // service at roughly six hours in twenty-four and then stops it, which on a long
         // cross-country would mean the watch going dark mid-leg.
+        //
+        // location as well once the pilot has granted a location permission, and only
+        // then: on Android 14 and later the location type without the permission throws
+        // rather than degrading.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIFICATION_ID, notification,
-                            ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
+            boolean location = hasLocationPermission(this);
+            int type = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE;
+            if (location) {
+                type |= ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION;
+            }
+            try {
+                startForeground(NOTIFICATION_ID, notification, type);
+                withLocation = location;
+            } catch (SecurityException e) {
+                // Android 14 and later also refuse the location type to an app that is
+                // not in the foreground at this moment, whatever it has been granted.
+                // The link must not be lost over it: an app whose service was started as
+                // a foreground service and never became one is killed by the platform.
+                // refresh() asks again the next time the app is on screen.
+                startForeground(NOTIFICATION_ID, notification,
+                                ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
+                withLocation = false;
+            }
         } else {
+            // Before Android 10 a foreground service has no type, and any foreground
+            // service keeps the positions coming.
             startForeground(NOTIFICATION_ID, notification);
+            withLocation = true;
         }
+    }
+
+    private static boolean hasLocationPermission(Context context) {
+        return context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                   == PackageManager.PERMISSION_GRANTED
+               || context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+                   == PackageManager.PERMISSION_GRANTED;
     }
 
     private void createNotificationChannel() {
@@ -146,6 +192,32 @@ public class CompanionService extends Service {
         // pilot has no way to see that the link is open.
         MobileAdaptor.requestNotificationPermission();
 
+        Intent intent = new Intent(context, CompanionService.class);
+        context.startForegroundService(intent);
+    }
+
+    /**
+     * Give a running service the location type if it started without it.
+     *
+     * Called from C++ via JNI whenever the app comes back to the foreground. The case it
+     * exists for is a service that started while the permission dialog was still open,
+     * as on the first start of an app whose settings came back from a backup with
+     * publishing on. Without this that service would run without positions in the
+     * background until the app was restarted, and nothing would say so. The dialog
+     * closing brings the app back to the foreground, which is also the only moment
+     * Android 14 and later let the type be taken.
+     *
+     * Not a grant made later in the system settings: after one of those the app itself
+     * does not start reading positions again until it is restarted, service or not.
+     *
+     * Does nothing in every other case, so it is cheap to call on every return. Unlike
+     * start() it does not ask for the notification permission: asked on every return,
+     * that would be a dialog loop for a pilot who has said no.
+     */
+    public static void refresh(Context context) {
+        if (!running || withLocation || !hasLocationPermission(context)) {
+            return;
+        }
         Intent intent = new Intent(context, CompanionService.class);
         context.startForegroundService(intent);
     }

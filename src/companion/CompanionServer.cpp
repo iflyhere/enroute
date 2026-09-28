@@ -30,6 +30,7 @@
 // the same context. The private include worked against a local Qt that happened to
 // ship private headers and failed everywhere else.
 #include <QCoreApplication>
+#include <QGuiApplication>
 #include <QJniObject>
 #endif
 
@@ -183,6 +184,29 @@ void Companion::CompanionServer::deferredInitialization()
     // only whether the platform is told to leave them alone.
     connect(GlobalObject::globalSettings(), &GlobalSettings::companionInBackgroundChanged,
             this, &Companion::CompanionServer::updateTransport);
+
+#if defined(Q_OS_ANDROID)
+    // Positions reach this app in the background only while its service holds the
+    // location type, and the service can take that type only once a location permission
+    // has been granted, and only while the app is on screen. A service that started while
+    // the permission dialog was still open therefore asks again each time the app comes
+    // back -- the dialog closing is such a moment -- and does nothing if it has the type
+    // already.
+    connect(qGuiApp, &QGuiApplication::applicationStateChanged, this,
+            [this](Qt::ApplicationState state)
+            {
+                if ((state != Qt::ApplicationActive) || !m_backgroundServiceRunning)
+                {
+                    return;
+                }
+                QJniObject context = QNativeInterface::QAndroidApplication::context();
+                QJniObject::callStaticMethod<void>(
+                    "de/akaflieg_freiburg/enroute/CompanionService",
+                    "refresh",
+                    "(Landroid/content/Context;)V",
+                    context.object());
+            });
+#endif
 
     updateTransport();
 }

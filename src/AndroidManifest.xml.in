@@ -41,9 +41,12 @@ ${FLIGHTLOG_ANDROID_PERMISSIONS}
 
   <!-- The companion link's own foreground service. Not behind FLIGHTLOG: a watch
        reading the navigation frame has nothing to do with the flight log, and the
-       connectedDevice type is the one the platform does not cap at six hours a day. -->
+       connectedDevice type is the one the platform does not cap at six hours a day.
+       The location type as well, because without it an app that is not on screen
+       receives no position, and the watch would be sent a frozen one. -->
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"/>
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
   <supports-screens
 
     android:anyDensity="true"
@@ -279,10 +282,12 @@ ${FLIGHTLOG_ANDROID_PERMISSIONS}
     <!-- Keeps the companion link alive while this app is not in the foreground.
          connectedDevice and never dataSync: the platform caps a dataSync foreground
          service at roughly six hours in twenty-four and then stops it, which on a long
-         cross-country would mean the watch going dark mid-leg. -->
+         cross-country would mean the watch going dark mid-leg. location so that the
+         position keeps moving while the phone is in a pocket; the service takes that
+         type only once the pilot has granted a location permission. -->
     <service
       android:name="de.akaflieg_freiburg.enroute.CompanionService"
-      android:foregroundServiceType="connectedDevice"
+      android:foregroundServiceType="connectedDevice|location"
       android:exported="false"/>
 
     <!-- NOTE: android:authorities must match AUTHORITY in de/akaflieg_freiburg/enroute/IntentLauncher.java -->
