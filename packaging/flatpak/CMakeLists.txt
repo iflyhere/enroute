@@ -7,7 +7,17 @@
 # Configure
 #
 
+# Version of the KDE runtime and the QtWebEngine base app. Used in the manifest
+# and by the helper targets below, so that both always agree.
+set(FLATPAK_RUNTIME_VERSION 6.9)
+
 configure_file(${APP_ID}.json.in ${APP_ID}.json @ONLY)
+
+# The runtime branch is maintained in the manifest template (see
+# runtime_policy.py, run by the fastlane lane flathubRelease); read it from
+# there so the sample build below installs the matching SDK and base app.
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/${APP_ID}.json.in FLATPAK_MANIFEST_TEMPLATE)
+string(JSON FLATPAK_RUNTIME_VERSION GET "${FLATPAK_MANIFEST_TEMPLATE}" runtime-version)
 
 
 #
@@ -16,8 +26,8 @@ configure_file(${APP_ID}.json.in ${APP_ID}.json @ONLY)
 
 add_custom_target(flatpak-binary
     COMMAND flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-    COMMAND flatpak install --system --assumeyes runtime/org.kde.Sdk/x86_64/6.8
-    COMMAND flatpak install --system --assumeyes app/io.qt.qtwebengine.BaseApp/x86_64/6.8
+    COMMAND flatpak install --system --assumeyes runtime/org.kde.Sdk/x86_64/${FLATPAK_RUNTIME_VERSION}
+    COMMAND flatpak install --system --assumeyes app/io.qt.qtwebengine.BaseApp/x86_64/${FLATPAK_RUNTIME_VERSION}
     COMMAND flatpak-builder --force-clean flatpakBuildDirectory ${APP_ID}.json
     COMMAND echo ""
     COMMAND echo ""
@@ -52,12 +62,11 @@ add_custom_target(flatpak-publish
     COMMAND git clone --depth 1 --branch upstream git@github.com:flathub/de.akaflieg_freiburg.enroute.git
     COMMAND cp de.akaflieg_freiburg.enroute.json de.akaflieg_freiburg.enroute
     COMMAND cp ${CMAKE_SOURCE_DIR}/CHANGELOG.md de.akaflieg_freiburg.enroute
-    COMMAND cd de.akaflieg_freiburg.enroute
-    COMMAND git diff-index --quiet HEAD || git commit -am "New upstream release"
-    COMMAND git push
-    COMMAND gh pr create --title "New upstream release" --body "Please merge the following new upstream release"
-    COMMAND cd ..
+    # One shell invocation: with the Makefile generators every COMMAND runs in
+    # its own shell, so a separate "cd" would not carry over to the next line.
+    COMMAND sh -c "cd de.akaflieg_freiburg.enroute && (git diff-index --quiet HEAD || git commit -am 'New upstream release') && git push && gh pr create --title 'New upstream release' --body 'Please merge the following new upstream release'"
     COMMAND rm -rf de.akaflieg_freiburg.enroute
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Publishing flatpak"
+    VERBATIM
     )

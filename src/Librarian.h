@@ -25,8 +25,10 @@
 #include <QRegularExpression>
 #include <QSettings>
 
+#include "FileLibraryModel.h"
 #include "GlobalObject.h"
 #include "navigation/Aircraft.h"
+#include "navigation/FlightRoute.h"
 #include "units/ByteSize.h"
 
 
@@ -40,6 +42,16 @@ class Librarian : public QObject {
     Q_OBJECT
     QML_ELEMENT
     QML_SINGLETON
+
+
+    /*! \brief Location of the user manual, see manualLocation() */
+    Q_PROPERTY(QString manualLocation READ manualLocation CONSTANT)
+
+    /*! \brief Model listing the entries of the aircraft library, see model() */
+    Q_PROPERTY(FileLibraryModel* aircraftModel READ aircraftModel CONSTANT)
+
+    /*! \brief Model listing the entries of the flight route library, see model() */
+    Q_PROPERTY(FileLibraryModel* routesModel READ routesModel CONSTANT)
 
 public:
     /*! \brief Default constructor
@@ -72,6 +84,30 @@ public:
     Q_ENUM(Library)
 
 
+    /*! \brief Getter function for the property with the same name
+     *
+     *  @returns Property aircraftModel
+     */
+    [[nodiscard]] FileLibraryModel* aircraftModel() const { return m_aircraftModel; }
+
+    /*! \brief Getter function for the property with the same name
+     *
+     *  @returns Property routesModel
+     */
+    [[nodiscard]] FileLibraryModel* routesModel() const { return m_routesModel; }
+
+    /*! \brief Model listing the entries of a library
+     *
+     *  The model follows the library directory and announces changes with
+     *  row-granular signals. It is owned by this instance.
+     *
+     *  @param library The library
+     *
+     *  @returns Pointer to the model
+     */
+    [[nodiscard]] FileLibraryModel* model(Librarian::Library library) const;
+
+
     /*! \brief Check if an object exists in the library
      *
      *  @param acft Aircraft object
@@ -98,20 +134,6 @@ public:
      *  @returns Name of the directory, without trailing slash
      */
     [[nodiscard]] Q_INVOKABLE static QString directory(Librarian::Library library) ;
-
-    /*! \brief Lists all entries in the library whose name contains the string 'filter'
-     *
-     * The check for string containment is done in a fuzzy way.
-     *
-     * @param library The library that is to be searched
-     *
-     * @param filter String used to filter the list
-     *
-     * @returns A filtered QStringList with the base names of flight routes
-     *
-     * @see permissiveFilter
-     */
-    Q_INVOKABLE QStringList entries(Librarian::Library library, const QString& filter=QString());
 
     /*! \brief Check if an entry with the given name exists in the library
      *
@@ -153,7 +175,14 @@ public:
      *
      * @returns Pointer to the object, or a nullptr in case of error.
      */
-    [[nodiscard]] Q_INVOKABLE static QObject* get(Librarian::Library library, const QString& baseName) ;
+    [[nodiscard]] Q_INVOKABLE static Navigation::FlightRoute* get(Librarian::Library library, const QString& baseName);
+
+    /*! \brief Location of the user manual
+     *
+     *  @returns Directory that holds the HTML version of the manual, as a
+     *  path or URL suitable for the platform
+     */
+    [[nodiscard]] static QString manualLocation();
 
     /*! \brief Exposes string stored in QRessource to QML
      *
@@ -224,8 +253,9 @@ public:
      * special characters, so that "Zürich" matches "u", "Ü", "ù" and "zurich".
      * An empty filter matches every text.
      *
-     * This is the single filter primitive of this app. Use it from QML to
-     * filter list models, as in
+     * This is the single filter primitive of this app. Lists over item models
+     * use it through Ui::NameFilterProxyModel; ad-hoc lists use it from QML,
+     * as in
      *
      * model: Array.from(SomeSingleton.items).filter((i) => Librarian.matches(i.name, filterField.filter))
      *
@@ -236,21 +266,6 @@ public:
      * @returns True if the text matches the filter
      */
     Q_INVOKABLE bool matches(const QString& text, const QString& filter);
-
-    /*! \brief Filters a QStringList in a fuzzy way
-     *
-     * This helper method filters a QStringList. It returns a sublist of those
-     * entries that match the filter, in the sense of the method matches().
-     *
-     * @param input QStringList that is to be filtered
-     *
-     * @param filter Filter
-     *
-     * @returns Filteres QStringList
-     *
-     * @see matches
-     */
-    QStringList permissiveFilter(const QStringList &input, const QString &filter);
 
     /*! \brief Simplifies string by transforming and removing special characters
      *
@@ -266,6 +281,9 @@ public:
 
 private:
     Q_DISABLE_COPY_MOVE(Librarian)
+
+    FileLibraryModel* m_aircraftModel {nullptr};
+    FileLibraryModel* m_routesModel {nullptr};
 
     // Caches used to speed up the method simplifySpecialChars
     QRegularExpression specialChars {QStringLiteral("[^a-zA-Z0-9]")};

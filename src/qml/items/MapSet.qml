@@ -19,7 +19,7 @@
  ***************************************************************************/
 
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls.Material
 import QtQuick.Layouts
 
 import akaflieg_freiburg.enroute
@@ -61,7 +61,7 @@ Item {
                 if (!element.model.modelData.downloading
                         && (!element.model.modelData.hasFile || element.model.modelData.updatable)) {
                     PlatformAdaptor.vibrateBrief()
-                    model.modelData.startDownload()
+                    element.model.modelData.startDownload()
                 }
             }
         }
@@ -154,11 +154,17 @@ Item {
     Connections {
         target: element.model.modelData
         function onError(objectName, message) {
-            Global.dialogLoader.active = false
-            Global.dialogLoader.setSource("../dialogs/LongTextDialog.qml", {title: qsTr("Download Error"),
-                                       text: qsTr("<p>Failed to download <strong>%1</strong>.</p><p>Reason: %2.</p>").arg(objectName).arg(message),
-                                       standardButtons: Dialog.Ok})
-            Global.dialogLoader.active = true
+            // Show the error through Global.textDialogLoader, never through
+            // Global.dialogLoader: this delegate can itself live inside
+            // Global.dialogLoader (the first-run dialog lists map sets), and
+            // deactivating that loader from within this handler destroys the
+            // handler's own QML context while it is still running, which
+            // crashes the app on the next line.
+            Global.textDialogLoader.active = false
+            Global.textDialogLoader.setSource("../dialogs/LongTextDialog.qml", {title: qsTr("Download Error"),
+                                           text: qsTr("<p>Failed to download <strong>%1</strong>.</p><p>Reason: %2.</p>").arg(objectName).arg(message),
+                                           standardButtons: Dialog.Ok})
+            Global.textDialogLoader.active = true
         }
     }
 

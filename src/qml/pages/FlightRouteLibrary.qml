@@ -18,8 +18,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+pragma ComponentBehavior: Bound
+
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls.Material
+import QtQuick.Templates as T
 import QtQuick.Dialogs
 import QtQuick.Layouts
 
@@ -57,7 +60,7 @@ Page {
 
             onClicked: {
                 PlatformAdaptor.vibrateBrief()
-                stackView.pop()
+                Global.stackView.pop()
             }
         }
 
@@ -68,7 +71,7 @@ Page {
             anchors.leftMargin: 72
             anchors.right: headerMenuToolButton.left
 
-            text: stackView.currentItem.title
+            text: (Global.stackView.currentItem as T.Page).title
             elide: Label.ElideRight
             font.pixelSize: 20
             verticalAlignment: Qt.AlignVCenter
@@ -77,7 +80,7 @@ Page {
         ToolButton {
             id: headerMenuToolButton
 
-            visible: !isIos
+            visible: !page.isIos
 
             anchors.verticalCenter: parent.verticalCenter
 
@@ -102,14 +105,14 @@ Page {
                     onTriggered: {
                         PlatformAdaptor.vibrateBrief()
                         highlighted = false
-                        if (isIos) {
+                        if (page.isIos) {
                             Global.dialogLoader.active = false
                             Global.dialogLoader.setSource("../dialogs/LongTextDialog.qml", {
                                                               title: qsTr("Import files"),
                                                               text: qsTr("Locate your file in the browser, then select 'Open with' from the share menu, and choose Enroute"),
                                                               standardButtons: Dialog.Ok})
                             Global.dialogLoader.active = true
-                        } else if (isAndroid) {
+                        } else if (page.isAndroid) {
                             FileExchange.openFilePicker("")
                         } else {
                             importFileDialog.open()
@@ -145,7 +148,6 @@ Page {
                             else
                             {
                                 Global.toast.doToast(qsTr("Flight Route Imported"))
-                                textInput.reload()
                             }
                         }
                         onRejected: {
@@ -193,10 +195,13 @@ Page {
 
             RowLayout {
                 id: entryRow
-                anchors.left: parent.left
-                anchors.right: parent.right
+                required property string name
+                // Size from the list, not from parent: the delegate is created
+                // and destroyed while it has no parent.
+                width: wpList.width
                 Layout.fillWidth: true
-                height: iDel.heigt
+                height: iDel.height
+
 
                 // Return/Enter on the highlighted row triggers its primary action
                 // (the trailing menu button stays mouse-only).
@@ -207,22 +212,25 @@ Page {
                     id: iDel
                     Layout.fillWidth: true
 
-                    text: modelData
+                    text: entryRow.name
                     icon.source: "/icons/material/ic_directions.svg"
 
                     onClicked: {
                         PlatformAdaptor.vibrateBrief()
-                        finalFileName = modelData
+                        page.finalFileName = entryRow.name
                         if ((Navigator.flightRoute.size > 0) && !Librarian.contains(Navigator.flightRoute))
                             overwriteDialog.open()
                         else
-                            openFromLibrary()
+                            page.openFromLibrary()
                     }
 
                     swipe.onCompleted: {
                         PlatformAdaptor.vibrateBrief()
-                        finalFileName = modelData
+                        page.finalFileName = entryRow.name
                         removeDialog.open()
+                        // The row is removed from the model if the user confirms.
+                        // Otherwise it stays, so return it to its normal position.
+                        iDel.swipe.close()
                     }
 
                 }
@@ -242,10 +250,10 @@ Page {
 
                         // The 'Save…' submenu applies to Android only. Submenu entries
                         // cannot be hidden declaratively, so remove it on other platforms.
-                        Component.onCompleted: if (!isAndroid) cptMenu.removeMenu(saveMenu)
+                        Component.onCompleted: if (!page.isAndroid) cptMenu.removeMenu(saveMenu)
 
                         AutoSizingMenu {
-                            title: isAndroidOrIos ? qsTr("Share…") : qsTr("Export…")
+                            title: page.isAndroidOrIos ? qsTr("Share…") : qsTr("Export…")
 
                             MenuItem {
                                 text: qsTr("… to GeoJSON file")
@@ -255,9 +263,9 @@ Page {
                                     highlighted = false
                                     parent.highlighted = false
 
-                                    var errorString = FileExchange.shareContent(Librarian.get(Librarian.Routes, modelData).toGeoJSON(), "application/geo+json", "geojson", Librarian.get(Librarian.Routes, modelData).suggestedFilename())
+                                    var errorString = FileExchange.shareContent(Librarian.get(Librarian.Routes, entryRow.name).toGeoJSON(), "application/geo+json", "geojson", Librarian.get(Librarian.Routes, entryRow.name).suggestedFilename())
                                     if (errorString === "abort") {
-                                        toast.doToast(qsTr("Aborted"))
+                                        Global.toast.doToast(qsTr("Aborted"))
                                         return
                                     }
                                     if (errorString !== "") {
@@ -265,10 +273,10 @@ Page {
                                         shareErrorDialog.open()
                                         return
                                     }
-                                    if (isAndroid)
-                                        toast.doToast(qsTr("Flight route shared"))
-                                    else if(!isIos)
-                                        toast.doToast(qsTr("Flight route exported"))
+                                    if (page.isAndroid)
+                                        Global.toast.doToast(qsTr("Flight route shared"))
+                                    else if(!page.isIos)
+                                        Global.toast.doToast(qsTr("Flight route exported"))
                                 }
                             }
 
@@ -280,9 +288,9 @@ Page {
                                     highlighted = false
                                     parent.highlighted = false
 
-                                    var errorString = FileExchange.shareContent(Librarian.get(Librarian.Routes, modelData).toGpx(), "application/gpx+xml", "gpx", Librarian.get(Librarian.Routes, modelData).suggestedFilename())
+                                    var errorString = FileExchange.shareContent(Librarian.get(Librarian.Routes, entryRow.name).toGpx(), "application/gpx+xml", "gpx", Librarian.get(Librarian.Routes, entryRow.name).suggestedFilename())
                                     if (errorString === "abort") {
-                                        toast.doToast(qsTr("Aborted"))
+                                        Global.toast.doToast(qsTr("Aborted"))
                                         return
                                     }
                                     if (errorString !== "") {
@@ -290,10 +298,10 @@ Page {
                                         shareErrorDialog.open()
                                         return
                                     }
-                                    if (isAndroid)
-                                        toast.doToast(qsTr("Flight route shared"))
-                                    else if (!isIos)
-                                        toast.doToast(qsTr("Flight route exported"))
+                                    if (page.isAndroid)
+                                        Global.toast.doToast(qsTr("Flight route shared"))
+                                    else if (!page.isIos)
+                                        Global.toast.doToast(qsTr("Flight route exported"))
                                 }
                             }
                         }
@@ -310,7 +318,7 @@ Page {
                                     highlighted = false
                                     parent.highlighted = false
 
-                                    FileExchange.saveContent(Librarian.get(Librarian.Routes, modelData).toGeoJSON(), "application/geo+json", "geojson", Librarian.get(Librarian.Routes, modelData).suggestedFilename())
+                                    FileExchange.saveContent(Librarian.get(Librarian.Routes, entryRow.name).toGeoJSON(), "application/geo+json", "geojson", Librarian.get(Librarian.Routes, entryRow.name).suggestedFilename())
                                 }
                             }
 
@@ -322,7 +330,7 @@ Page {
                                     highlighted = false
                                     parent.highlighted = false
 
-                                    FileExchange.saveContent(Librarian.get(Librarian.Routes, modelData).toGpx(), "application/gpx+xml", "gpx", Librarian.get(Librarian.Routes, modelData).suggestedFilename())
+                                    FileExchange.saveContent(Librarian.get(Librarian.Routes, entryRow.name).toGpx(), "application/gpx+xml", "gpx", Librarian.get(Librarian.Routes, entryRow.name).suggestedFilename())
                                 }
                             }
                         }
@@ -339,12 +347,12 @@ Page {
                                     highlighted = false
                                     parent.highlighted = false
 
-                                    var errorString = FileExchange.viewContent(Librarian.get(Librarian.Routes, modelData).toGeoJSON(), "application/geo+json", "geojson", "FlightRoute-%1.geojson")
+                                    var errorString = FileExchange.viewContent(Librarian.get(Librarian.Routes, entryRow.name).toGeoJSON(), "application/geo+json", "geojson", "FlightRoute-%1.geojson")
                                     if (errorString !== "") {
                                         shareErrorDialog.text = errorString
                                         shareErrorDialog.open()
                                     } else
-                                        toast.doToast(qsTr("Flight route opened in other app"))
+                                        Global.toast.doToast(qsTr("Flight route opened in other app"))
                                 }
                             }
 
@@ -356,12 +364,12 @@ Page {
                                     highlighted = false
                                     parent.highlighted = false
 
-                                    var errorString = FileExchange.viewContent(Librarian.get(Librarian.Routes, modelData).toGpx(), "application/gpx+xml", "gpx", "FlightRoute-%1.gpx")
+                                    var errorString = FileExchange.viewContent(Librarian.get(Librarian.Routes, entryRow.name).toGpx(), "application/gpx+xml", "gpx", "FlightRoute-%1.gpx")
                                     if (errorString !== "") {
                                         shareErrorDialog.text = errorString
                                         shareErrorDialog.open()
                                     } else
-                                        toast.doToast(qsTr("Flight route opened in other app"))
+                                        Global.toast.doToast(qsTr("Flight route opened in other app"))
                                 }
                             }
 
@@ -374,8 +382,8 @@ Page {
                             text: qsTr("Rename…")
                             onTriggered: {
                                 PlatformAdaptor.vibrateBrief()
-                                finalFileName = modelData
-                                renameName.text = modelData
+                                page.finalFileName = entryRow.name
+                                renameName.text = entryRow.name
                                 renameDialog.open()
                             }
 
@@ -386,7 +394,7 @@ Page {
                             text: qsTr("Remove…")
                             onTriggered: {
                                 PlatformAdaptor.vibrateBrief()
-                                finalFileName = modelData
+                                page.finalFileName = entryRow.name
                                 removeDialog.open()
                             }
                         } // removeAction
@@ -405,12 +413,9 @@ Page {
 
             clip: true
 
-            model: {
-                // Mention reloadTrigger: Librarian.entries() has no change
-                // notification, so reload() is the only way to re-evaluate.
-                textInput.reloadTrigger
-
-                return Librarian.entries(Librarian.Routes, textInput.filter)
+            model: NameFilterProxyModel {
+                sourceModel: Librarian.routesModel
+                filter: textInput.filter
             }
             delegate: flightRouteDelegate
         }
@@ -433,22 +438,18 @@ Page {
         }
     }
 
-    // This is the name of the file that openFromLibrary will open
+    // This is the name of the file that page.openFromLibrary will open
     property string finalFileName;
 
     function openFromLibrary() {
-        var errorString = Navigator.flightRoute.load(Librarian.fullPath(Librarian.Routes, finalFileName))
+        var errorString = Navigator.flightRoute.load(Librarian.fullPath(Librarian.Routes, page.finalFileName))
         if (errorString !== "") {
             fileError.text = errorString
             fileError.open()
             return
         }
-        toast.doToast( qsTr("Loading flight route <strong>%1</strong>").arg(finalFileName) )
-        stackView.pop()
-    }
-
-    function reloadFlightRouteList() {
-        textInput.reload()
+        Global.toast.doToast( qsTr("Loading flight route <strong>%1</strong>").arg(page.finalFileName) )
+        Global.stackView.pop()
     }
 
     CenteringDialog {
@@ -464,14 +465,12 @@ Page {
         title: qsTr("Overwrite Current Flight Route?")
         standardButtons: Dialog.No | Dialog.Yes
 
-        text: qsTr("Loading the route <strong>%1</strong> will overwrite the current route. Once overwritten, the current flight route cannot be restored.").arg(finalFileName)
+        text: qsTr("Loading the route <strong>%1</strong> will overwrite the current route. Once overwritten, the current flight route cannot be restored.").arg(page.finalFileName)
 
         onAccepted: {
-            PlatformAdaptor.vibrateBrief()
             page.openFromLibrary()
         }
         onRejected: {
-            PlatformAdaptor.vibrateBrief()
             overwriteDialog.close()
         }
     }
@@ -485,16 +484,10 @@ Page {
         text: qsTr("Once the flight route <strong>%1</strong> is removed, it cannot be restored.").arg(page.finalFileName)
 
         onAccepted: {
-            PlatformAdaptor.vibrateBrief()
             Librarian.remove(Librarian.Routes, page.finalFileName)
-            page.reloadFlightRouteList()
-            toast.doToast(qsTr("Flight route removed from device"))
+            Global.toast.doToast(qsTr("Flight route removed from device"))
         }
-        onRejected: {
-            PlatformAdaptor.vibrateBrief()
-            page.reloadFlightRouteList()
-            removeDialog.close()
-        }
+        onRejected: removeDialog.close()
     }
 
     CenteringDialog {
@@ -510,7 +503,7 @@ Page {
             Label {
                 Layout.fillWidth: true
 
-                text: qsTr("Enter new name for the route <strong>%1</strong>.").arg(finalFileName)
+                text: qsTr("Enter new name for the route <strong>%1</strong>.").arg(page.finalFileName)
                 wrapMode: Text.Wrap
                 textFormat: Text.StyledText
             }
@@ -521,7 +514,10 @@ Page {
                 Layout.fillWidth: true
                 focus: true
 
-                onAccepted: renameDialog.onAccepted()
+                onAccepted: {
+                    PlatformAdaptor.vibrateBrief()
+                    renameDialog.doRename()
+                }
             }
 
         }
@@ -537,17 +533,16 @@ Page {
             }
         }
 
-        onAccepted: {
-            PlatformAdaptor.vibrateBrief()
+        // Also called from the text field when Return is pressed.
+        function doRename() {
             if ((renameName.text !== "") && !Librarian.exists(Librarian.Routes, renameName.text)) {
-                Librarian.rename(Librarian.Routes, finalFileName, renameName.text)
-                page.reloadFlightRouteList()
+                Librarian.rename(Librarian.Routes, page.finalFileName, renameName.text)
                 renameDialog.close()
-                toast.doToast(qsTr("Flight route renamed"))
+                Global.toast.doToast(qsTr("Flight route renamed"))
             }
         }
+        onAccepted: doRename()
         onRejected: {
-            PlatformAdaptor.vibrateBrief()
             renameDialog.close()
         }
     }

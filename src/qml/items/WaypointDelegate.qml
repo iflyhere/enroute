@@ -19,6 +19,7 @@
  ***************************************************************************/
 
 import QtQuick
+import QtQuick.Templates as T
 
 import akaflieg_freiburg.enroute
 
@@ -62,9 +63,6 @@ Item {
         icon.source: waypointDelegate.waypoint.icon
 
         text: {
-            // Mention horizontal distance
-            Navigator.aircraft.horizontalDistanceUnit
-
             var result = waypointDelegate.waypoint.twoLineTitle
 
             var wayTo  = Navigator.aircraft.describeWay(PositionProvider.positionInfo.coordinate(), waypointDelegate.waypoint.coordinate)
@@ -81,6 +79,6 @@ Item {
 
     Loader {
         id: wpDescriptionLoader
-        onLoaded: item.open()
+        onLoaded: (item as T.Popup).open()
     }
 }

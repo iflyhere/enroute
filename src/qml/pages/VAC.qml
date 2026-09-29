@@ -18,8 +18,10 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+pragma ComponentBehavior: Bound
+
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls.Material
 import QtQuick.Layouts
 
 import akaflieg_freiburg.enroute
@@ -29,8 +31,6 @@ import "../items"
 Page {
     id: pg
 
-    required property var dialogLoader
-    required property var stackView
 
     title: qsTr("Visual Approach Charts")
 
@@ -42,17 +42,19 @@ Page {
         id: approachChartItem
 
         WordWrappingItemDelegate {
+            id: vacItem
+
             width: parent ? parent.width : undefined
 
-            required property var model
+            required property vac vac
 
-            text: model.modelData.name + `<br><font color="#606060" size="2">${model.modelData.infoText}</font>`
+            text: vacItem.vac.name + `<br><font color="#606060" size="2">${vacItem.vac.infoText}</font>`
             icon.source: "/icons/material/ic_map.svg"
 
             onClicked: {
                 PlatformAdaptor.vibrateBrief()
-                Global.currentVAC = VACLibrary.materialize(model.modelData)
-                stackView.pop()
+                Global.currentVAC = VACLibrary.materialize(vacItem.vac)
+                Global.stackView.pop()
             }
         }
     }
@@ -75,7 +77,7 @@ Page {
 
             onClicked: {
                 PlatformAdaptor.vibrateBrief()
-                pg.stackView.pop()
+                Global.stackView.pop()
             }
         }
 
@@ -133,11 +135,10 @@ Page {
             Layout.bottomMargin: SafeInsets.bottom
 
             clip: true
-            model: {
-                // Mention downloadable in order to get updates
-                VACLibrary.vacs
-
-                return VACLibrary.vacsByDistance(PositionProvider.lastValidCoordinate, textInput.filter)
+            model: DistanceSortProxyModel {
+                sourceModel: VACLibrary
+                filter: textInput.filter
+                referenceCoordinate: PositionProvider.lastValidCoordinate
             }
             delegate: approachChartItem
         }
@@ -162,7 +163,10 @@ Page {
         text: VACLibrary.isEmpty
               ? Global.withLinkColor("<h3>"+ qsTr("Sorry!") + "</h3><p>" + qsTr("There are no approach charts installed. The <a href='x'>manual</a> explains how to install and use them.")+"</p>")
               : qsTr("<h3>Sorry!</h3><p>No approach charts match your filter.</p>")
-        onLinkActivated: openManual("forward.html#vac-tutorial")
+        onLinkActivated: {
+            PlatformAdaptor.vibrateBrief()
+            Global.openManual("forward.html#vac-tutorial")
+        }
 
     }
 

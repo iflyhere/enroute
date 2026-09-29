@@ -22,7 +22,6 @@
 #include <QJsonObject>
 
 #include "GlobalObject.h"
-#include "GlobalSettings.h"
 #include "notam/NOTAM.h"
 #include "notam/NOTAMProvider.h"
 
@@ -232,7 +231,7 @@ QString NOTAM::NOTAM::category() const
 }
 
 
-QString NOTAM::NOTAM::richText() const
+QString NOTAM::NOTAM::richText(bool expandAbbreviations, const QDateTime& now) const
 {
     QStringList result;
 
@@ -240,13 +239,13 @@ QString NOTAM::NOTAM::richText() const
     auto effectiveStartString = m_effectiveStartString;
     if (m_effectiveStart.isValid())
     {
-        if (m_effectiveStart < QDateTime::currentDateTime())
+        if (m_effectiveStart < now)
         {
             effectiveStartString.clear();
         }
         else
         {
-            if (m_effectiveStart.date() == QDateTime::currentDateTimeUtc().date())
+            if (m_effectiveStart.date() == now.toUTC().date())
             {
                 effectiveStartString = u"Today %1"_s.arg(m_effectiveStart.toString(u"hh:mm"_s));
             }
@@ -293,24 +292,21 @@ QString NOTAM::NOTAM::richText() const
 
     if (!m_schedule.isEmpty())
     {
-        result += u"<strong>Schedule %1</strong>"_s.arg(m_schedule);
+        result += u"<strong>Schedule %1</strong>"_s.arg(m_schedule.toHtmlEscaped());
     }
 
-    if (GlobalObject::globalSettings()->expandNotamAbbreviations())
+    // The text is rendered as rich text: escape it, so that characters such
+    // as '<' in "VIS <800M" do not truncate the display.
+    QString text = m_text.toHtmlEscaped();
+    if (expandAbbreviations)
     {
-        QString tmp = m_text;
         foreach(auto contraction, *contractions)
         {
-            tmp.replace(contraction.first, contraction.second);
+            text.replace(contraction.first, contraction.second);
         }
-
-        result += tmp;
     }
-    else
-    {
-        result += m_text;
-    }
-    return u"<strong>%1: </strong>"_s.arg(m_icaoLocation) + result.join(u" • "_s).replace(u"  "_s, u" "_s);
+    result += text;
+    return u"<strong>%1: </strong>"_s.arg(m_icaoLocation.toHtmlEscaped()) + result.join(u" • "_s).replace(u"  "_s, u" "_s);
 }
 
 
@@ -339,11 +335,8 @@ void NOTAM::NOTAM::updateSectionTitle()
             m_sectionTitle = u"Next 90 days"_s;
             return;
         }
-        if (m_effectiveStart < QDateTime::currentDateTimeUtc().addDays(90))
-        {
-            m_sectionTitle = u"> 90 days"_s;
-            return;
-        }
+        m_sectionTitle = u"> 90 days"_s;
+        return;
     }
     m_sectionTitle = u"NOTAM"_s;
 }
