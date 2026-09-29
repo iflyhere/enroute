@@ -20,8 +20,8 @@
 
 import QtPositioning
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Controls.Material
+import QtQuick.Templates as T
 import QtQuick.Layouts
 import QtQuick.Shapes
 
@@ -97,7 +97,7 @@ CenteringDialog {
         Label { // METAR info
             Loader {
                 id: secondaryDlgLoader
-                onLoaded: item.open()
+                onLoaded: (item as T.Popup).open()
             }
             Observer {
                 id: obs
@@ -135,17 +135,23 @@ CenteringDialog {
         id: notamInfo
 
         Label { // NOTAM info
+            id: notamLabel
 
             Loader {
                 // WARNING This does not really belong here.
                 id: dlgLoader
-                onLoaded: item.open()
+                onLoaded: (item as T.Popup).open()
             }
 
-            property notamList notamList: {
-                // Mention lastUpdate, so we update whenever there is new data
-                NOTAMProvider.lastUpdate
-                return NOTAMProvider.notams(waypointDescriptionDialog.waypoint)
+            property notamList notamList: NOTAMProvider.notams(waypointDescriptionDialog.waypoint)
+
+            // The NOTAM database updates in the background. Re-query it when
+            // that happens.
+            Connections {
+                target: NOTAMProvider
+                function onLastUpdateChanged() {
+                    notamLabel.notamList = NOTAMProvider.notams(waypointDescriptionDialog.waypoint)
+                }
             }
 
             visible: text !== ""
@@ -526,9 +532,18 @@ CenteringDialog {
             AutoSizingMenu {
                 id: addMenu
 
+                // The route can change while the dialog is open. The state
+                // only matters while the menu is open, so evaluate it on
+                // opening rather than tracking every change.
+                onAboutToShow: {
+                    appendToRouteAction.enabled = Navigator.flightRoute.canAppend(waypointDescriptionDialog.waypoint)
+                    insertIntoRouteAction.enabled = Navigator.flightRoute.canInsert(waypointDescriptionDialog.waypoint)
+                    removeFromRouteAction.enabled = Navigator.flightRoute.contains(waypointDescriptionDialog.waypoint)
+                }
+
                 Action {
                     text: qsTr("Direct")
-                    enabled: PositionProvider.receivingPositionInfo && (dialogLoader.text !== "noRouteButton")
+                    enabled: PositionProvider.receivingPositionInfo && (Global.textDialogLoader.text !== "noRouteButton")
 
                     onTriggered: {
                         PlatformAdaptor.vibrateBrief()
@@ -546,13 +561,9 @@ CenteringDialog {
                 }
 
                 Action {
+                    id: appendToRouteAction
+
                     text: qsTr("Append")
-                    enabled: {
-                        // Mention Object to ensure that property gets updated
-                        // when flight route changes
-                        Navigator.flightRoute.size
-                        return Navigator.flightRoute.canAppend(waypointDescriptionDialog.waypoint)
-                    }
 
                     onTriggered: {
                         PlatformAdaptor.vibrateBrief()
@@ -564,14 +575,9 @@ CenteringDialog {
                 }
 
                 Action {
-                    text: qsTr("Insert")
-                    enabled: {
-                        // Mention Object to ensure that property gets updated
-                        // when flight route changes
-                        Navigator.flightRoute.size
+                    id: insertIntoRouteAction
 
-                        return Navigator.flightRoute.canInsert(waypointDescriptionDialog.waypoint)
-                    }
+                    text: qsTr("Insert")
 
                     onTriggered: {
                         PlatformAdaptor.vibrateBrief()
@@ -583,15 +589,10 @@ CenteringDialog {
                 }
 
                 Action {
+                    id: removeFromRouteAction
+
                     text: qsTr("Remove")
 
-                    enabled:  {
-                        // Mention to ensure that property gets updated
-                        // when flight route changes
-                        Navigator.flightRoute.size
-
-                        return Navigator.flightRoute.contains(waypointDescriptionDialog.waypoint)
-                    }
                     onTriggered: {
                         PlatformAdaptor.vibrateBrief()                        
                         var index = Navigator.flightRoute.lastIndexOf(waypointDescriptionDialog.waypoint)
@@ -619,9 +620,19 @@ CenteringDialog {
             AutoSizingMenu {
                 id: libraryMenu
 
+                // The library can change while the dialog is open. The state
+                // only matters while the menu is open, so evaluate it on
+                // opening rather than tracking every change.
+                onAboutToShow: {
+                    addToLibraryAction.enabled = !WaypointLibrary.hasNearbyEntry(waypointDescriptionDialog.waypoint)
+                    removeFromLibraryAction.enabled = WaypointLibrary.contains(waypointDescriptionDialog.waypoint)
+                    editInLibraryAction.enabled = WaypointLibrary.contains(waypointDescriptionDialog.waypoint)
+                }
+
                 Action {
+                    id: addToLibraryAction
+
                     text: qsTr("Add…")
-                    enabled: !WaypointLibrary.hasNearbyEntry(waypointDescriptionDialog.waypoint)
 
                     onTriggered: {
                         PlatformAdaptor.vibrateBrief()
@@ -632,8 +643,9 @@ CenteringDialog {
                 }
 
                 Action {
+                    id: removeFromLibraryAction
+
                     text: qsTr("Remove…")
-                    enabled: WaypointLibrary.contains(waypointDescriptionDialog.waypoint)
 
                     onTriggered: {
                         PlatformAdaptor.vibrateBrief()
@@ -650,8 +662,9 @@ CenteringDialog {
                 }
 
                 Action {
+                    id: editInLibraryAction
+
                     text: qsTr("Edit…")
-                    enabled: WaypointLibrary.contains(waypointDescriptionDialog.waypoint)
 
                     onTriggered: {
                         PlatformAdaptor.vibrateBrief()
@@ -723,7 +736,6 @@ CenteringDialog {
         standardButtons: Dialog.Cancel|Dialog.Ok
 
         onAccepted: {
-            PlatformAdaptor.vibrateBrief()
             GlobalSettings.alwaysOpenExternalWebsites = alwaysOpen.checked
             PlatformAdaptor.openSatView(coordinate)
         }
@@ -734,7 +746,6 @@ CenteringDialog {
         id: wpEdit
 
         onAccepted: {
-            PlatformAdaptor.vibrateBrief()
             var newWP = waypointDescriptionDialog.waypoint.copy()
             newWP.name = newName
             newWP.notes = newNotes
@@ -751,7 +762,6 @@ CenteringDialog {
         title: qsTr("Add Waypoint to Library")
 
         onAccepted: {
-            PlatformAdaptor.vibrateBrief()
             var newWP = waypointDescriptionDialog.waypoint.copy()
             newWP.name = newName
             newWP.notes = newNotes
@@ -773,13 +783,11 @@ CenteringDialog {
         standardButtons: Dialog.No | Dialog.Yes
 
         onAccepted: {
-            PlatformAdaptor.vibrateBrief()
             WaypointLibrary.remove(removeDialog.waypoint)
             waypointDescriptionDialog.close()
             Global.toast.doToast(qsTr("Waypoint removed from device"))
         }
         onRejected: {
-            PlatformAdaptor.vibrateBrief()
             removeDialog.close()
         }
     }

@@ -18,8 +18,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+pragma ComponentBehavior: Bound
+
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls.Material
+import QtQuick.Templates as T
 import QtQuick.Dialogs
 import QtQuick.Layouts
 
@@ -29,8 +32,6 @@ Page {
     id: pg
     objectName: "DataManagerPage"
 
-    required property var dialogLoader
-    required property var stackView
     property bool isIos: Qt.platform.os === "ios"
     property bool isAndroid: Qt.platform.os === "android"
 
@@ -69,7 +70,7 @@ Page {
             width: parent ? parent.width : undefined
             height: gridLayout.height
 
-            required property var model
+            required property vac vac
 
             GridLayout {
                 id: gridLayout
@@ -84,7 +85,7 @@ Page {
                 columns: 6
 
                 WordWrappingItemDelegate {
-                    text: element.model.modelData.name + `<br><font color="#606060" size="2">${element.model.modelData.infoText}</font>`
+                    text: element.vac.name + `<br><font color="#606060" size="2">${element.vac.infoText}</font>`
                     icon.source: "/icons/material/ic_map.svg"
                     Layout.fillWidth: true
                 }
@@ -109,8 +110,8 @@ Page {
                             onTriggered: {
                                 PlatformAdaptor.vibrateBrief()
                                 Global.dialogLoader.active = false
-                                Global.dialogLoader.setSource("../dialogs/LongTextDialog.qml", {title: element.model.modelData.name,
-                                                                  text: element.model.modelData.description,
+                                Global.dialogLoader.setSource("../dialogs/LongTextDialog.qml", {title: element.vac.name,
+                                                                  text: element.vac.description,
                                                                   standardButtons: Dialog.Ok})
                                 Global.dialogLoader.active = true
                             }
@@ -119,12 +120,12 @@ Page {
                             id: renameAction
 
                             text: qsTr("Rename")
-                            enabled: element.model.modelData.collection === ""
+                            enabled: element.vac.collection === ""
 
                             onTriggered: {
                                 PlatformAdaptor.vibrateBrief()
                                 Global.dialogLoader.active = false
-                                Global.dialogLoader.setSource("../dialogs/RenameVACDialog.qml", {oldName: element.model.modelData.name})
+                                Global.dialogLoader.setSource("../dialogs/RenameVACDialog.qml", {oldName: element.vac.name})
                                 Global.dialogLoader.active = true
                             }
                         }
@@ -132,11 +133,11 @@ Page {
                             id: removeAction
 
                             text: qsTr("Uninstall")
-                            enabled: element.model.modelData.collection === ""
+                            enabled: element.vac.collection === ""
 
                             onTriggered: {
                                 PlatformAdaptor.vibrateBrief()
-                                VACLibrary.remove(element.model.modelData.name)
+                                VACLibrary.remove(element.vac.name)
                             }
                         }
                     }
@@ -163,7 +164,7 @@ Page {
 
             onClicked: {
                 PlatformAdaptor.vibrateBrief()
-                pg.stackView.pop()
+                Global.stackView.pop()
             }
         }
 
@@ -176,7 +177,7 @@ Page {
             anchors.leftMargin: 72
             anchors.right: headerMenuToolButton.left
 
-            text: pg.stackView.currentItem.title
+            text: (Global.stackView.currentItem as T.Page).title
             elide: Label.ElideRight
             font.pixelSize: 20
             verticalAlignment: Qt.AlignVCenter
@@ -310,12 +311,15 @@ Page {
         currentIndex: sv.currentIndex
         TabButton {
             text: qsTr("Maps")
+            onClicked: PlatformAdaptor.vibrateBrief()
         }
         TabButton {
             text: "VAC"
+            onClicked: PlatformAdaptor.vibrateBrief()
         }
         TabButton {
             text: qsTr("Data")
+            onClicked: PlatformAdaptor.vibrateBrief()
         }
     }
 
@@ -361,7 +365,7 @@ Page {
                 // DecoratedListView must keep working. The field is reached by
                 // tap or by Tab.
                 focus: mapsTab.SwipeView.isCurrentItem
-                model: Array.from(DataManager.mapSets.downloadables)
+                model: Array.from(DataManager.mapSets.downloadables) // qmllint disable unresolved-type
                             .filter((mapSet) => Librarian.matches(mapSet.objectName, mapsFilter.filter))
                 delegate: MapSet {}
 
@@ -417,13 +421,9 @@ Page {
                 Layout.fillWidth: true
                 clip: true
                 focus: vacTab.SwipeView.isCurrentItem
-                // This delayed binding is necessary, or else there will be terrible delays
-                // when the user deletes all VACs -- the GUI is re-rendered after
-                // every delete, which takes very long time.
-                Binding on model {
-                    value: Array.from(VACLibrary.vacs)
-                                .filter((vac) => Librarian.matches(vac.name, vacFilter.filter))
-                    delayed: true    // Prevent intermediary values from being assigned
+                model: NameFilterProxyModel {
+                    sourceModel: VACLibrary
+                    filter: vacFilter.filter
                 }
 
                 delegate: vacDelegate
@@ -461,7 +461,10 @@ Page {
                     text: VACLibrary.isEmpty
                           ? Global.withLinkColor("<p>" + qsTr("There are no approach charts installed. The <a href='x'>manual</a> explains how to install and use them.") + "</p>")
                           : qsTr("<h3>Sorry!</h3><p>No approach charts match your filter.</p>")
-                    onLinkActivated: openManual("forward.html#vac-tutorial")
+                    onLinkActivated: {
+                        PlatformAdaptor.vibrateBrief()
+                        Global.openManual("forward.html#vac-tutorial")
+                    }
 
                 }
             }
@@ -472,7 +475,7 @@ Page {
             Layout.fillWidth: true
             clip: true
             focus: SwipeView.isCurrentItem
-            model: DataManager.databases.downloadables
+            model: DataManager.databases.downloadables // qmllint disable unresolved-type
             delegate: MapSet {}
 
             section.property: "section"
@@ -636,11 +639,11 @@ Page {
     Connections {
         target: DataManager
         function onError (message) {
-            pg.dialogLoader.active = false
-            pg.dialogLoader.title = qsTr("Download Error")
-            pg.dialogLoader.text = qsTr("<p>Failed to download the list of aviation maps.</p><p>Reason: %1.</p>").arg(message)
-            pg.dialogLoader.source = "dialogs/ErrorDialog.qml"
-            pg.dialogLoader.active = true
+            Global.textDialogLoader.active = false
+            Global.textDialogLoader.title = qsTr("Download Error")
+            Global.textDialogLoader.text = qsTr("<p>Failed to download the list of aviation maps.</p><p>Reason: %1.</p>").arg(message)
+            Global.textDialogLoader.source = "dialogs/ErrorDialog.qml"
+            Global.textDialogLoader.active = true
         }
     }
 
@@ -654,7 +657,6 @@ Page {
               + qsTr("Charts from downloaded collections are not affected; remove them by deleting the corresponding maps.")
 
         onAccepted: {
-            PlatformAdaptor.vibrateBrief()
             VACLibrary.clear()
             Global.toast.doToast(qsTr("Approach chart library cleared"))
         }

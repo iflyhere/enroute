@@ -37,6 +37,22 @@ Create GitHub Release, using SSH authentication
 
 Create Flathub test build for release
 
+### flathubRuntime
+
+```sh
+[bundle exec] fastlane flathubRuntime
+```
+
+Show which org.kde.Platform runtime the next Flathub release would use
+
+### flathubScreenshots
+
+```sh
+[bundle exec] fastlane flathubScreenshots
+```
+
+Decorate the Flathub screenshots for inspection, without uploading them
+
 ----
 
 
@@ -56,7 +72,7 @@ Build Android Binary
 [bundle exec] fastlane android metadata
 ```
 
-Updata Meta Data for Google Play
+Update Meta Data for Google Play
 
 ### android validate
 

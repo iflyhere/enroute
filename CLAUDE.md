@@ -15,6 +15,9 @@ cmake --build build/claude
 cmake --build build/claude --target all_qmllint   # lint all QML (resolves project modules)
 # NOTE: this project has no test target — `ctest` reports 0 tests. Verify via build +
 # qmllint (and, if needed, by launching the app).
+# The flight log (src/flightlog, FlightLogPage.qml) is work in progress and hidden in
+# default builds. Add -DFLIGHTLOG=ON to the configure line to work on it. The option is
+# cached in build/claude, so pass -DFLIGHTLOG=OFF/ON explicitly when the state matters.
 
 ## Layout
 src/        C++ (QObject-derived types marked QML_ELEMENT, module URI "akaflieg_freiburg.enroute")
@@ -33,3 +36,17 @@ CMakeLists.txt uses qt_add_executable + qt_add_qml_module; AUTOMOC is on.
   the user's live desktop and may use real sensors/Bluetooth/position — don't launch it
   unprompted; ask first.
 - Match existing qmlformat / clang-format style; don't reformat unrelated lines.
+- Bindings must consume every dependency they rely on. Never "mention" a property
+  (`Foo.bar; return f()`) to force re-evaluation: the QML-to-C++ compiler drops
+  unused reads together with their change captures. Use the value in the
+  expression, pass it to the C++ function as an argument (e.g.
+  `metar.summary(Navigator.aircraft, Clock.time)`), or use a Connections handler
+  with an imperative assignment.
+- Lists over library data bind once to an item model: the library is a
+  QAbstractListModel (WaypointLibrary, VACLibrary, Librarian.aircraftModel /
+  routesModel); pages filter and sort through NameFilterProxyModel or
+  DistanceSortProxyModel (src/ui/). No Q_INVOKABLE functions returning arrays as
+  list models, no reload triggers. Delegates declare typed `required property`
+  roles (`required property waypoint waypoint`), not `modelData`.
+- Library-style data emits row-granular signals (begin/endInsertRows,
+  begin/endRemoveRows, dataChanged); beginResetModel only for bulk replacement.

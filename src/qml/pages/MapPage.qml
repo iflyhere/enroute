@@ -18,9 +18,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-import QtPositioning
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls.Material
 
 import akaflieg_freiburg.enroute
 import "../items"
