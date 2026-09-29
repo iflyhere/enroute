@@ -47,6 +47,12 @@ ${FLIGHTLOG_ANDROID_PERMISSIONS}
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"/>
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
+
+  <!-- The companion link's Bluetooth transport makes this app a peripheral as well
+       as a central: the watch connects to the phone, not the other way round.
+       Advertising needs its own permission from Android 12 on, and without it the
+       phone cannot advertise, so a watch scanning for it never finds it. -->
+  <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE"/>
   <supports-screens
 
     android:anyDensity="true"
